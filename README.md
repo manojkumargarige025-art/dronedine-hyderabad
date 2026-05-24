@@ -191,6 +191,15 @@ gh auth login
 gh repo create dronedine-hyderabad --public --source=. --remote=origin --push --description "Drone food delivery MVP - Flask, Hyderabad"
 ```
 
+### Deploy on Render
+
+1. Connect your GitHub repo at [render.com](https://render.com)
+2. **Build command:** `pip install -r requirements.txt`
+3. **Start command:** `gunicorn app:app --bind 0.0.0.0:$PORT`
+4. Add environment variables (optional): `SECRET_KEY`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`
+
+> SQLite (`orders.db`) resets on redeploy on free tier — fine for demos; use PostgreSQL for production.
+
 Replace `dronedine-hyderabad` with your preferred repo name. If the repo already exists on GitHub:
 
 ```powershell

@@ -692,8 +692,11 @@ def verify_payment():
     return jsonify({"error": "Razorpay not configured"}), 500
 
 
+# Create SQLite tables on startup (local dev + Render/gunicorn)
+db.init_db()
+
+
 if __name__ == "__main__":
-    db.init_db()
     print("\n=== Drone Food Delivery MVP ===")
     print("DroneDine:  http://127.0.0.1:5000/")
     print("Track:      http://127.0.0.1:5000/track")
