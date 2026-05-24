@@ -178,3 +178,22 @@ Drone Delivery/
 ---
 
 Built for MVP demos in **Hyderabad, India**. Not production-hardened — use test keys only.
+
+---
+
+## Push to GitHub
+
+This project is ready for GitHub. In PowerShell:
+
+```powershell
+cd "d:\Drone Delivery"
+gh auth login
+gh repo create dronedine-hyderabad --public --source=. --remote=origin --push --description "Drone food delivery MVP - Flask, Hyderabad"
+```
+
+Replace `dronedine-hyderabad` with your preferred repo name. If the repo already exists on GitHub:
+
+```powershell
+git remote add origin https://github.com/YOUR_USERNAME/dronedine-hyderabad.git
+git push -u origin main
+```
