@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard | DroneDine</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  {% set active_page = 'admin' %}
+  {% include '_navbar.html' %}
+
+  <main class="page-main">
+    <h1 class="page-title"><i class="fas fa-gauge-high"></i> Admin Dashboard</h1>
+    <p class="page-subtitle">Fleet overview and all orders across Hyderabad.</p>
+
+    <h2 class="section-heading"><i class="fas fa-helicopter"></i> Drone Fleet Status</h2>
+    <div class="fleet-grid">
+      <div class="fleet-card">
+        <strong>Drone 1</strong>
+        <p><span class="status-dot active"></span> Active</p>
+        <p class="hint">Battery 87%</p>
+      </div>
+      <div class="fleet-card">
+        <strong>Drone 2</strong>
+        <p><span class="status-dot active"></span> Active</p>
+        <p class="hint">Battery 92%</p>
+      </div>
+      <div class="fleet-card">
+        <strong>Drone 3</strong>
+        <p><span class="status-dot idle"></span> Idle</p>
+        <p class="hint">Battery 45%</p>
+      </div>
+      <div class="fleet-card">
+        <strong>Drone 4</strong>
+        <p><span class="status-dot charging"></span> Charging</p>
+        <p class="hint">Battery 23%</p>
+      </div>
+    </div>
+
+    <h2 class="section-heading"><i class="fas fa-list"></i> All Orders</h2>
+    <div class="toolbar">
+      <label>Status</label>
+      <select id="status-filter" class="form-control">
+        <option value="">All</option>
+        <option value="pending">Pending</option>
+        <option value="accepted">Accepted</option>
+        <option value="declined">Declined</option>
+        <option value="preparing">Preparing</option>
+        <option value="out_for_delivery">Out for delivery</option>
+        <option value="delivered">Delivered</option>
+      </select>
+      <label>Payment</label>
+      <select id="payment-filter" class="form-control">
+        <option value="">All</option>
+        <option value="paid">Paid</option>
+        <option value="unpaid">Unpaid</option>
+        <option value="refunded">Refunded</option>
+      </select>
+      <input type="search" id="search-input" class="form-control" placeholder="Name, phone, order ID">
+      <button type="button" class="btn btn-small" id="btn-refresh"><i class="fas fa-rotate"></i> Refresh</button>
+      <span id="last-refresh"></span>
+    </div>
+
+    <div class="table-wrap" id="admin-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Time</th>
+            <th>Customer</th>
+            <th>Restaurant</th>
+            <th>Items</th>
+            <th>Total</th>
+            <th>Password</th>
+            <th>Status</th>
+            <th>Payment</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="admin-orders-body">
+          <tr><td colspan="10">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="/static/js/admin.js"></script>
+</body>
+</html>

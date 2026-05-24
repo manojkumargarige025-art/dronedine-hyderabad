@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Track Order | DroneDine</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  {% set active_page = 'track' %}
+  {% include '_navbar.html' %}
+
+  <main class="page-main">
+    <h1 class="page-title"><i class="fas fa-box"></i> Order Tracking</h1>
+    <p class="page-subtitle">Enter your order ID and phone to see live drone status.</p>
+
+    <section class="card" style="max-width:520px;">
+      <form id="track-form">
+        <div class="form-group">
+          <label>Order ID</label>
+          <input type="number" class="form-control" id="track-order-id" required placeholder="e.g. 3">
+        </div>
+        <div class="form-group">
+          <label>Phone (from checkout)</label>
+          <input type="tel" class="form-control" id="track-phone" required placeholder="9876543210">
+        </div>
+        <button type="submit" class="btn">
+          <i class="fas fa-location-crosshairs"></i> Track Order
+        </button>
+      </form>
+      <p class="hint"><span class="live-dot"></span> Auto-refreshes every 5 seconds.</p>
+    </section>
+
+    <section id="track-result" class="card hidden" style="max-width:640px;margin-top:1rem;">
+      <h2>Order #<span id="result-id"></span></h2>
+      <div id="track-order-summary" class="hint" style="margin-bottom:1rem;"></div>
+      <div id="track-timeline"></div>
+      <div class="map-container" id="map-container">
+        <div class="map-drone"><i class="fas fa-helicopter"></i></div>
+        <p style="font-size:0.85rem;color:var(--gray);margin-top:0.5rem;">Drone en route over Hyderabad</p>
+        <div class="map-home"><i class="fas fa-house"></i> Your location</div>
+      </div>
+      <div class="drone-meta" id="drone-meta"></div>
+      <p id="track-details" style="margin-top:1rem;"></p>
+      <p id="track-payment" class="alert alert-info"></p>
+      <a href="/" class="btn btn-outline btn-small"><i class="fas fa-utensils"></i> Order again</a>
+    </section>
+
+    <p id="track-error" class="alert alert-error hidden"></p>
+  </main>
+
+  <script src="/static/js/track.js"></script>
+</body>
+</html>

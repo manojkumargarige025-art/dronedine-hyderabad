@@ -1,0 +1,27 @@
+{# Shared navbar — set active_page: home | track | restaurant | admin #}
+<nav class="navbar">
+  <a href="/" class="logo">
+    <i class="fas fa-helicopter"></i>
+    <span>DroneDine</span>
+  </a>
+  <div class="nav-links">
+    <a href="/" class="{% if active_page == 'home' %}active{% endif %}">
+      <i class="fas fa-home"></i><span class="nav-text">Home</span>
+    </a>
+    <a href="/track" class="{% if active_page == 'track' %}active{% endif %}">
+      <i class="fas fa-location-dot"></i><span class="nav-text">Track</span>
+    </a>
+    <a href="/restaurant/login" class="{% if active_page == 'restaurant' %}active{% endif %}">
+      <i class="fas fa-store"></i><span class="nav-text">Restaurant</span>
+    </a>
+    <a href="/admin" class="{% if active_page == 'admin' %}active{% endif %}">
+      <i class="fas fa-gauge-high"></i><span class="nav-text">Admin</span>
+    </a>
+    {% if show_cart %}
+    <button type="button" class="nav-cart-btn" id="cart-toggle" aria-label="Open cart">
+      <i class="fas fa-shopping-cart"></i>
+      <span class="cart-badge" id="cart-badge">0</span>
+    </button>
+    {% endif %}
+  </div>
+</nav>

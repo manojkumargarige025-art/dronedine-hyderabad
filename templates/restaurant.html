@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Restaurant Dashboard | DroneDine</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  {% set active_page = 'restaurant' %}
+  {% include '_navbar.html' %}
+
+  <main class="page-main">
+    <div class="card-header" style="margin-bottom:1rem;">
+      <div>
+        <h1 class="page-title" id="restaurant-title"><i class="fas fa-store"></i> Restaurant Dashboard</h1>
+        <p class="page-subtitle" style="margin:0">
+          <span class="live-dot"></span> Live orders — refreshes every 3 seconds
+        </p>
+      </div>
+      <button type="button" class="btn btn-outline btn-small" id="btn-logout">
+        <i class="fas fa-right-from-bracket"></i> Logout
+      </button>
+    </div>
+
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-orders">—</div>
+        <div class="stat-label">Orders today</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-revenue">—</div>
+        <div class="stat-label">Revenue today</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-active">—</div>
+        <div class="stat-label">Active orders</div>
+      </div>
+      <div class="stat-card highlight">
+        <div class="stat-value"><i class="fas fa-helicopter"></i></div>
+        <div class="stat-label" id="stat-drone">Drone ready</div>
+      </div>
+    </div>
+
+    <h2 class="section-heading"><i class="fas fa-bell"></i> New Orders</h2>
+    <div id="orders-container">
+      <p class="alert alert-info">Waiting for orders...</p>
+    </div>
+
+    <h2 class="section-heading" style="margin-top:2rem;"><i class="fas fa-box"></i> Drone Box Status</h2>
+    <div class="card">
+      <div class="drone-boxes" id="drone-boxes">
+        <div class="drone-box unlocked"><strong>Box 1</strong><br>🔓 Ready to load</div>
+        <div class="drone-box locked"><strong>Box 2</strong><br>🔒 In flight</div>
+        <div class="drone-box unlocked"><strong>Box 3</strong><br>🔓 Ready to load</div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/js/restaurant.js"></script>
+</body>
+</html>
