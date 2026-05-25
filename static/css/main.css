@@ -1,0 +1,88 @@
+/* DroneDine Main Styles – Phase 1 (Safe) */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: #0a1a2f;
+    color: #e2e8f0;
+    line-height: 1.5;
+}
+
+/* Navbar (will be used only after layout.html is active) */
+.navbar {
+    background: rgba(10, 26, 47, 0.95);
+    backdrop-filter: blur(10px);
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    border-bottom: 1px solid #2d3a5e;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #f59e0b;
+}
+
+.nav-links a {
+    color: #cbd5e1;
+    text-decoration: none;
+    font-weight: 500;
+    margin: 0 0.8rem;
+}
+
+.nav-links a:hover {
+    color: #f59e0b;
+}
+
+/* Container for main content */
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+/* Card style (optional, won’t affect existing unless used) */
+.card {
+    background: rgba(15, 35, 60, 0.7);
+    backdrop-filter: blur(8px);
+    border-radius: 24px;
+    padding: 1.5rem;
+    border: 1px solid #2d3a5e;
+    margin-bottom: 1.5rem;
+}
+
+/* Buttons */
+.btn {
+    background: #f59e0b;
+    border: none;
+    padding: 0.7rem 1.5rem;
+    border-radius: 40px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .navbar {
+        flex-direction: column;
+        text-align: center;
+    }
+    .container {
+        padding: 1rem;
+    }
+}
