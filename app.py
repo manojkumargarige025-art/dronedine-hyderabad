@@ -169,36 +169,7 @@ def simulator():
 def tracking_demo():
     return render_template('tracking_clean.html')
 
-# ========== ADD NEW API ROUTE BELOW ==========
-@app.route('/api/orders', methods=['POST'])
-def create_order_api():
-    from flask import request, jsonify
-    import json
-    data = request.get_json()
-    
-    required_fields = ['restaurant_id', 'items', 'total_amount', 'password', 'customer_address']
-    for field in required_fields:
-        if field not in data:
-            return jsonify({'error': f'Missing field: {field}'}), 400
-    
-    try:
-        new_order = Order(
-            restaurant_id=data['restaurant_id'],
-            items=json.dumps(data['items']),
-            total=data['total_amount'],
-            password=data['password'],
-            customer_name=data.get('customer_name', 'Guest'),
-            customer_phone=data.get('customer_phone', '0000000000'),
-            customer_address=data['customer_address'],
-            status='pending',
-            payment_status='unpaid'
-        )
-        db.session.add(new_order)
-        db.session.commit()
-        return jsonify({'order_id': new_order.id}), 201
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+
 # ---------- Restaurant auth ----------
 
 
@@ -250,13 +221,15 @@ def get_restaurants():
     return jsonify(RESTAURANTS)
 
 
-# ---------- API: Orders ----------
+# ---------- API: Orders (only one version) ----------
 
 
 @app.route("/api/orders", methods=["POST"])
 def create_order():
     """
     Create order. Server assigns a unique 4-digit drone box password.
+    Expects JSON fields: customer_name, customer_phone, customer_address,
+    restaurant_id, items, total_amount
     """
     data = request.get_json() or {}
 
@@ -733,55 +706,8 @@ def verify_payment():
     return jsonify({"error": "Razorpay not configured"}), 500
 
 
-# Create SQLite tables on startup (local dev + Render/gunicorn)
+# Create SQLite tables on startup
 db.init_db()
-document.getElementById('checkoutBtn').onclick = async () => {
-    if (cart.length === 0) {
-        alert('Cart is empty');
-        return;
-    }
-    const total = cart.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-    const deliveryFee = 20;
-    const grandTotal = total + deliveryFee;
-    const password = prompt(`Total: ₹${total} + ₹20 delivery = ₹${grandTotal}\nSet a 4-digit delivery password:`, "1234");
-    if (!password || password.length !== 4) {
-        alert('Password must be 4 digits');
-        return;
-    }
-    const address = prompt("Enter your delivery address:", "Gachibowli, Hyderabad");
-    if (!address) {
-        alert('Address is required');
-        return;
-    }
-    const orderData = {
-        restaurant_id: currentRestaurantId || 1,
-        items: cart.map(i => ({ name: i.name, quantity: i.quantity, price: i.price })),
-        total_amount: grandTotal,   // ✅ matches backend expectation
-        password: password,
-        customer_name: "Demo User",
-        customer_phone: "9999999999",
-        customer_address: address,
-        status: 'pending',
-        payment_status: 'unpaid'
-    };
-    try {
-        const response = await fetch('/api/orders', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(orderData)
-        });
-        if (response.ok) {
-            const result = await response.json();
-            sessionStorage.setItem('currentOrder', JSON.stringify({ id: result.order_id, password: password }));
-            window.location.href = "/tracking_demo";
-        } else {
-            const err = await response.json();
-            alert('Order failed: ' + err.error);
-        }
-    } catch (err) {
-        alert('Network error. Please try again.');
-    }
-};
 
 if __name__ == "__main__":
     print("\n=== Drone Food Delivery MVP ===")
