@@ -81,6 +81,17 @@
         z-index: 1200;
         font-weight: bold;
     }
+    /* ✅ FIX: ensures total and button have proper spacing */
+    .cart-summary {
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid #334155;
+    }
+    #cartTotal {
+        margin-bottom: 15px;
+        font-size: 1.2rem;
+        font-weight: bold;
+    }
     .btn-add {
         background: #f59e0b;
         border: none;
@@ -105,6 +116,27 @@
         padding: 5px 10px;
         border-radius: 20px;
         cursor: pointer;
+    }
+    /* Toast notification */
+    #toast {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #1e293b;
+        color: #f59e0b;
+        border-left: 4px solid #f59e0b;
+        padding: 12px 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 1300;
+        font-weight: 500;
+        transform: translateX(120%);
+        transition: transform 0.3s ease;
+        font-size: 0.9rem;
+        backdrop-filter: blur(8px);
+    }
+    #toast.show {
+        transform: translateX(0);
     }
 </style>
 {% endblock %}
@@ -137,8 +169,10 @@
     <button id="closeCart" class="close-cart">✖</button>
     <h3>Your Cart</h3>
     <div id="cartItems"></div>
-    <div id="cartTotal">Total: ₹0</div>
-    <button id="checkoutBtn" class="btn" style="margin-top:1rem;">Proceed to Checkout</button>
+    <div class="cart-summary">
+        <div id="cartTotal">Total: ₹0</div>
+        <button id="checkoutBtn" class="btn" style="margin-top:0; width:100%;">Proceed to Checkout</button>
+    </div>
 </div>
 <div id="checkoutPanel" class="checkout-panel">🛒 Cart (0)</div>
 
@@ -150,10 +184,23 @@
         <button id="closeModal" class="btn-outline" style="margin-top:1rem;">Close</button>
     </div>
 </div>
+
+<!-- Toast container -->
+<div id="toast"></div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
+    // Toast notification system
+    function showToast(message, type = 'info') {
+        const toast = document.getElementById('toast');
+        toast.innerText = message;
+        toast.classList.add('show');
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
+    }
+
     // Menu data
     const menus = {
         Bawarchi: [
@@ -205,6 +252,7 @@
     window.removeFromCart = function(index) {
         cart.splice(index, 1);
         updateCartUI();
+        showToast('Item removed from cart', 'info');
     };
 
     function addToCart(itemName, price) {
@@ -215,10 +263,10 @@
             cart.push({ name: itemName, price: price, quantity: 1 });
         }
         updateCartUI();
-        alert(`${itemName} added to cart`);
+        showToast(`${itemName} added to cart`, 'success');
     }
 
-    // Show menu modal when restaurant card clicked
+    // Show menu modal
     document.querySelectorAll('.restaurant-card').forEach(card => {
         card.addEventListener('click', () => {
             const restaurant = card.getAttribute('data-restaurant');
@@ -247,23 +295,26 @@
         document.getElementById('cartSidebar').classList.add('open');
     };
 
-    // Checkout with API call
+    // Checkout with API call (using toast instead of alert)
     document.getElementById('checkoutBtn').onclick = async () => {
         if (cart.length === 0) {
-            alert('Cart is empty');
+            showToast('Cart is empty', 'error');
             return;
         }
         const total = cart.reduce((sum, i) => sum + (i.price * i.quantity), 0);
         const deliveryFee = 20;
         const grandTotal = total + deliveryFee;
+        
+        // Use custom modal prompt instead of browser prompt? For simplicity, we still use prompt but will replace later if needed.
+        // For now keep prompt to avoid complexity, but you can later replace with a modal.
         const password = prompt(`Total: ₹${total} + ₹20 delivery = ₹${grandTotal}\nSet a 4-digit delivery password:`, "1234");
         if (!password || password.length !== 4) {
-            alert('Password must be 4 digits');
+            showToast('Password must be 4 digits', 'error');
             return;
         }
         const address = prompt("Enter your delivery address:", "Gachibowli, Hyderabad");
         if (!address) {
-            alert('Address is required');
+            showToast('Address is required', 'error');
             return;
         }
         const orderData = {
@@ -284,13 +335,16 @@
             if (response.ok) {
                 const result = await response.json();
                 sessionStorage.setItem('currentOrder', JSON.stringify({ id: result.order_id, password: password }));
-                window.location.href = "/tracking_demo";
+                showToast('Order placed! Redirecting to tracking...', 'success');
+                setTimeout(() => {
+                    window.location.href = "/tracking_demo";
+                }, 1500);
             } else {
                 const err = await response.json();
-                alert('Order failed: ' + err.error);
+                showToast('Order failed: ' + err.error, 'error');
             }
         } catch (err) {
-            alert('Network error. Please try again.');
+            showToast('Network error. Please try again.', 'error');
         }
     };
 </script>
