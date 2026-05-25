@@ -242,44 +242,53 @@
     };
 
     // --- UPDATED CHECKOUT WITH API CALL ---
-    document.getElementById('checkoutBtn').onclick = async () => {
-        if (cart.length === 0) {
-            alert('Cart is empty');
-            return;
-        }
-        const total = cart.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-        const deliveryFee = 20;
-        const grandTotal = total + deliveryFee;
-        const password = prompt(`Total: ₹${total} + ₹20 delivery = ₹${grandTotal}\nSet a 4-digit delivery password:`, "1234");
-        if (!password || password.length !== 4) {
-            alert('Password must be 4 digits');
-            return;
-        }
-        const orderData = {
-            restaurant_id: currentRestaurantId || 1,
-            items: cart.map(i => ({ name: i.name, quantity: i.quantity, price: i.price })),
-            total: grandTotal,
-            password: password,
-            customer_name: "Demo User",
-            customer_phone: "9999999999"
-        };
-        try {
-            const response = await fetch('/api/orders', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(orderData)
-            });
-            if (response.ok) {
-                const result = await response.json();
-                sessionStorage.setItem('currentOrder', JSON.stringify({ id: result.order_id, password: password }));
-                window.location.href = "/tracking_demo";
-            } else {
-                const err = await response.json();
-                alert('Order failed: ' + err.error);
-            }
-        } catch (err) {
-            alert('Network error. Please try again.');
-        }
+document.getElementById('checkoutBtn').onclick = async () => {
+    if (cart.length === 0) {
+        alert('Cart is empty');
+        return;
+    }
+    const total = cart.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+    const deliveryFee = 20;
+    const grandTotal = total + deliveryFee;
+    const password = prompt(`Total: ₹${total} + ₹20 delivery = ₹${grandTotal}\nSet a 4-digit delivery password:`, "1234");
+    if (!password || password.length !== 4) {
+        alert('Password must be 4 digits');
+        return;
+    }
+    // NEW: Ask for delivery address
+    const address = prompt("Enter your delivery address:", "Gachibowli, Hyderabad");
+    if (!address) {
+        alert('Address is required');
+        return;
+    }
+    const orderData = {
+        restaurant_id: currentRestaurantId || 1,
+        items: cart.map(i => ({ name: i.name, quantity: i.quantity, price: i.price })),
+        total: grandTotal,
+        password: password,
+        customer_name: "Demo User",
+        customer_phone: "9999999999",
+        customer_address: address,   // ✅ added
+        status: 'pending',
+        payment_status: 'unpaid'
     };
+    try {
+        const response = await fetch('/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(orderData)
+        });
+        if (response.ok) {
+            const result = await response.json();
+            sessionStorage.setItem('currentOrder', JSON.stringify({ id: result.order_id, password: password }));
+            window.location.href = "/tracking_demo";
+        } else {
+            const err = await response.json();
+            alert('Order failed: ' + err.error);
+        }
+    } catch (err) {
+        alert('Network error. Please try again.');
+    }
+};
 </script>
 {% endblock %}
