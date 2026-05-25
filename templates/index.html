@@ -238,6 +238,23 @@
     const ZONE_CENTER = [17.4300, 78.3450];
     const ZONE_RADIUS_KM = 3.0;
 
+    // ========== HELPER FUNCTIONS (Add near top of script) ==========
+function haversineDistance(lat1, lon1, lat2, lon2) {
+    const toRad = (x) => (x * Math.PI) / 180;
+    const R = 6371;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
+
+function isWithinZone(lat, lng) {
+    const ZONE_CENTER = [17.4300, 78.3450];
+    const ZONE_RADIUS_KM = 3.0;
+    return haversineDistance(lat, lng, ZONE_CENTER[0], ZONE_CENTER[1]) <= ZONE_RADIUS_KM;
+}
+
     // DOM elements
     const screens = {
         1: document.getElementById('screenLocation'),
@@ -309,27 +326,42 @@
     }
 
     document.getElementById('confirmAddressBtn').onclick = async () => {
-        const addr = document.getElementById('addressInput').value.trim();
-        if (!addr) { showToast("Please enter an address", true); return; }
-        showToast("🔍 Verifying address...");
-        try {
-            const coords = await geocodeAddress(addr);
-            if (!isWithinZone(coords[0], coords[1])) {
-                showToast("📍 Coming Soon! DroneDine operates strictly within the Gachibowli Green Zone Circle right now.", true);
-                return;
-            }
-            customerCoords = coords;
-            // Update map marker
-            if (window.destMarker) locationMap.removeLayer(window.destMarker);
-            window.destMarker = L.marker(customerCoords).addTo(locationMap).bindPopup("Your drop zone").openPopup();
-            locationMap.setView(customerCoords, 15);
-            showToast("✅ Address verified! Proceeding to menu.", false);
-            setActiveStep(2);
-            renderMenu();
-        } catch(e) {
-            showToast("Address not recognized. Try 'Wipro Circle, Gachibowli'", true);
+    const addrInput = document.getElementById('addressInput');
+    const address = addrInput.value.trim();
+    if (!address) {
+        showToast("Please enter an address", true);
+        return;
+    }
+    showToast("🔍 Verifying address...");
+    try {
+        const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ", Hyderabad")}&limit=1`;
+        const response = await fetch(geocodeUrl, { headers: { 'User-Agent': 'DroneDine/1.0' } });
+        const data = await response.json();
+        if (!data || data.length === 0) throw new Error("Address not found");
+        const lat = parseFloat(data[0].lat);
+        const lon = parseFloat(data[0].lon);
+        
+        if (!isWithinZone(lat, lon)) {
+            showToast("📍 Coming Soon! DroneDine operates strictly within the Gachibowli Green Zone Circle right now.", true);
+            return;
         }
-    };
+        
+        customerCoords = [lat, lon];
+        
+        if (window.destMarker) locationMap.removeLayer(window.destMarker);
+        window.destMarker = L.marker(customerCoords).addTo(locationMap).bindPopup("Your drop zone").openPopup();
+        locationMap.setView(customerCoords, 15);
+        
+        if (window.routeLine) locationMap.removeLayer(window.routeLine);
+        window.routeLine = L.polyline([kitchenCoords, customerCoords], { color: '#f59e0b', weight: 2, dashArray: '5,10' }).addTo(locationMap);
+        
+        showToast("✅ Address verified! Proceeding to menu.", false);
+        setActiveStep(2);
+        renderMenu();
+    } catch (err) {
+        showToast("Address not recognized. Try 'Wipro Circle, Gachibowli'", true);
+    }
+};
 
     // ---------- Step 2: Menu ----------
     const menuData = [
@@ -398,24 +430,37 @@
     }
 
     // ---------- Step 3: Checkout & PIN ----------
-    document.getElementById('payAndLaunchBtn').onclick = () => {
-        const pin = document.getElementById('checkoutPin').value;
-        if (!pin || pin.length !== 4 || !/^\d+$/.test(pin)) {
-            showToast("Please set a valid 4-digit numeric PIN", true);
-            return;
+    document.getElementById('payAndLaunchBtn').onclick = async () => {
+    const pin = document.getElementById('checkoutPin').value;
+    if (!pin || pin.length !== 4 || !/^\d+$/.test(pin)) {
+        showToast("Please set a valid 4-digit numeric PIN", true);
+        return;
+    }
+    deliveryPin = pin;
+    
+    const payBtn = document.getElementById('payAndLaunchBtn');
+    payBtn.disabled = true;
+    payBtn.innerText = "🔄 Processing Secure Payment...";
+    
+    setTimeout(() => {
+        let statusElem = document.getElementById('trackingStatus');
+        if (!statusElem) {
+            statusElem = document.createElement('div');
+            statusElem.id = 'trackingStatus';
+            statusElem.className = 'status-text';
+            document.getElementById('screenTracking').prepend(statusElem);
         }
-        deliveryPin = pin;
-        // Store order details (for tracking step)
-        localStorage.setItem('droneOrder', JSON.stringify({
-            items: selectedItems,
-            total: orderTotal,
-            pin: deliveryPin,
-            dropCoords: customerCoords,
-            address: document.getElementById('addressInput').value
-        }));
-        setActiveStep(4);
-        initTrackingMap();
-    };
+        statusElem.innerText = "🍳 Status: Restaurant has accepted your order. Kitchen is preparing your fresh meal...";
+        
+        setTimeout(() => {
+            statusElem.innerText = "🛫 Status: Order packed. Drone launching via Green Zone Corridor...";
+            setActiveStep(4);
+            initTrackingMap();
+            payBtn.disabled = false;
+            payBtn.innerText = "Pay & Launch DroneDine";
+        }, 2000);
+    }, 2000);
+};
 
     // ---------- Step 4: Tracking & Unlock ----------
     let trackingMap = null;
