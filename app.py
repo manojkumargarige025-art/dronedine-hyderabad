@@ -157,6 +157,10 @@ def restaurant_page():
 def admin_page():
     return render_template("admin.html")
 
+@app.route("/support")
+def support():
+    return render_template("support.html")
+
 
 # ---------- Restaurant auth ----------
 
