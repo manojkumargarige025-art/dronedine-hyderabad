@@ -1,63 +1,186 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Restaurant Dashboard | DroneDine</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="/static/css/style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DroneDine – Restaurant Portal | 5% Commission</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a1a2f;
+            color: #e2e8f0;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #f59e0b;
+        }
+        .card {
+            background: rgba(15, 35, 60, 0.9);
+            border-radius: 24px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid #2d3a5e;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .stat-card {
+            background: #1e293b;
+            border-radius: 20px;
+            padding: 1rem;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #f59e0b;
+        }
+        .commission-highlight {
+            background: #f59e0b;
+            color: #0a1a2f;
+            padding: 0.5rem 1rem;
+            border-radius: 40px;
+            display: inline-block;
+            font-weight: bold;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #334155;
+        }
+        .badge {
+            background: #10b981;
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+        @media (max-width: 640px) {
+            body { padding: 1rem; }
+            .stats-grid { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body>
-  {% set active_page = 'restaurant' %}
-  {% include '_navbar.html' %}
-
-  <main class="page-main">
-    <div class="card-header" style="margin-bottom:1rem;">
-      <div>
-        <h1 class="page-title" id="restaurant-title"><i class="fas fa-store"></i> Restaurant Dashboard</h1>
-        <p class="page-subtitle" style="margin:0">
-          <span class="live-dot"></span> Live orders — refreshes every 3 seconds
-        </p>
-      </div>
-      <button type="button" class="btn btn-outline btn-small" id="btn-logout">
-        <i class="fas fa-right-from-bracket"></i> Logout
-      </button>
+<div class="container">
+    <div class="header">
+        <div class="logo"><i class="fas fa-drone"></i> DroneDine Merchant</div>
+        <div class="commission-highlight"><i class="fas fa-percent"></i> You keep 95% – Only 5% platform fee</div>
     </div>
 
-    <div class="stats-grid" id="stats-grid">
-      <div class="stat-card">
-        <div class="stat-value" id="stat-orders">—</div>
-        <div class="stat-label">Orders today</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="stat-revenue">—</div>
-        <div class="stat-label">Revenue today</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="stat-active">—</div>
-        <div class="stat-label">Active orders</div>
-      </div>
-      <div class="stat-card highlight">
-        <div class="stat-value"><i class="fas fa-helicopter"></i></div>
-        <div class="stat-label" id="stat-drone">Drone ready</div>
-      </div>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value" id="todayOrders">0</div>
+            <div>Today's Orders</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="todayRevenue">₹0</div>
+            <div>Your Revenue (after 5% fee)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">5%</div>
+            <div>Flat Commission</div>
+        </div>
     </div>
 
-    <h2 class="section-heading"><i class="fas fa-bell"></i> New Orders</h2>
-    <div id="orders-container">
-      <p class="alert alert-info">Waiting for orders...</p>
-    </div>
-
-    <h2 class="section-heading" style="margin-top:2rem;"><i class="fas fa-box"></i> Drone Box Status</h2>
     <div class="card">
-      <div class="drone-boxes" id="drone-boxes">
-        <div class="drone-box unlocked"><strong>Box 1</strong><br>🔓 Ready to load</div>
-        <div class="drone-box locked"><strong>Box 2</strong><br>🔒 In flight</div>
-        <div class="drone-box unlocked"><strong>Box 3</strong><br>🔓 Ready to load</div>
-      </div>
+        <h3><i class="fas fa-receipt"></i> Active Orders (Dine‑in Price, No Markup)</h3>
+        <div id="ordersList">
+            <p style="text-align:center; padding:1rem;">Loading orders...</p>
+        </div>
     </div>
-  </main>
 
-  <script src="/static/js/restaurant.js"></script>
+    <div class="card">
+        <h3><i class="fas fa-chart-line"></i> Why Partner With DroneDine?</h3>
+        <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+            <li>✅ No hidden GST burden – transparent 5% fee on food value only</li>
+            <li>✅ Drone delivery within 10‑15 minutes – faster than Swiggy/Zomato</li>
+            <li>✅ Keep 100% of dine‑in price – we don't force discounts</li>
+            <li>✅ No exclusivity – you can stay on other platforms</li>
+        </ul>
+    </div>
+    <div class="footer">
+        © 2026 DroneDine Hyderabad | Zero markup, zero GST on restaurants
+    </div>
+</div>
+
+<script>
+    // Mock data – in production, replace with calls to /api/restaurant/stats and /api/orders/pending
+    // For demo, we simulate with hardcoded values and update periodically
+    function loadStats() {
+        // Simulate today's orders
+        document.getElementById('todayOrders').innerText = Math.floor(Math.random() * 15) + 3;
+        const revenue = (Math.random() * 5000 + 1000).toFixed(0);
+        document.getElementById('todayRevenue').innerHTML = `₹${revenue}`;
+    }
+
+    function loadOrders() {
+        const mockOrders = [
+            { id: 101, customer: "Rahul", items: "Chicken Biryani x1", total: 280, status: "pending" },
+            { id: 102, customer: "Priya", items: "Masala Dosa x2", total: 240, status: "accepted" }
+        ];
+        const container = document.getElementById('ordersList');
+        if (mockOrders.length === 0) {
+            container.innerHTML = '<p>No active orders</p>';
+            return;
+        }
+        let html = `<table>
+            <thead><tr><th>Order ID</th><th>Customer</th><th>Items</th><th>Amount</th><th>Status</th></tr></thead>
+            <tbody>`;
+        mockOrders.forEach(order => {
+            html += `<tr>
+                <td>#${order.id}</td>
+                <td>${order.customer}</td>
+                <td>${order.items}</td>
+                <td>₹${order.total}</td>
+                <td><span class="badge">${order.status}</span></td>
+            </tr>`;
+        });
+        html += `</tbody></table><p style="margin-top:1rem; font-size:0.8rem;">* Demo data – connect to live API for real orders.</p>`;
+        container.innerHTML = html;
+    }
+
+    loadStats();
+    loadOrders();
+    // Auto-refresh every 30 seconds (demo)
+    setInterval(() => {
+        loadStats();
+        loadOrders();
+    }, 30000);
+</script>
 </body>
 </html>
