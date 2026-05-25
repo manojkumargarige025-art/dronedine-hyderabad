@@ -264,7 +264,7 @@ document.getElementById('checkoutBtn').onclick = async () => {
     const orderData = {
         restaurant_id: currentRestaurantId || 1,
         items: cart.map(i => ({ name: i.name, quantity: i.quantity, price: i.price })),
-        total: grandTotal,
+        total_amount: grandTotal,,
         password: password,
         customer_name: "Demo User",
         customer_phone: "9999999999",
