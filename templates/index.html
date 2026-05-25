@@ -4,6 +4,25 @@
 
 {% block extra_head %}
 <style>
+    .restaurant-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin: 1.5rem 0;
+    }
+    .restaurant-card {
+        background: #1e293b;
+        border-radius: 20px;
+        padding: 1rem;
+        cursor: pointer;
+        transition: 0.2s;
+        border: 1px solid #334155;
+    }
+    .restaurant-card:hover {
+        transform: translateY(-4px);
+        background: #2d3a5e;
+        border-color: #f59e0b;
+    }
     .modal {
         display: none;
         position: fixed;
@@ -62,28 +81,6 @@
         z-index: 1200;
         font-weight: bold;
     }
-    .close-cart {
-        background: #dc2626;
-        border: none;
-        color: white;
-        padding: 5px 10px;
-        border-radius: 20px;
-        cursor: pointer;
-    }
-    .restaurant-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 1.5rem;
-        margin: 1.5rem 0;
-    }
-    .restaurant-card {
-        background: #1e293b;
-        border-radius: 20px;
-        padding: 1rem;
-        cursor: pointer;
-        transition: 0.2s;
-    }
-    .restaurant-card:hover { transform: translateY(-4px); background: #2d3a5e; }
     .btn-add {
         background: #f59e0b;
         border: none;
@@ -101,6 +98,14 @@
         align-items: center;
         gap: 4px;
     }
+    .close-cart {
+        background: #dc2626;
+        border: none;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 20px;
+        cursor: pointer;
+    }
 </style>
 {% endblock %}
 
@@ -110,17 +115,17 @@
 <!-- Restaurant Grid -->
 <h2>Top Restaurants Near You</h2>
 <div class="restaurant-grid" id="restaurantGrid">
-    <div class="restaurant-card" data-restaurant="Bawarchi" data-id="1">
+    <div class="restaurant-card" data-restaurant="Bawarchi" data-id="bawarchi">
         <h3>Bawarchi</h3>
         <p>Biryani, Kebabs, North Indian</p>
         <span class="drone-badge"><i class="fas fa-drone"></i> 10-15 min</span> ⭐ 4.5
     </div>
-    <div class="restaurant-card" data-restaurant="Chutneys" data-id="2">
+    <div class="restaurant-card" data-restaurant="Chutneys" data-id="chutneys">
         <h3>Chutneys</h3>
         <p>South Indian, Idly, Dosa</p>
         <span class="drone-badge"><i class="fas fa-drone"></i> 8-12 min</span> ⭐ 4.3
     </div>
-    <div class="restaurant-card" data-restaurant="Paradise" data-id="3">
+    <div class="restaurant-card" data-restaurant="Paradise" data-id="paradise">
         <h3>Paradise</h3>
         <p>Biryani, Haleem</p>
         <span class="drone-badge"><i class="fas fa-drone"></i> 15-20 min</span> ⭐ 4.6
@@ -149,21 +154,22 @@
 
 {% block extra_scripts %}
 <script>
+    // Menu data
     const menus = {
         Bawarchi: [
             { name: "Chicken Biryani (Full)", price: 280 },
-            { name: "Mutton Biryani (Full)", price: 380 },
-            { name: "Haleem", price: 180 }
+            { name: "Mutton Biryani (Full)", price: 350 },
+            { name: "Double Ka Meetha", price: 80 }
         ],
         Chutneys: [
-            { name: "Masala Dosa", price: 70 },
-            { name: "Idli (2 pcs)", price: 40 },
-            { name: "Vada", price: 35 }
+            { name: "Masala Dosa", price: 120 },
+            { name: "Idli Sambar (2 pcs)", price: 80 },
+            { name: "Filter Coffee", price: 50 }
         ],
         Paradise: [
-            { name: "Chicken Biryani", price: 290 },
-            { name: "Mutton Biryani", price: 390 },
-            { name: "Kebabs", price: 220 }
+            { name: "Paradise Special Biryani", price: 320 },
+            { name: "Keema Samosa (2 pcs)", price: 90 },
+            { name: "Qubani Ka Meetha", price: 120 }
         ]
     };
 
@@ -212,7 +218,7 @@
         alert(`${itemName} added to cart`);
     }
 
-    // Show menu modal
+    // Show menu modal when restaurant card clicked
     document.querySelectorAll('.restaurant-card').forEach(card => {
         card.addEventListener('click', () => {
             const restaurant = card.getAttribute('data-restaurant');
@@ -241,54 +247,51 @@
         document.getElementById('cartSidebar').classList.add('open');
     };
 
-    // --- UPDATED CHECKOUT WITH API CALL ---
-document.getElementById('checkoutBtn').onclick = async () => {
-    if (cart.length === 0) {
-        alert('Cart is empty');
-        return;
-    }
-    const total = cart.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-    const deliveryFee = 20;
-    const grandTotal = total + deliveryFee;
-    const password = prompt(`Total: ₹${total} + ₹20 delivery = ₹${grandTotal}\nSet a 4-digit delivery password:`, "1234");
-    if (!password || password.length !== 4) {
-        alert('Password must be 4 digits');
-        return;
-    }
-    // NEW: Ask for delivery address
-    const address = prompt("Enter your delivery address:", "Gachibowli, Hyderabad");
-    if (!address) {
-        alert('Address is required');
-        return;
-    }
-    const orderData = {
-        restaurant_id: currentRestaurantId || 1,
-        items: cart.map(i => ({ name: i.name, quantity: i.quantity, price: i.price })),
-        total_amount: grandTotal,,
-        password: password,
-        customer_name: "Demo User",
-        customer_phone: "9999999999",
-        customer_address: address,   // ✅ added
-        status: 'pending',
-        payment_status: 'unpaid'
-    };
-    try {
-        const response = await fetch('/api/orders', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(orderData)
-        });
-        if (response.ok) {
-            const result = await response.json();
-            sessionStorage.setItem('currentOrder', JSON.stringify({ id: result.order_id, password: password }));
-            window.location.href = "/tracking_demo";
-        } else {
-            const err = await response.json();
-            alert('Order failed: ' + err.error);
+    // Checkout with API call
+    document.getElementById('checkoutBtn').onclick = async () => {
+        if (cart.length === 0) {
+            alert('Cart is empty');
+            return;
         }
-    } catch (err) {
-        alert('Network error. Please try again.');
-    }
-};
+        const total = cart.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+        const deliveryFee = 20;
+        const grandTotal = total + deliveryFee;
+        const password = prompt(`Total: ₹${total} + ₹20 delivery = ₹${grandTotal}\nSet a 4-digit delivery password:`, "1234");
+        if (!password || password.length !== 4) {
+            alert('Password must be 4 digits');
+            return;
+        }
+        const address = prompt("Enter your delivery address:", "Gachibowli, Hyderabad");
+        if (!address) {
+            alert('Address is required');
+            return;
+        }
+        const orderData = {
+            customer_name: "Demo User",
+            customer_phone: "9999999999",
+            customer_address: address,
+            restaurant_id: currentRestaurantId,
+            items: cart.map(i => ({ name: i.name, quantity: i.quantity, price: i.price })),
+            total_amount: grandTotal,
+            password: password
+        };
+        try {
+            const response = await fetch('/api/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(orderData)
+            });
+            if (response.ok) {
+                const result = await response.json();
+                sessionStorage.setItem('currentOrder', JSON.stringify({ id: result.order_id, password: password }));
+                window.location.href = "/tracking_demo";
+            } else {
+                const err = await response.json();
+                alert('Order failed: ' + err.error);
+            }
+        } catch (err) {
+            alert('Network error. Please try again.');
+        }
+    };
 </script>
 {% endblock %}
