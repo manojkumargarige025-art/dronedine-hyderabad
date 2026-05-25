@@ -96,6 +96,36 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+    // ========== DELIVERY ZONE (Green Zone) ==========
+const ZONE_CENTER = [17.4300, 78.3450]; // Gachibowli center
+const ZONE_RADIUS_KM = 3.0; // 3 km
+
+// Draw the zone circle on the map
+const zoneCircle = L.circle(ZONE_CENTER, {
+    color: '#06b6d4',        // cyan border
+    weight: 2,
+    fillColor: '#38bdf8',
+    fillOpacity: 0.15,
+    radius: ZONE_RADIUS_KM * 1000 // meters
+}).addTo(map).bindPopup('DroneDine Green Zone<br>Active Delivery Area');
+
+// Haversine formula to calculate distance between two lat/lng points (in km)
+function haversineDistance(lat1, lon1, lat2, lon2) {
+    const toRad = (angle) => (angle * Math.PI) / 180;
+    const R = 6371; // Earth radius in km
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 +
+              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+              Math.sin(dLon / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+function isWithinZone(lat, lng) {
+    const distance = haversineDistance(lat, lng, ZONE_CENTER[0], ZONE_CENTER[1]);
+    return distance <= ZONE_RADIUS_KM;
+}
     // ---------- Get order from sessionStorage ----------
     const order = JSON.parse(sessionStorage.getItem('currentOrder'));
     if (!order) {
