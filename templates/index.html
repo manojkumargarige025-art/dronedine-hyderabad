@@ -4,7 +4,6 @@
 
 {% block extra_head %}
 <style>
-    /* Modal styles */
     .modal {
         display: none;
         position: fixed;
@@ -92,6 +91,16 @@
         border-radius: 20px;
         cursor: pointer;
     }
+    .drone-badge {
+        background: #f59e0b;
+        color: #0a1a2f;
+        padding: 2px 8px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
 </style>
 {% endblock %}
 
@@ -101,20 +110,20 @@
 <!-- Restaurant Grid -->
 <h2>Top Restaurants Near You</h2>
 <div class="restaurant-grid" id="restaurantGrid">
-    <div class="restaurant-card" data-restaurant="Bawarchi">
+    <div class="restaurant-card" data-restaurant="Bawarchi" data-id="1">
         <h3>Bawarchi</h3>
         <p>Biryani, Kebabs, North Indian</p>
-        <span>🚁 10-15 min ⭐ 4.5</span>
+        <span class="drone-badge"><i class="fas fa-drone"></i> 10-15 min</span> ⭐ 4.5
     </div>
-    <div class="restaurant-card" data-restaurant="Chutneys">
+    <div class="restaurant-card" data-restaurant="Chutneys" data-id="2">
         <h3>Chutneys</h3>
         <p>South Indian, Idly, Dosa</p>
-        <span>🚁 8-12 min ⭐ 4.3</span>
+        <span class="drone-badge"><i class="fas fa-drone"></i> 8-12 min</span> ⭐ 4.3
     </div>
-    <div class="restaurant-card" data-restaurant="Paradise">
+    <div class="restaurant-card" data-restaurant="Paradise" data-id="3">
         <h3>Paradise</h3>
         <p>Biryani, Haleem</p>
-        <span>🚁 15-20 min ⭐ 4.6</span>
+        <span class="drone-badge"><i class="fas fa-drone"></i> 15-20 min</span> ⭐ 4.6
     </div>
 </div>
 
@@ -140,7 +149,6 @@
 
 {% block extra_scripts %}
 <script>
-    // Menu data (simplified)
     const menus = {
         Bawarchi: [
             { name: "Chicken Biryani (Full)", price: 280 },
@@ -160,7 +168,7 @@
     };
 
     let cart = [];
-    let currentRestaurant = null;
+    let currentRestaurantId = null;
 
     function updateCartUI() {
         const cartItemsDiv = document.getElementById('cartItems');
@@ -204,11 +212,11 @@
         alert(`${itemName} added to cart`);
     }
 
-    // Show menu modal when restaurant clicked
+    // Show menu modal
     document.querySelectorAll('.restaurant-card').forEach(card => {
         card.addEventListener('click', () => {
             const restaurant = card.getAttribute('data-restaurant');
-            currentRestaurant = restaurant;
+            currentRestaurantId = card.getAttribute('data-id');
             document.getElementById('modalRestaurantName').innerText = restaurant;
             const menuDiv = document.getElementById('menuItems');
             menuDiv.innerHTML = '';
@@ -233,42 +241,45 @@
         document.getElementById('cartSidebar').classList.add('open');
     };
 
-    // Checkout flow
+    // --- UPDATED CHECKOUT WITH API CALL ---
     document.getElementById('checkoutBtn').onclick = async () => {
-    if (cart.length === 0) {
-        alert('Cart is empty');
-        return;
-    }
-    const total = cart.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-    const deliveryFee = 20;
-    const grandTotal = total + deliveryFee;
-    const password = prompt(`Total: ₹${total} + ₹20 delivery = ₹${grandTotal}\nSet a 4-digit delivery password:`, "1234");
-    if (!password || password.length !== 4) {
-        alert('Password must be 4 digits');
-        return;
-    }
-    // Prepare order data
-    const orderData = {
-        restaurant_id: 1,  // You'll need to map restaurant name to actual ID
-        items: cart.map(i => ({ name: i.name, quantity: i.quantity, price: i.price })),
-        total: grandTotal,
-        password: password,
-        customer_name: "Demo User",
-        customer_phone: "9999999999"
+        if (cart.length === 0) {
+            alert('Cart is empty');
+            return;
+        }
+        const total = cart.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+        const deliveryFee = 20;
+        const grandTotal = total + deliveryFee;
+        const password = prompt(`Total: ₹${total} + ₹20 delivery = ₹${grandTotal}\nSet a 4-digit delivery password:`, "1234");
+        if (!password || password.length !== 4) {
+            alert('Password must be 4 digits');
+            return;
+        }
+        const orderData = {
+            restaurant_id: currentRestaurantId || 1,
+            items: cart.map(i => ({ name: i.name, quantity: i.quantity, price: i.price })),
+            total: grandTotal,
+            password: password,
+            customer_name: "Demo User",
+            customer_phone: "9999999999"
+        };
+        try {
+            const response = await fetch('/api/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(orderData)
+            });
+            if (response.ok) {
+                const result = await response.json();
+                sessionStorage.setItem('currentOrder', JSON.stringify({ id: result.order_id, password: password }));
+                window.location.href = "/tracking_demo";
+            } else {
+                const err = await response.json();
+                alert('Order failed: ' + err.error);
+            }
+        } catch (err) {
+            alert('Network error. Please try again.');
+        }
     };
-    // Send to backend API
-    const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData)
-    });
-    if (response.ok) {
-        const result = await response.json();
-        sessionStorage.setItem('currentOrder', JSON.stringify({ id: result.order_id, password: password }));
-        window.location.href = "/tracking_demo";
-    } else {
-        alert('Failed to place order. Please try again.');
-    }
-};
 </script>
 {% endblock %}
