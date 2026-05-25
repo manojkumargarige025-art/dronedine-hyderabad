@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DroneDine - Live Tracking</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: #0a1a2f;
+            color: white;
+        }
+        #map {
+            height: 400px;
+            width: 100%;
+        }
+        .tracking-container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background: rgba(15, 35, 60, 0.9);
+            border-radius: 24px;
+        }
+        .eta {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #f59e0b;
+        }
+        .chat-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #25D366;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin: 15px 0;
+        }
+        .key {
+            background: #1e293b;
+            padding: 12px;
+            text-align: center;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+        input {
+            background: #1e293b;
+            border: 1px solid #334155;
+            padding: 8px;
+            border-radius: 20px;
+            width: 100%;
+            text-align: center;
+            font-size: 1.2rem;
+            color: white;
+        }
+        button {
+            background: #f59e0b;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 40px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+<div class="tracking-container">
+    <h2><i class="fas fa-drone"></i> Your Order is On the Way</h2>
+    <div class="eta">ARRIVING IN <span id="etaSeconds">120</span> seconds</div>
+    <div id="passwordDisplay" class="status-text">Delivery PIN: <strong>****</strong> (shown after landing)</div>
+    <div id="unlockSection" style="display:none;">
+        <h3>Enter PIN to Unlock Box</h3>
+        <div class="keypad" id="keypad"></div>
+        <input type="text" id="pinInput" maxlength="4" placeholder="____">
+        <button id="unlockBtn">Unlock</button>
+    </div>
+</div>
+<button id="chatSupportBtn" class="chat-btn"><i class="fab fa-whatsapp"></i> Chat Support</button>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    const order = JSON.parse(sessionStorage.getItem('currentOrder'));
+    if (!order) {
+        alert('No active order. Redirecting to home.');
+        window.location.href = '/';
+    }
+    const correctPassword = order.password;
+
+    // Map
+    const map = L.map('map').setView([17.4265, 78.3450], 14);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+    const kitchen = [17.4416, 78.3489];
+    const drop = [17.4116, 78.3400];
+    L.marker(kitchen).addTo(map).bindPopup('Kitchen');
+    L.marker(drop).addTo(map).bindPopup('Your Drop Zone');
+    L.polyline([kitchen, drop], { color: '#f59e0b', dashArray: '5,10' }).addTo(map);
+
+    const droneIcon = L.divIcon({ html: '<i class="fas fa-drone" style="font-size:28px; color:#f59e0b;"></i>', iconSize: [32,32] });
+    let droneMarker = L.marker(kitchen, { icon: droneIcon }).addTo(map);
+
+    let eta = 120;
+    const etaSpan = document.getElementById('etaSeconds');
+    const interval = setInterval(() => {
+        if (eta <= 0) {
+            clearInterval(interval);
+            etaSpan.innerText = '0';
+            document.getElementById('unlockSection').style.display = 'block';
+            document.getElementById('passwordDisplay').innerHTML = `Delivery PIN: <strong>${correctPassword}</strong>`;
+            droneMarker.setLatLng(drop);
+            map.setView(drop, 16);
+        } else {
+            eta--;
+            etaSpan.innerText = eta;
+            const t = 1 - (eta / 120);
+            const lat = kitchen[0] + (drop[0] - kitchen[0]) * t;
+            const lng = kitchen[1] + (drop[1] - kitchen[1]) * t;
+            droneMarker.setLatLng([lat, lng]);
+        }
+    }, 1000);
+
+    // Keypad
+    const pad = document.getElementById('keypad');
+    for (let i=1; i<=9; i++) {
+        const btn = document.createElement('div');
+        btn.className = 'key';
+        btn.innerText = i;
+        btn.onclick = () => { document.getElementById('pinInput').value += i; };
+        pad.appendChild(btn);
+    }
+    const zero = document.createElement('div'); zero.className = 'key'; zero.innerText = '0';
+    zero.onclick = () => { document.getElementById('pinInput').value += '0'; };
+    const clear = document.createElement('div'); clear.className = 'key'; clear.innerText = '⌫';
+    clear.onclick = () => { const inp = document.getElementById('pinInput'); inp.value = inp.value.slice(0,-1); };
+    pad.appendChild(zero); pad.appendChild(clear);
+
+    document.getElementById('unlockBtn').onclick = () => {
+        if (document.getElementById('pinInput').value === correctPassword) {
+            alert('✅ Box unlocked! Enjoy your meal.');
+            document.getElementById('unlockSection').style.display = 'none';
+        } else {
+            alert('❌ Wrong PIN. Try again.');
+            document.getElementById('pinInput').value = '';
+        }
+    };
+    document.getElementById('chatSupportBtn').onclick = () => window.open('https://wa.me/919876543210?text=Help%20with%20order', '_blank');
+</script>
+</body>
+</html>
