@@ -1,208 +1,398 @@
 {% extends "layout.html" %}
 
-{% block title %}DroneDine — Food Delivery by Drone | Hyderabad{% endblock %}
+{% block title %}Order Food - Drone Delivery{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<link rel="stylesheet" href="/static/css/style.css">
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<style>
+    /* Additional styles not in main.css */
+    #map {
+        height: 400px;
+        border-radius: 24px;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+    .restaurant-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin: 1.5rem 0;
+    }
+    .restaurant-card {
+        background: #1e293b;
+        border-radius: 20px;
+        padding: 1rem;
+        cursor: pointer;
+        transition: 0.2s;
+        border: 1px solid #334155;
+    }
+    .restaurant-card:hover {
+        transform: translateY(-4px);
+        background: #2d3a5e;
+        border-color: #f59e0b;
+    }
+    .tax-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 0;
+        border-bottom: 1px dashed #334155;
+    }
+    .total {
+        font-weight: bold;
+        font-size: 1.2rem;
+        margin-top: 8px;
+        color: #facc15;
+    }
+    .toggle-switch {
+        display: flex;
+        background: #1e293b;
+        border-radius: 40px;
+        padding: 4px;
+        margin: 10px 0;
+    }
+    .toggle-option {
+        flex: 1;
+        text-align: center;
+        padding: 8px;
+        border-radius: 32px;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    .toggle-option.active {
+        background: #f59e0b;
+        color: #0a1a2f;
+        font-weight: bold;
+    }
+    .keypad {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin: 15px 0;
+    }
+    .key {
+        background: #1e293b;
+        padding: 12px;
+        text-align: center;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: 0.1s;
+        font-weight: bold;
+        font-size: 1.2rem;
+    }
+    .key:active { background: #f59e0b; color: #0a1a2f; }
+    .timer {
+        font-size: 1.8rem;
+        font-weight: bold;
+        text-align: center;
+        font-family: monospace;
+        letter-spacing: 5px;
+    }
+    .status-text {
+        background: #000000aa;
+        padding: 8px;
+        border-radius: 16px;
+        font-family: monospace;
+        font-size: 0.85rem;
+        margin: 10px 0;
+    }
+    .drone-badge {
+        background: #f59e0b;
+        color: #0a1a2f;
+        padding: 2px 8px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
+<h1><i class="fas fa-drone"></i> DroneDine Hyderabad</h1>
+<p><i class="fas fa-map-marker-alt"></i> Delivering to: <strong>Gachibowli, Hyderabad</strong> <a href="#" style="color:#f59e0b;">Change</a></p>
 
-{% set active_page = 'home' %}
-{% set show_cart = true %}
-
-<div class="cart-overlay" id="cart-overlay"></div>
-
-<main class="page-main">
-  <div class="card location-bar">
-    <div>
-      <i class="fas fa-map-marker-alt"></i>
-      <strong>Delivering to:</strong> Hyderabad, Telangana
+<!-- Search Bar -->
+<div class="card" style="margin-bottom: 1rem;">
+    <div style="display: flex; gap: 0.5rem;">
+        <i class="fas fa-search" style="color: #94a3b8;"></i>
+        <input type="text" placeholder="Search for restaurants or dishes..." style="background:transparent; border:none; width:100%; outline:none; color:white;">
     </div>
-    <button type="button" class="btn btn-outline btn-small" disabled title="Coming soon">
-      <i class="fas fa-pen"></i> Change
-    </button>
-  </div>
-
-  <div class="card search-bar-wrap">
-    <div class="search-bar">
-      <i class="fas fa-search"></i>
-      <input type="search" id="restaurant-search" placeholder="Search restaurants or dishes..." autocomplete="off">
-    </div>
-  </div>
-
-  <div class="filter-chips" id="filter-chips">
-    <button type="button" class="filter-chip active" data-filter="all">🍔 All</button>
-    <button type="button" class="filter-chip" data-filter="veg">🌿 Veg</button>
-    <button type="button" class="filter-chip" data-filter="nonveg">🍗 Non-Veg</button>
-    <button type="button" class="filter-chip" data-filter="drone"><i class="fas fa-helicopter"></i> Drone Ready</button>
-  </div>
-
-  <p class="alert alert-info">
-    <i class="fas fa-lock"></i> Unique 4-digit drone password assigned after payment.
-    <a href="/track">Track your order</a> with order ID + phone.
-  </p>
-
-  <h2 class="section-heading">
-    <i class="fas fa-fire" style="color:var(--secondary)"></i>
-    Top Restaurants Near You
-  </h2>
-
-  <section id="restaurants-section">
-    <div id="restaurant-list" class="restaurant-grid"></div>
-  </section>
-
-  <section id="menu-section" class="menu-section hidden">
-    <h2 id="menu-title" class="section-heading">Menu</h2>
-    <div id="menu-list"></div>
-  </section>
-
-  <section id="unlock-section" class="menu-section hidden">
-    <h2 class="section-heading">
-      <i class="fas fa-box-open"></i>
-      Drone arrived? Unlock your box
-    </h2>
-
-    <div class="form-group">
-      <label>Order ID</label>
-      <input type="number" class="form-control" id="unlock-order-id" placeholder="From confirmation">
-    </div>
-
-    <div class="password-box">
-      <label>Enter your 4-digit password</label>
-      <input type="password"
-             class="form-control password-input"
-             id="unlock-password"
-             maxlength="4"
-             inputmode="numeric"
-             placeholder="••••"
-             style="max-width:140px;margin:0.5rem auto;">
-    </div>
-
-    <button type="button" class="btn btn-success" id="btn-verify-password">
-      <i class="fas fa-unlock"></i> Unlock Drone Box
-    </button>
-
-    <p id="unlock-message"></p>
-  </section>
-</main>
-
-<aside class="cart-panel" id="cart-panel">
-  <h2><i class="fas fa-shopping-cart"></i> Your Order</h2>
-
-  <p class="hint" id="cart-restaurant-name"></p>
-
-  <div id="cart-items"></div>
-
-  <div class="checkout-summary" id="cart-summary">
-    <div class="checkout-row">
-      <span>Subtotal</span>
-      <span>₹<span id="cart-subtotal">0</span></span>
-    </div>
-
-    <div class="checkout-row">
-      <span><i class="fas fa-helicopter"></i> Drone delivery</span>
-      <span>₹20</span>
-    </div>
-
-    <div class="checkout-row">
-      <span>Platform fee</span>
-      <span>₹0</span>
-    </div>
-
-    <div class="checkout-row grand">
-      <span>Grand Total</span>
-      <span>₹<span id="cart-total">0</span></span>
-    </div>
-  </div>
-
-  <button type="button" class="btn" id="btn-checkout" style="width:100%">
-    <i class="fas fa-credit-card"></i> Checkout
-  </button>
-
-  <button type="button"
-          class="btn btn-outline btn-small"
-          id="btn-close-cart"
-          style="margin-top:0.5rem;width:100%">
-    Close
-  </button>
-</aside>
-
-<div class="modal-overlay" id="checkout-modal">
-  <div class="modal">
-    <h2><i class="fas fa-receipt"></i> Confirm Order & Pay</h2>
-
-    <form id="checkout-form">
-      <div class="form-group">
-        <label>Full name</label>
-        <input type="text"
-               class="form-control"
-               id="customer-name"
-               required
-               placeholder="Your name">
-      </div>
-
-      <div class="form-group">
-        <label>Phone</label>
-        <input type="tel"
-               class="form-control"
-               id="customer-phone"
-               required
-               placeholder="10-digit mobile">
-      </div>
-
-      <div class="form-group">
-        <label>Delivery address</label>
-        <textarea class="form-control"
-                  id="customer-address"
-                  rows="2"
-                  required
-                  placeholder="Flat, street, landmark — Hyderabad"></textarea>
-      </div>
-
-      <div class="checkout-summary">
-        <div class="checkout-row">
-          <span>Food total</span>
-          <span>₹<span id="checkout-food-total">0</span></span>
-        </div>
-
-        <div class="checkout-row">
-          <span>Drone delivery</span>
-          <span>₹20</span>
-        </div>
-
-        <div class="checkout-row grand">
-          <span>Pay now</span>
-          <span>₹<span id="checkout-total">0</span></span>
-        </div>
-      </div>
-
-      <p class="hint">
-        <i class="fas fa-key"></i>
-        Unique drone password assigned after successful payment.
-      </p>
-
-      <button type="submit" class="btn btn-success" style="width:100%">
-        <i class="fas fa-check"></i>
-        Place Order & Pay
-      </button>
-
-      <button type="button"
-              class="btn btn-outline btn-small"
-              id="btn-cancel-checkout"
-              style="margin-top:0.5rem;width:100%">
-        Cancel
-      </button>
-    </form>
-
-    <p id="checkout-message"></p>
-  </div>
 </div>
 
+<!-- Quick Filters -->
+<div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+    <button class="btn" style="padding: 0.3rem 1rem;">🍔 All</button>
+    <button class="btn-outline" style="padding: 0.3rem 1rem;">🌿 Veg</button>
+    <button class="btn-outline" style="padding: 0.3rem 1rem;">🍗 Non-Veg</button>
+    <button class="btn-outline" style="padding: 0.3rem 1rem;"><i class="fas fa-drone"></i> Drone Ready</button>
+</div>
+
+<!-- Restaurant Grid -->
+<h2>Top Restaurants Near You</h2>
+<div class="restaurant-grid">
+    <div class="restaurant-card" onclick="selectRestaurant('Bawarchi')">
+        <h3>Bawarchi</h3>
+        <p>Biryani, Kebabs, North Indian</p>
+        <div><span class="drone-badge"><i class="fas fa-drone"></i> 10-15 min</span> <span>⭐ 4.5</span></div>
+    </div>
+    <div class="restaurant-card" onclick="selectRestaurant('Chutneys')">
+        <h3>Chutneys</h3>
+        <p>South Indian, Idly, Dosa, Vada</p>
+        <div><span class="drone-badge"><i class="fas fa-drone"></i> 8-12 min</span> <span>⭐ 4.3</span></div>
+    </div>
+    <div class="restaurant-card" onclick="selectRestaurant('Paradise')">
+        <h3>Paradise</h3>
+        <p>Biryani, Haleem, Kebabs</p>
+        <div><span class="drone-badge"><i class="fas fa-drone"></i> 15-20 min</span> <span>⭐ 4.6</span></div>
+    </div>
+</div>
+
+<!-- Restaurant Partnership & Tax Calculator -->
+<div class="card">
+    <h3><i class="fas fa-store"></i> Restaurant Partnership (Demo)</h3>
+    <div class="tax-row"><span>Pista House - Chicken Biryani (dine-in)</span><span>₹300</span></div>
+    <div class="tax-row"><span>🍽️ Food GST (5%)</span><span id="foodGst">₹15.00</span></div>
+    <div class="tax-row"><span>🚁 Delivery fee</span><span id="deliveryFee">₹15.00</span></div>
+    <div class="tax-row"><span>📦 Delivery GST (18%)</span><span id="deliveryGst">₹2.70</span></div>
+    <div class="total">🧾 Customer pays: <span id="totalCheckout">₹332.70</span></div>
+</div>
+
+<!-- Weather Mode Toggle -->
+<div class="card">
+    <h3><i class="fas fa-cloud-sun"></i> Weather Mode</h3>
+    <div class="toggle-switch" id="weatherToggle">
+        <div class="toggle-option active" data-mode="clear">☀️ Clear Skies (Drone)</div>
+        <div class="toggle-option" data-mode="rain">🌧️ Rainy Season (Bike)</div>
+    </div>
+    <div id="weatherStatus" class="status-text">✅ Drone operations active</div>
+</div>
+
+<!-- Drone Simulation & Launch -->
+<div class="card">
+    <h3><i class="fas fa-route"></i> Flight Logistics</h3>
+    <button id="launchBtn" class="btn">🚁 Launch Drone Delivery</button>
+    <div id="flightStatus" class="status-text">⚡ Ready to launch</div>
+    <div id="timerArea" style="display:none;">
+        <div>⏱️ Drone landed – Meeting timer:</div>
+        <div class="timer" id="countdown">05:00</div>
+        <button id="stuckBtn" class="btn-outline">I'm Stuck in a Meeting</button>
+    </div>
+    <div id="bikeInputArea" style="display:none; margin-top:10px;">
+        <label>🔐 Enter 4-digit delivery password (default 1234)</label>
+        <div class="keypad" id="keypad"></div>
+        <input type="text" id="pinInput" maxlength="4" placeholder="____" style="width:100%; padding:8px; margin-top:8px; background:#1e293b; border:1px solid #334155; border-radius:16px; color:white;">
+        <button id="verifyPinBtn" class="btn" style="margin-top:8px;">Unlock Box</button>
+    </div>
+</div>
+
+<!-- Map -->
+<div id="map"></div>
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="/static/js/customer.js"></script>
+<script>
+    // ========================
+    // 1. Map Initialization
+    // ========================
+    const map = L.map('map').setView([17.4265, 78.3450], 14);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; CartoDB',
+        subdomains: 'abcd',
+        maxZoom: 19
+    }).addTo(map);
+
+    const kitchenCoords = [17.4416, 78.3489];
+    const apartmentCoords = [17.4116, 78.3400];
+
+    L.marker(kitchenCoords).addTo(map).bindPopup('Pista House (Kitchen)');
+    L.marker(apartmentCoords).addTo(map).bindPopup('My Home Avatar (Drop Zone)');
+    L.polyline([kitchenCoords, apartmentCoords], { color: '#f59e0b', weight: 2, dashArray: '5, 10' }).addTo(map);
+
+    const droneIcon = L.divIcon({ html: '<i class="fas fa-drone" style="font-size:28px; color:#f59e0b;"></i>', iconSize: [32,32], className: 'drone-marker' });
+    let droneMarker = L.marker(kitchenCoords, { icon: droneIcon }).addTo(map);
+    let animationId = null;
+    let isAnimating = false;
+    let weatherMode = 'clear';
+
+    // UI Elements
+    const launchBtn = document.getElementById('launchBtn');
+    const flightStatus = document.getElementById('flightStatus');
+    const timerArea = document.getElementById('timerArea');
+    const bikeInputArea = document.getElementById('bikeInputArea');
+    const countdownElem = document.getElementById('countdown');
+    const stuckBtn = document.getElementById('stuckBtn');
+    const verifyPinBtn = document.getElementById('verifyPinBtn');
+    const pinInput = document.getElementById('pinInput');
+    const weatherToggle = document.getElementById('weatherToggle');
+    const weatherStatus = document.getElementById('weatherStatus');
+    const deliveryFeeSpan = document.getElementById('deliveryFee');
+    const deliveryGstSpan = document.getElementById('deliveryGst');
+    const totalSpan = document.getElementById('totalCheckout');
+
+    // Tax update
+    function updateTaxes() {
+        let delivery = (weatherMode === 'clear') ? 15 : 35;
+        deliveryFeeSpan.innerText = `₹${delivery.toFixed(2)}`;
+        let deliveryGst = delivery * 0.18;
+        deliveryGstSpan.innerText = `₹${deliveryGst.toFixed(2)}`;
+        let foodPrice = 300;
+        let foodGst = foodPrice * 0.05;
+        document.getElementById('foodGst').innerText = `₹${foodGst.toFixed(2)}`;
+        let total = foodPrice + foodGst + delivery + deliveryGst;
+        totalSpan.innerText = `₹${total.toFixed(2)}`;
+    }
+
+    // Weather toggle
+    document.querySelectorAll('.toggle-option').forEach(opt => {
+        opt.addEventListener('click', () => {
+            document.querySelectorAll('.toggle-option').forEach(o => o.classList.remove('active'));
+            opt.classList.add('active');
+            weatherMode = opt.getAttribute('data-mode');
+            if (weatherMode === 'clear') {
+                weatherStatus.innerHTML = '✅ Drone operations active (Clear Skies)';
+                launchBtn.disabled = false;
+            } else {
+                weatherStatus.innerHTML = '🌧️ Rainy Season: Drone grounded. Using Mobile Carrier Bike (₹35 fee)';
+                launchBtn.disabled = false;
+            }
+            updateTaxes();
+            resetUI();
+        });
+    });
+
+    function resetUI() {
+        if (animationId) cancelAnimationFrame(animationId);
+        isAnimating = false;
+        droneMarker.setLatLng(kitchenCoords);
+        timerArea.style.display = 'none';
+        bikeInputArea.style.display = 'none';
+        flightStatus.innerHTML = '⚡ Ready to launch';
+        pinInput.value = '';
+        pinInput.disabled = true;
+    }
+
+    // Drone animation
+    function animateDrone() {
+        if (isAnimating) return;
+        isAnimating = true;
+        flightStatus.innerHTML = '✈️ Drone taking off... Flying via Green Zone Corridor...';
+        launchBtn.disabled = true;
+        const start = kitchenCoords, end = apartmentCoords;
+        const duration = 10000;
+        const startTime = performance.now();
+        function step(now) {
+            const elapsed = now - startTime;
+            let t = Math.min(1, elapsed / duration);
+            const lat = start[0] + (end[0] - start[0]) * t;
+            const lng = start[1] + (end[1] - start[1]) * t;
+            droneMarker.setLatLng([lat, lng]);
+            if (t < 1) {
+                animationId = requestAnimationFrame(step);
+            } else {
+                droneMarker.setLatLng(end);
+                flightStatus.innerHTML = '✅ Arrived at Mobile Bike Grid Outside Gate. Drone landed.';
+                timerArea.style.display = 'block';
+                bikeInputArea.style.display = 'block';
+                pinInput.disabled = false;
+                startMeetingTimer();
+                isAnimating = false;
+                launchBtn.disabled = false;
+                generateKeypad();
+            }
+        }
+        animationId = requestAnimationFrame(step);
+    }
+
+    let countdownInterval = null;
+    function startMeetingTimer() {
+        let timeLeft = 300; // 5 minutes in seconds
+        if (countdownInterval) clearInterval(countdownInterval);
+        countdownInterval = setInterval(() => {
+            if (timeLeft <= 0) {
+                clearInterval(countdownInterval);
+                countdownElem.innerText = '00:00';
+                flightStatus.innerHTML += '<br>⚠️ Timer expired – Security bypass initiated.';
+                triggerSecurityBypass();
+            } else {
+                const mins = Math.floor(timeLeft / 60);
+                const secs = timeLeft % 60;
+                countdownElem.innerText = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+                timeLeft--;
+            }
+        }, 1000);
+    }
+
+    function triggerSecurityBypass() {
+        flightStatus.innerHTML = '🔓 Security Bypass Active: Cargo transferred to Biker\'s Locked Mobile Box.';
+        if (countdownInterval) clearInterval(countdownInterval);
+        countdownElem.innerText = '00:00';
+    }
+
+    stuckBtn.addEventListener('click', () => {
+        if (countdownInterval) clearInterval(countdownInterval);
+        countdownElem.innerText = '00:00';
+        triggerSecurityBypass();
+    });
+
+    // Keypad
+    function generateKeypad() {
+        const keypadDiv = document.getElementById('keypad');
+        if (!keypadDiv) return;
+        keypadDiv.innerHTML = '';
+        for (let i=1; i<=9; i++) {
+            const btn = document.createElement('div');
+            btn.className = 'key';
+            btn.innerText = i;
+            btn.onclick = () => { if (pinInput.value.length < 4) pinInput.value += i; };
+            keypadDiv.appendChild(btn);
+        }
+        const zero = document.createElement('div');
+        zero.className = 'key'; zero.innerText = '0';
+        zero.onclick = () => { if (pinInput.value.length < 4) pinInput.value += '0'; };
+        const clear = document.createElement('div');
+        clear.className = 'key'; clear.innerText = '⌫';
+        clear.onclick = () => { pinInput.value = pinInput.value.slice(0, -1); };
+        keypadDiv.appendChild(zero);
+        keypadDiv.appendChild(clear);
+    }
+
+    verifyPinBtn.addEventListener('click', () => {
+        if (pinInput.value === '1234') {
+            alert('✅ Lock Disengaged. Cargo Box Opened Safely. Restaurant profit protected!');
+            flightStatus.innerHTML += '<br>🎉 Delivery completed. Thank you!';
+            bikeInputArea.style.display = 'none';
+            timerArea.style.display = 'none';
+            pinInput.disabled = true;
+        } else {
+            alert('❌ Wrong password. Please try again or use "Forgot PIN" in support.');
+            pinInput.value = '';
+        }
+    });
+
+    launchBtn.addEventListener('click', () => {
+        if (weatherMode === 'clear') {
+            resetUI();
+            animateDrone();
+        } else {
+            flightStatus.innerHTML = '🌧️ Rain mode active: Deploying Mobile Carrier Bike. Drone grounded.';
+            setTimeout(() => {
+                flightStatus.innerHTML = '🚲 Bike arrived at parking grid. Please meet at gate.';
+                timerArea.style.display = 'block';
+                bikeInputArea.style.display = 'block';
+                pinInput.disabled = false;
+                generateKeypad();
+                startMeetingTimer();
+            }, 2000);
+        }
+    });
+
+    function selectRestaurant(name) {
+        alert(`Opening ${name} menu – in a real app you would see items and add to cart.`);
+    }
+
+    // Initialize
+    updateTaxes();
+    generateKeypad();
+    resetUI();
+</script>
 {% endblock %}
