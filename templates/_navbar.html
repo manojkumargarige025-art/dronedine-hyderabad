@@ -1,27 +1,40 @@
-{# Shared navbar — set active_page: home | track | restaurant | admin #}
-<nav class="navbar">
-  <a href="/" class="logo">
-    <i class="fas fa-helicopter"></i>
-    <span>DroneDine</span>
-  </a>
-  <div class="nav-links">
-    <a href="/" class="{% if active_page == 'home' %}active{% endif %}">
-      <i class="fas fa-home"></i><span class="nav-text">Home</span>
-    </a>
-    <a href="/track" class="{% if active_page == 'track' %}active{% endif %}">
-      <i class="fas fa-location-dot"></i><span class="nav-text">Track</span>
-    </a>
-    <a href="/restaurant/login" class="{% if active_page == 'restaurant' %}active{% endif %}">
-      <i class="fas fa-store"></i><span class="nav-text">Restaurant</span>
-    </a>
-    <a href="/admin" class="{% if active_page == 'admin' %}active{% endif %}">
-      <i class="fas fa-gauge-high"></i><span class="nav-text">Admin</span>
-    </a>
-    {% if show_cart %}
-    <button type="button" class="nav-cart-btn" id="cart-toggle" aria-label="Open cart">
-      <i class="fas fa-shopping-cart"></i>
-      <span class="cart-badge" id="cart-badge">0</span>
-    </button>
-    {% endif %}
-  </div>
-</nav>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>DroneDine Hyderabad | {% block title %}Smart Drone Delivery{% endblock %}</title>
+    <!-- Main CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">
+            <i class="fas fa-drone"></i>
+            <span>DroneDine</span>
+        </div>
+        <div class="nav-links">
+            <a href="{{ url_for('customer_page') }}">Order</a>
+            <a href="{{ url_for('tracking_demo') }}">Tracking</a>
+            <a href="/support">Support</a>
+            <a href="/static/simulator.html">🚁 Simulator</a>
+        </div>
+    </nav>
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+    <footer class="footer">
+        <p>© 2026 DroneDine Hyderabad | 5% Commission | Zero GST Burden</p>
+    </footer>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
