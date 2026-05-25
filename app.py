@@ -169,7 +169,36 @@ def simulator():
 def tracking_demo():
     return render_template('tracking_clean.html')
 
-
+# ========== ADD NEW API ROUTE BELOW ==========
+@app.route('/api/orders', methods=['POST'])
+def create_order_api():
+    from flask import request, jsonify
+    import json
+    data = request.get_json()
+    
+    required_fields = ['restaurant_id', 'items', 'total_amount', 'password', 'customer_address']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({'error': f'Missing field: {field}'}), 400
+    
+    try:
+        new_order = Order(
+            restaurant_id=data['restaurant_id'],
+            items=json.dumps(data['items']),
+            total=data['total_amount'],
+            password=data['password'],
+            customer_name=data.get('customer_name', 'Guest'),
+            customer_phone=data.get('customer_phone', '0000000000'),
+            customer_address=data['customer_address'],
+            status='pending',
+            payment_status='unpaid'
+        )
+        db.session.add(new_order)
+        db.session.commit()
+        return jsonify({'order_id': new_order.id}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 # ---------- Restaurant auth ----------
 
 
