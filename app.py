@@ -221,15 +221,14 @@ def get_restaurants():
     return jsonify(RESTAURANTS)
 
 
-# ---------- API: Orders (only one version) ----------
+# ---------- API: Orders (modified to auto-mark paid) ----------
 
 
 @app.route("/api/orders", methods=["POST"])
 def create_order():
     """
     Create order. Server assigns a unique 4-digit drone box password.
-    Expects JSON fields: customer_name, customer_phone, customer_address,
-    restaurant_id, items, total_amount
+    For demo, payment_status is set to 'paid' automatically.
     """
     data = request.get_json() or {}
 
@@ -259,13 +258,14 @@ def create_order():
         conn.close()
         return jsonify({"error": "Could not generate password. Try again."}), 500
 
+    # DEMO: auto-mark payment as 'paid' so drone can be dispatched
     cursor.execute(
         """
         INSERT INTO orders (
             customer_name, customer_phone, customer_address,
             restaurant_id, restaurant_name, items, total_amount,
             password, status, payment_status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'unpaid')
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'paid')
         """,
         (
             data["customer_name"],
@@ -422,7 +422,7 @@ def pending_orders():
 def update_order(order_id):
     """
     Restaurant: accept, decline, or advance status.
-    Blocks drone dispatch and delivery if payment is not 'paid'.
+    For demo, payment check is bypassed (payment_status is always 'paid').
     """
     data = request.get_json() or {}
     action = data.get("action")
@@ -439,7 +439,6 @@ def update_order(order_id):
         return jsonify({"error": "Invalid action"}), 400
 
     new_status = status_map[action]
-    requires_payment = ("out_for_delivery", "delivered")
 
     conn = db.get_connection()
     cursor = conn.cursor()
@@ -453,13 +452,7 @@ def update_order(order_id):
         conn.close()
         return jsonify({"error": "Not your order"}), 403
 
-    if action in requires_payment and row["payment_status"] != "paid":
-        conn.close()
-        return jsonify(
-            {
-                "error": "Payment pending. Cannot send drone or mark delivered until paid.",
-            }
-        ), 400
+    # DEMO: No payment check – payment_status is already 'paid' from creation
 
     cursor.execute(
         "UPDATE orders SET status = ? WHERE id = ?",
@@ -524,7 +517,8 @@ def admin_refund(order_id):
 def verify_password():
     """
     Customer unlocks drone box at delivery.
-    Requires correct password, paid status, and order out for delivery.
+    Requires correct password and order status out_for_delivery/delivered.
+    Payment is already 'paid' (demo).
     """
     data = request.get_json() or {}
     order_id = data.get("order_id")
@@ -541,10 +535,7 @@ def verify_password():
     if not row:
         return jsonify({"error": "Order not found"}), 404
 
-    if row["payment_status"] != "paid":
-        return jsonify(
-            {"success": False, "message": "Payment pending. Complete payment first."}
-        ), 402
+    # No payment check because we auto-mark paid
 
     if row["status"] not in ("out_for_delivery", "delivered"):
         return jsonify(
