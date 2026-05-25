@@ -165,6 +165,10 @@ def support():
 def simulator():
     return render_template('simulator.html')
 
+@app.route('/tracking_demo')
+def tracking_demo():
+    return render_template('tracking_demo.html')
+
 
 # ---------- Restaurant auth ----------
 
