@@ -160,6 +160,15 @@
             letter-spacing: 4px;
             text-align: center;
         }
+        .status-text {
+            background: #00000066;
+            border-radius: 20px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 0.9rem;
+            text-align: center;
+        }
         @media (max-width: 640px) {
             body { padding: 0.5rem; }
             .container { padding: 1rem; }
@@ -213,7 +222,7 @@
     <div id="screenTracking" class="screen">
         <h2><i class="fas fa-drone"></i> Your Drone is Flying</h2>
         <div class="map-container" id="trackingMap"></div>
-        <div id="trackingStatus" class="status-text" style="margin: 0.5rem 0;">🟢 Preparing flight...</div>
+        <div id="trackingStatus" class="status-text">⏳ Status: Processing digital wallet allocation...</div>
         <div id="unlockArea" style="display: none;">
             <p>🔐 Drone landed. Enter your 4-digit PIN to unlock box:</p>
             <div class="keypad-grid" id="trackingKeypad"></div>
@@ -228,32 +237,28 @@
 <script>
     // ---------- Global state ----------
     let currentStep = 1;
-    let customerCoords = null;      // [lat, lng] from geocoding
-    let selectedItems = [];         // { name, price, quantity }
+    let customerCoords = null;      // dynamic coordinates from geocoding
+    let selectedItems = [];
     let deliveryPin = "";
     let orderTotal = 0;
-    let map, kitchenMarker, destMarker, routeLine, droneMarker;
-    let animationInterval = null;
     let kitchenCoords = [17.4416, 78.3489]; // Pista House
     const ZONE_CENTER = [17.4300, 78.3450];
     const ZONE_RADIUS_KM = 3.0;
-
-    // ========== HELPER FUNCTIONS (Add near top of script) ==========
-function haversineDistance(lat1, lon1, lat2, lon2) {
-    const toRad = (x) => (x * Math.PI) / 180;
-    const R = 6371;
-    const dLat = toRad(lat2 - lat1);
-    const dLon = toRad(lon2 - lon1);
-    const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
-}
-
-function isWithinZone(lat, lng) {
-    const ZONE_CENTER = [17.4300, 78.3450];
-    const ZONE_RADIUS_KM = 3.0;
-    return haversineDistance(lat, lng, ZONE_CENTER[0], ZONE_CENTER[1]) <= ZONE_RADIUS_KM;
-}
+    
+    // Map references
+    let locationMap = null;
+    let trackingMap = null;
+    let destMarker, routeLine, droneMarkerObj, animationFrame;
+    
+    // Delivery state machine
+    const DELIVERY_STATE = {
+        IDLE: 'idle',
+        PROCESSING_PAYMENT: 'processing_payment',
+        PREPARING_FOOD: 'preparing_food',
+        LAUNCHING_DRONE: 'launching_drone',
+        IN_FLIGHT: 'in_flight'
+    };
+    let currentDeliveryState = DELIVERY_STATE.IDLE;
 
     // DOM elements
     const screens = {
@@ -269,6 +274,7 @@ function isWithinZone(lat, lng) {
         4: document.getElementById('step4Label')
     };
 
+    // ---------- Helper functions ----------
     function showToast(message, isError = false) {
         const toast = document.getElementById('toast');
         toast.innerText = message;
@@ -287,7 +293,7 @@ function isWithinZone(lat, lng) {
         stepLabels[step].classList.add('active-step');
     }
 
-    // ---------- Helper: distance calculation ----------
+    // Distance calculator
     function haversineDistance(lat1, lon1, lat2, lon2) {
         const toRad = (x) => (x * Math.PI) / 180;
         const R = 6371;
@@ -302,19 +308,53 @@ function isWithinZone(lat, lng) {
         return haversineDistance(lat, lng, ZONE_CENTER[0], ZONE_CENTER[1]) <= ZONE_RADIUS_KM;
     }
 
-    // ---------- Geocoding ----------
-    async function geocodeAddress(address) {
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ", Hyderabad")}&limit=1`;
-        const resp = await fetch(url, { headers: { 'User-Agent': 'DroneDine/1.0' } });
-        const data = await resp.json();
-        if (data && data.length) {
-            return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+    // ---------- Address cleaning ----------
+    function cleanAddressForGeocoding(rawAddress) {
+        if (!rawAddress) return '';
+        let cleaned = rawAddress.trim();
+        // Extract last 2-3 comma-separated chunks
+        let parts = cleaned.split(',');
+        if (parts.length >= 2) {
+            let meaningfulParts = parts.slice(-3);
+            cleaned = meaningfulParts.join(',').trim();
         }
-        throw new Error("Address not found");
+        // Remove common problematic terms
+        cleaned = cleaned.replace(/near\s+[\w\s]+/gi, '');
+        cleaned = cleaned.replace(/survey\s*no\.?\s*\d+/gi, '');
+        cleaned = cleaned.replace(/road\s*$/gi, '');
+        cleaned = cleaned.replace(/\s{2,}/g, ' ').trim();
+        return cleaned;
     }
 
-    // ---------- Step 1: Address confirmation ----------
-    let locationMap = null;
+    // Geocoding with fallback
+    async function tryGeocode(query) {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
+        try {
+            const response = await fetch(url, { headers: { 'User-Agent': 'DroneDine/1.0' } });
+            if (!response.ok) return null;
+            const data = await response.json();
+            if (data && data.length > 0) {
+                return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+            }
+            return null;
+        } catch (err) {
+            console.error("Geocoding error:", err);
+            return null;
+        }
+    }
+
+    async function geocodeAddressWithFallback(address) {
+        const cleaned = cleanAddressForGeocoding(address);
+        let coords = await tryGeocode(cleaned);
+        if (coords) return coords;
+        coords = await tryGeocode("Hyderabad, Telangana");
+        if (coords) return coords;
+        // Ultimate fallback: Financial District, Gachibowli
+        console.warn("Using fallback coordinates: Financial District");
+        return [17.4256, 78.3405];
+    }
+
+    // ---------- Step 1: Address confirmation (dynamic geocoding + zone check) ----------
     function initLocationMap() {
         if (locationMap) locationMap.remove();
         locationMap = L.map('locationMap').setView(ZONE_CENTER, 13);
@@ -322,46 +362,37 @@ function isWithinZone(lat, lng) {
         // Draw zone circle
         L.circle(ZONE_CENTER, { color: '#06b6d4', weight: 2, fillColor: '#38bdf8', fillOpacity: 0.15, radius: ZONE_RADIUS_KM * 1000 }).addTo(locationMap);
         // Kitchen marker
-        kitchenMarker = L.marker(kitchenCoords).addTo(locationMap).bindPopup('Base Kitchen');
+        L.marker(kitchenCoords).addTo(locationMap).bindPopup('Base Kitchen');
     }
 
     document.getElementById('confirmAddressBtn').onclick = async () => {
-    const addrInput = document.getElementById('addressInput');
-    const address = addrInput.value.trim();
-    if (!address) {
-        showToast("Please enter an address", true);
-        return;
-    }
-    showToast("🔍 Verifying address...");
-    try {
-        const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ", Hyderabad")}&limit=1`;
-        const response = await fetch(geocodeUrl, { headers: { 'User-Agent': 'DroneDine/1.0' } });
-        const data = await response.json();
-        if (!data || data.length === 0) throw new Error("Address not found");
-        const lat = parseFloat(data[0].lat);
-        const lon = parseFloat(data[0].lon);
-        
-        if (!isWithinZone(lat, lon)) {
-            showToast("📍 Coming Soon! DroneDine operates strictly within the Gachibowli Green Zone Circle right now.", true);
+        const addrInput = document.getElementById('addressInput');
+        const rawAddress = addrInput.value.trim();
+        if (!rawAddress) {
+            showToast("Please enter an address", true);
             return;
         }
-        
-        customerCoords = [lat, lon];
-        
-        if (window.destMarker) locationMap.removeLayer(window.destMarker);
-        window.destMarker = L.marker(customerCoords).addTo(locationMap).bindPopup("Your drop zone").openPopup();
-        locationMap.setView(customerCoords, 15);
-        
-        if (window.routeLine) locationMap.removeLayer(window.routeLine);
-        window.routeLine = L.polyline([kitchenCoords, customerCoords], { color: '#f59e0b', weight: 2, dashArray: '5,10' }).addTo(locationMap);
-        
-        showToast("✅ Address verified! Proceeding to menu.", false);
-        setActiveStep(2);
-        renderMenu();
-    } catch (err) {
-        showToast("Address not recognized. Try 'Wipro Circle, Gachibowli'", true);
-    }
-};
+        showToast("🔍 Verifying address...");
+        try {
+            const coords = await geocodeAddressWithFallback(rawAddress);
+            if (!isWithinZone(coords[0], coords[1])) {
+                showToast("📍 Coming Soon! DroneDine operates strictly within the Gachibowli Green Zone Circle right now.", true);
+                return;
+            }
+            customerCoords = coords;
+            // Update map marker and route
+            if (window.destMarker) locationMap.removeLayer(window.destMarker);
+            window.destMarker = L.marker(customerCoords).addTo(locationMap).bindPopup("Your drop zone").openPopup();
+            locationMap.setView(customerCoords, 15);
+            if (window.routeLine) locationMap.removeLayer(window.routeLine);
+            window.routeLine = L.polyline([kitchenCoords, customerCoords], { color: '#f59e0b', weight: 2, dashArray: '5,10' }).addTo(locationMap);
+            showToast("✅ Address verified! Proceeding to menu.", false);
+            setActiveStep(2);
+            renderMenu();
+        } catch (err) {
+            showToast("Address not recognized. Try 'Wipro Circle, Gachibowli'", true);
+        }
+    };
 
     // ---------- Step 2: Menu ----------
     const menuData = [
@@ -386,8 +417,7 @@ function isWithinZone(lat, lng) {
                 const existing = selectedItems.find(i => i.name === name);
                 if (existing) existing.quantity++;
                 else selectedItems.push({ name, price, quantity: 1 });
-                showToast("🍽️ Item added cleanly to cart!", false);
-                // Update total display for checkout (preview)
+                showToast("🍽️ Item added to cart!", false);
                 updateInvoicePreview();
             };
         });
@@ -401,7 +431,6 @@ function isWithinZone(lat, lng) {
         let deliveryGst = delivery * 0.18;
         let total = subtotal + commission + foodGst + delivery + deliveryGst;
         orderTotal = total;
-        // Update checkout screen when visible (will be done later)
         if (currentStep === 3) renderInvoice();
     }
 
@@ -431,39 +460,27 @@ function isWithinZone(lat, lng) {
 
     // ---------- Step 3: Checkout & PIN ----------
     document.getElementById('payAndLaunchBtn').onclick = async () => {
-    const pin = document.getElementById('checkoutPin').value;
-    if (!pin || pin.length !== 4 || !/^\d+$/.test(pin)) {
-        showToast("Please set a valid 4-digit numeric PIN", true);
-        return;
-    }
-    deliveryPin = pin;
-    
-    const payBtn = document.getElementById('payAndLaunchBtn');
-    payBtn.disabled = true;
-    payBtn.innerText = "🔄 Processing Secure Payment...";
-    
-    setTimeout(() => {
-        let statusElem = document.getElementById('trackingStatus');
-        if (!statusElem) {
-            statusElem = document.createElement('div');
-            statusElem.id = 'trackingStatus';
-            statusElem.className = 'status-text';
-            document.getElementById('screenTracking').prepend(statusElem);
+        const pin = document.getElementById('checkoutPin').value;
+        if (!pin || pin.length !== 4 || !/^\d+$/.test(pin)) {
+            showToast("Please set a valid 4-digit numeric PIN", true);
+            return;
         }
-        statusElem.innerText = "🍳 Status: Restaurant has accepted your order. Kitchen is preparing your fresh meal...";
+        deliveryPin = pin;
         
-        setTimeout(() => {
-            statusElem.innerText = "🛫 Status: Order packed. Drone launching via Green Zone Corridor...";
-            setActiveStep(4);
-            initTrackingMap();
-            payBtn.disabled = false;
-            payBtn.innerText = "Pay & Launch DroneDine";
-        }, 2000);
-    }, 2000);
-};
+        // Ensure we have coordinates (re‑geocode if needed)
+        const addr = document.getElementById('addressInput').value;
+        if (!customerCoords) {
+            showToast("Please confirm your delivery address first", true);
+            return;
+        }
+        
+        // Move to tracking screen
+        setActiveStep(4);
+        initTrackingMap();  // draws kitchen and destination markers
+        startDeliveryWorkflow();
+    };
 
-    // ---------- Step 4: Tracking & Unlock ----------
-    let trackingMap = null;
+    // ---------- Step 4: Tracking & State Machine ----------
     function initTrackingMap() {
         if (trackingMap) trackingMap.remove();
         trackingMap = L.map('trackingMap').setView(ZONE_CENTER, 13);
@@ -471,36 +488,66 @@ function isWithinZone(lat, lng) {
         // Kitchen marker
         L.marker(kitchenCoords).addTo(trackingMap).bindPopup('Kitchen');
         // Destination marker
-        const destMarkerTracking = L.marker(customerCoords).addTo(trackingMap).bindPopup('Your drop zone');
+        L.marker(customerCoords).addTo(trackingMap).bindPopup('Your drop zone');
         // Route line
-        const route = L.polyline([kitchenCoords, customerCoords], { color: '#f59e0b', weight: 2, dashArray: '5,10' }).addTo(trackingMap);
+        L.polyline([kitchenCoords, customerCoords], { color: '#f59e0b', weight: 2, dashArray: '5,10' }).addTo(trackingMap);
         trackingMap.fitBounds([kitchenCoords, customerCoords]);
-        // Drone icon
+        // Drone icon (will be moved after launch)
         const droneIcon = L.divIcon({ html: '<i class="fas fa-drone" style="font-size:28px; color:#f59e0b;"></i>', iconSize: [32,32] });
-        let droneMarkerObj = L.marker(kitchenCoords, { icon: droneIcon }).addTo(trackingMap);
-        
-        let startTime = performance.now();
+        droneMarkerObj = L.marker(kitchenCoords, { icon: droneIcon }).addTo(trackingMap);
+    }
+
+    function updateStatus(message) {
+        const statusElem = document.getElementById('trackingStatus');
+        if (statusElem) statusElem.innerText = message;
+    }
+
+    function startDroneAnimation() {
+        // Cancel any previous animation
+        if (animationFrame) cancelAnimationFrame(animationFrame);
+        const start = kitchenCoords;
+        const end = customerCoords;
         const duration = 8000; // 8 seconds
-        function animate(now) {
+        const startTime = performance.now();
+        
+        function step(now) {
             const elapsed = now - startTime;
             let t = Math.min(1, elapsed / duration);
-            const lat = kitchenCoords[0] + (customerCoords[0] - kitchenCoords[0]) * t;
-            const lng = kitchenCoords[1] + (customerCoords[1] - kitchenCoords[1]) * t;
-            droneMarkerObj.setLatLng([lat, lng]);
+            const lat = start[0] + (end[0] - start[0]) * t;
+            const lng = start[1] + (end[1] - start[1]) * t;
+            if (droneMarkerObj) droneMarkerObj.setLatLng([lat, lng]);
             if (t < 1) {
-                requestAnimationFrame(animate);
+                animationFrame = requestAnimationFrame(step);
             } else {
                 // Drone landed
-                document.getElementById('trackingStatus').innerHTML = '✅ Drone landed at your location! Enter PIN to unlock.';
+                updateStatus("✅ Drone has landed at your location!");
                 document.getElementById('unlockArea').style.display = 'block';
                 generateTrackingKeypad();
+                currentDeliveryState = DELIVERY_STATE.IDLE;
             }
         }
-        requestAnimationFrame(animate);
-        // Also set status text
-        document.getElementById('trackingStatus').innerHTML = '🚁 Drone en route...';
-        // Store the PIN for verification
-        window.expectedPin = deliveryPin;
+        animationFrame = requestAnimationFrame(step);
+    }
+
+    function startDeliveryWorkflow() {
+        if (currentDeliveryState !== DELIVERY_STATE.IDLE) return;
+        
+        // State 1: Processing Payment (2 seconds)
+        updateStatus("🔄 Status: Processing digital wallet allocation...");
+        currentDeliveryState = DELIVERY_STATE.PROCESSING_PAYMENT;
+        
+        setTimeout(() => {
+            // State 2: Food Preparation (3 seconds)
+            updateStatus("🍳 Status: Restaurant confirmed. Kitchen is preparing your meal...");
+            currentDeliveryState = DELIVERY_STATE.PREPARING_FOOD;
+            
+            setTimeout(() => {
+                // State 3: Drone Launch
+                updateStatus("🛫 Status: Package sealed. Drone launching into Green Zone...");
+                currentDeliveryState = DELIVERY_STATE.LAUNCHING_DRONE;
+                startDroneAnimation();
+            }, 3000);
+        }, 2000);
     }
 
     function generateTrackingKeypad() {
@@ -529,16 +576,16 @@ function isWithinZone(lat, lng) {
         if (entered === deliveryPin) {
             showToast("✅ Box unlocked! Enjoy your meal.", false);
             document.getElementById('unlockArea').innerHTML = '<p style="color:#10b981;">🎉 Delivery complete. Thank you for using DroneDine!</p>';
+            updateStatus("✅ Delivery completed successfully!");
         } else {
             showToast("❌ Wrong PIN. Please try again.", true);
             document.getElementById('trackingPin').value = '';
         }
     };
 
-    // Initialise location map
+    // Initialization
     initLocationMap();
-    // Prefill some demo items for menu preview (optional)
-    renderMenu();
+    renderMenu(); // pre‑render menu (empty cart initially)
 </script>
 </body>
 </html>
