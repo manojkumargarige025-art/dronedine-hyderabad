@@ -161,6 +161,10 @@ def admin_page():
 def support():
     return render_template("support.html")
 
+@app.route('/simulator')
+def simulator():
+    return render_template('simulator.html')
+
 
 # ---------- Restaurant auth ----------
 
