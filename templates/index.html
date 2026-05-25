@@ -222,7 +222,7 @@
     <div id="screenTracking" class="screen">
         <h2><i class="fas fa-drone"></i> Your Drone is Flying</h2>
         <div class="map-container" id="trackingMap"></div>
-        <div id="trackingStatus" class="status-text">⏳ Status: Processing digital wallet allocation...</div>
+        <div id="trackingStatus" class="status-text">⏳ Status: Awaiting launch...</div>
         <div id="unlockArea" style="display: none;">
             <p>🔐 Drone landed. Enter your 4-digit PIN to unlock box:</p>
             <div class="keypad-grid" id="trackingKeypad"></div>
@@ -235,9 +235,12 @@
 <div id="toast" class="toast"></div>
 
 <script>
+    // ---------- Mapbox Token ----------
+    const MAPBOX_TOKEN = "pk.eyJ1IjoibWFub2oyNTgwOCIsImEiOiJjbXBsZ3B3NmoxYzJmMnFzbHV6Zmt1NnNwIn0.hzkSfnkPO_KRL3urJbFtxA";
+
     // ---------- Global state ----------
     let currentStep = 1;
-    let customerCoords = null;      // dynamic coordinates from geocoding
+    let customerCoords = null;      // dynamic coordinates from Mapbox
     let selectedItems = [];
     let deliveryPin = "";
     let orderTotal = 0;
@@ -248,18 +251,9 @@
     // Map references
     let locationMap = null;
     let trackingMap = null;
-    let destMarker, routeLine, droneMarkerObj, animationFrame;
+    let droneMarkerObj = null;
+    let animationFrame = null;
     
-    // Delivery state machine
-    const DELIVERY_STATE = {
-        IDLE: 'idle',
-        PROCESSING_PAYMENT: 'processing_payment',
-        PREPARING_FOOD: 'preparing_food',
-        LAUNCHING_DRONE: 'launching_drone',
-        IN_FLIGHT: 'in_flight'
-    };
-    let currentDeliveryState = DELIVERY_STATE.IDLE;
-
     // DOM elements
     const screens = {
         1: document.getElementById('screenLocation'),
@@ -293,7 +287,7 @@
         stepLabels[step].classList.add('active-step');
     }
 
-    // Distance calculator
+    // Haversine distance (km)
     function haversineDistance(lat1, lon1, lat2, lon2) {
         const toRad = (x) => (x * Math.PI) / 180;
         const R = 6371;
@@ -308,58 +302,12 @@
         return haversineDistance(lat, lng, ZONE_CENTER[0], ZONE_CENTER[1]) <= ZONE_RADIUS_KM;
     }
 
-    // ---------- Address cleaning ----------
-    function cleanAddressForGeocoding(rawAddress) {
-        if (!rawAddress) return '';
-        let cleaned = rawAddress.trim();
-        // Extract last 2-3 comma-separated chunks
-        let parts = cleaned.split(',');
-        if (parts.length >= 2) {
-            let meaningfulParts = parts.slice(-3);
-            cleaned = meaningfulParts.join(',').trim();
-        }
-        // Remove common problematic terms
-        cleaned = cleaned.replace(/near\s+[\w\s]+/gi, '');
-        cleaned = cleaned.replace(/survey\s*no\.?\s*\d+/gi, '');
-        cleaned = cleaned.replace(/road\s*$/gi, '');
-        cleaned = cleaned.replace(/\s{2,}/g, ' ').trim();
-        return cleaned;
-    }
-
-    // Geocoding with fallback
-    async function tryGeocode(query) {
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
-        try {
-            const response = await fetch(url, { headers: { 'User-Agent': 'DroneDine/1.0' } });
-            if (!response.ok) return null;
-            const data = await response.json();
-            if (data && data.length > 0) {
-                return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
-            }
-            return null;
-        } catch (err) {
-            console.error("Geocoding error:", err);
-            return null;
-        }
-    }
-
-    async function geocodeAddressWithFallback(address) {
-        const cleaned = cleanAddressForGeocoding(address);
-        let coords = await tryGeocode(cleaned);
-        if (coords) return coords;
-        coords = await tryGeocode("Hyderabad, Telangana");
-        if (coords) return coords;
-        // Ultimate fallback: Financial District, Gachibowli
-        console.warn("Using fallback coordinates: Financial District");
-        return [17.4256, 78.3405];
-    }
-
-    // ---------- Step 1: Address confirmation (dynamic geocoding + zone check) ----------
+    // ---------- Step 1: Address confirmation using Mapbox ----------
     function initLocationMap() {
         if (locationMap) locationMap.remove();
         locationMap = L.map('locationMap').setView(ZONE_CENTER, 13);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: 'OSM' }).addTo(locationMap);
-        // Draw zone circle
+        // Draw Green Zone circle
         L.circle(ZONE_CENTER, { color: '#06b6d4', weight: 2, fillColor: '#38bdf8', fillOpacity: 0.15, radius: ZONE_RADIUS_KM * 1000 }).addTo(locationMap);
         // Kitchen marker
         L.marker(kitchenCoords).addTo(locationMap).bindPopup('Base Kitchen');
@@ -367,20 +315,30 @@
 
     document.getElementById('confirmAddressBtn').onclick = async () => {
         const addrInput = document.getElementById('addressInput');
-        const rawAddress = addrInput.value.trim();
-        if (!rawAddress) {
+        const address = addrInput.value.trim();
+        if (!address) {
             showToast("Please enter an address", true);
             return;
         }
-        showToast("🔍 Verifying address...");
+        showToast("🔍 Verifying address with Mapbox...");
+        const bbox = "78.25,17.35,78.45,17.50";
+        const proximity = "78.3450,17.4300";
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${MAPBOX_TOKEN}&bbox=${bbox}&proximity=${proximity}&limit=1`;
         try {
-            const coords = await geocodeAddressWithFallback(rawAddress);
+            const response = await fetch(url);
+            const data = await response.json();
+            if (!data.features || data.features.length === 0) {
+                showToast("Address not found. Try 'Wipro Circle, Gachibowli'", true);
+                return;
+            }
+            const [lng, lat] = data.features[0].geometry.coordinates;
+            const coords = [lat, lng];  // flip to [lat, lng]
             if (!isWithinZone(coords[0], coords[1])) {
                 showToast("📍 Coming Soon! DroneDine operates strictly within the Gachibowli Green Zone Circle right now.", true);
                 return;
             }
             customerCoords = coords;
-            // Update map marker and route
+            // Update map
             if (window.destMarker) locationMap.removeLayer(window.destMarker);
             window.destMarker = L.marker(customerCoords).addTo(locationMap).bindPopup("Your drop zone").openPopup();
             locationMap.setView(customerCoords, 15);
@@ -390,7 +348,8 @@
             setActiveStep(2);
             renderMenu();
         } catch (err) {
-            showToast("Address not recognized. Try 'Wipro Circle, Gachibowli'", true);
+            console.error(err);
+            showToast("Geocoding failed. Check your connection.", true);
         }
     };
 
@@ -458,7 +417,7 @@
         document.getElementById('grandTotal').innerHTML = `₹${total.toFixed(2)}`;
     }
 
-    // ---------- Step 3: Checkout & PIN ----------
+    // ---------- Step 3: Checkout & 5-second preparation timer ----------
     document.getElementById('payAndLaunchBtn').onclick = async () => {
         const pin = document.getElementById('checkoutPin').value;
         if (!pin || pin.length !== 4 || !/^\d+$/.test(pin)) {
@@ -466,88 +425,66 @@
             return;
         }
         deliveryPin = pin;
-        
-        // Ensure we have coordinates (re‑geocode if needed)
-        const addr = document.getElementById('addressInput').value;
         if (!customerCoords) {
             showToast("Please confirm your delivery address first", true);
             return;
         }
-        
         // Move to tracking screen
         setActiveStep(4);
-        initTrackingMap();  // draws kitchen and destination markers
-        startDeliveryWorkflow();
+        initTrackingMap();
+        const statusElem = document.getElementById('trackingStatus');
+        const payBtn = document.getElementById('payAndLaunchBtn');
+        payBtn.disabled = true;
+        payBtn.innerText = "Processing...";
+        // Phase 1: Payment simulation (2.5 sec)
+        statusElem.innerText = "⏳ Status: Confirming secure wallet processing split... (PIN Verified)";
+        setTimeout(() => {
+            // Phase 2: Kitchen preparation (2.5 sec)
+            statusElem.innerText = "🍳 Status: Order accepted by kitchen. Chef is preparing your fresh meal...";
+            setTimeout(() => {
+                // Phase 3: Drone launch
+                statusElem.innerText = "🛫 Status: Cargo locked. Drone launching autonomously via Gachibowli Green Zone...";
+                startDroneAnimation();
+                payBtn.disabled = false;
+                payBtn.innerText = "Pay & Launch DroneDine";
+            }, 2500);
+        }, 2500);
     };
 
-    // ---------- Step 4: Tracking & State Machine ----------
+    // ---------- Step 4: Tracking map and drone animation ----------
     function initTrackingMap() {
         if (trackingMap) trackingMap.remove();
         trackingMap = L.map('trackingMap').setView(ZONE_CENTER, 13);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: 'OSM' }).addTo(trackingMap);
-        // Kitchen marker
         L.marker(kitchenCoords).addTo(trackingMap).bindPopup('Kitchen');
-        // Destination marker
         L.marker(customerCoords).addTo(trackingMap).bindPopup('Your drop zone');
-        // Route line
         L.polyline([kitchenCoords, customerCoords], { color: '#f59e0b', weight: 2, dashArray: '5,10' }).addTo(trackingMap);
         trackingMap.fitBounds([kitchenCoords, customerCoords]);
-        // Drone icon (will be moved after launch)
         const droneIcon = L.divIcon({ html: '<i class="fas fa-drone" style="font-size:28px; color:#f59e0b;"></i>', iconSize: [32,32] });
         droneMarkerObj = L.marker(kitchenCoords, { icon: droneIcon }).addTo(trackingMap);
     }
 
-    function updateStatus(message) {
-        const statusElem = document.getElementById('trackingStatus');
-        if (statusElem) statusElem.innerText = message;
-    }
-
     function startDroneAnimation() {
-        // Cancel any previous animation
-        if (animationFrame) cancelAnimationFrame(animationFrame);
+        if (!customerCoords) return;
         const start = kitchenCoords;
         const end = customerCoords;
-        const duration = 8000; // 8 seconds
+        const duration = 8000;
         const startTime = performance.now();
-        
-        function step(now) {
+        function animate(now) {
             const elapsed = now - startTime;
             let t = Math.min(1, elapsed / duration);
             const lat = start[0] + (end[0] - start[0]) * t;
             const lng = start[1] + (end[1] - start[1]) * t;
             if (droneMarkerObj) droneMarkerObj.setLatLng([lat, lng]);
             if (t < 1) {
-                animationFrame = requestAnimationFrame(step);
+                requestAnimationFrame(animate);
             } else {
-                // Drone landed
-                updateStatus("✅ Drone has landed at your location!");
+                document.getElementById('trackingStatus').innerText = "✅ Drone has arrived! Enter your PIN.";
                 document.getElementById('unlockArea').style.display = 'block';
                 generateTrackingKeypad();
-                currentDeliveryState = DELIVERY_STATE.IDLE;
             }
         }
-        animationFrame = requestAnimationFrame(step);
-    }
-
-    function startDeliveryWorkflow() {
-        if (currentDeliveryState !== DELIVERY_STATE.IDLE) return;
-        
-        // State 1: Processing Payment (2 seconds)
-        updateStatus("🔄 Status: Processing digital wallet allocation...");
-        currentDeliveryState = DELIVERY_STATE.PROCESSING_PAYMENT;
-        
-        setTimeout(() => {
-            // State 2: Food Preparation (3 seconds)
-            updateStatus("🍳 Status: Restaurant confirmed. Kitchen is preparing your meal...");
-            currentDeliveryState = DELIVERY_STATE.PREPARING_FOOD;
-            
-            setTimeout(() => {
-                // State 3: Drone Launch
-                updateStatus("🛫 Status: Package sealed. Drone launching into Green Zone...");
-                currentDeliveryState = DELIVERY_STATE.LAUNCHING_DRONE;
-                startDroneAnimation();
-            }, 3000);
-        }, 2000);
+        requestAnimationFrame(animate);
     }
 
     function generateTrackingKeypad() {
@@ -576,16 +513,16 @@
         if (entered === deliveryPin) {
             showToast("✅ Box unlocked! Enjoy your meal.", false);
             document.getElementById('unlockArea').innerHTML = '<p style="color:#10b981;">🎉 Delivery complete. Thank you for using DroneDine!</p>';
-            updateStatus("✅ Delivery completed successfully!");
+            document.getElementById('trackingStatus').innerText = "✅ Delivery completed successfully!";
         } else {
             showToast("❌ Wrong PIN. Please try again.", true);
             document.getElementById('trackingPin').value = '';
         }
     };
 
-    // Initialization
+    // Initialisation
     initLocationMap();
-    renderMenu(); // pre‑render menu (empty cart initially)
+    renderMenu();  // pre‑render menu
 </script>
 </body>
 </html>
