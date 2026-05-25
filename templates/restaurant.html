@@ -1,186 +1,291 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DroneDine – Restaurant Portal | 5% Commission</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #0a1a2f;
-            color: #e2e8f0;
-            padding: 2rem;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-        .logo {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #f59e0b;
-        }
-        .card {
-            background: rgba(15, 35, 60, 0.9);
-            border-radius: 24px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            border: 1px solid #2d3a5e;
-        }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        .stat-card {
-            background: #1e293b;
-            border-radius: 20px;
-            padding: 1rem;
-            text-align: center;
-        }
-        .stat-value {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #f59e0b;
-        }
-        .commission-highlight {
-            background: #f59e0b;
-            color: #0a1a2f;
-            padding: 0.5rem 1rem;
-            border-radius: 40px;
-            display: inline-block;
-            font-weight: bold;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            text-align: left;
-            padding: 12px;
-            border-bottom: 1px solid #334155;
-        }
-        .badge {
-            background: #10b981;
-            color: white;
-            padding: 0.2rem 0.6rem;
-            border-radius: 20px;
-            font-size: 0.75rem;
-        }
-        .footer {
-            text-align: center;
-            margin-top: 2rem;
-            font-size: 0.8rem;
-            color: #94a3b8;
-        }
-        @media (max-width: 640px) {
-            body { padding: 1rem; }
-            .stats-grid { grid-template-columns: 1fr; }
-        }
-    </style>
-</head>
-<body>
-<div class="container">
-    <div class="header">
-        <div class="logo"><i class="fas fa-drone"></i> DroneDine Merchant</div>
-        <div class="commission-highlight"><i class="fas fa-percent"></i> You keep 95% – Only 5% platform fee</div>
-    </div>
+{% extends "layout.html" %}
 
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-value" id="todayOrders">0</div>
-            <div>Today's Orders</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value" id="todayRevenue">₹0</div>
-            <div>Your Revenue (after 5% fee)</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value">5%</div>
-            <div>Flat Commission</div>
-        </div>
-    </div>
+{% block title %}Restaurant Dashboard - DroneDine{% endblock %}
 
-    <div class="card">
-        <h3><i class="fas fa-receipt"></i> Active Orders (Dine‑in Price, No Markup)</h3>
-        <div id="ordersList">
-            <p style="text-align:center; padding:1rem;">Loading orders...</p>
-        </div>
-    </div>
+{% block extra_head %}
+<style>
+    .stats-grid {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+    .stat-card {
+        background: #1e293b;
+        border-radius: 20px;
+        padding: 1rem;
+        flex: 1;
+        min-width: 120px;
+        text-align: center;
+    }
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: #f59e0b;
+    }
+    .orders-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .order-card {
+        background: #1e293b;
+        border-radius: 20px;
+        padding: 1rem;
+        border-left: 4px solid #f59e0b;
+    }
+    .order-header {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        margin-bottom: 0.5rem;
+    }
+    .order-id {
+        font-weight: bold;
+        color: #f59e0b;
+    }
+    .order-status {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: bold;
+        background: #334155;
+    }
+    .order-details {
+        margin: 0.5rem 0;
+        font-size: 0.9rem;
+    }
+    .order-items {
+        background: #0f172a;
+        border-radius: 12px;
+        padding: 0.5rem;
+        margin: 0.5rem 0;
+    }
+    .password-display {
+        background: #0f172a;
+        padding: 0.5rem;
+        border-radius: 12px;
+        font-family: monospace;
+        font-size: 1.2rem;
+        text-align: center;
+        letter-spacing: 2px;
+        margin: 0.5rem 0;
+    }
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 0.5rem;
+    }
+    .action-btn {
+        background: #334155;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 40px;
+        cursor: pointer;
+        font-size: 0.8rem;
+        transition: 0.2s;
+    }
+    .action-btn:hover {
+        background: #f59e0b;
+        color: #0a1a2f;
+    }
+    .logout-btn {
+        background: #ef4444;
+        color: white;
+        margin-bottom: 1rem;
+    }
+    .refresh-btn {
+        background: #f59e0b;
+        margin-bottom: 1rem;
+    }
+    @media (max-width: 640px) {
+        .order-header { flex-direction: column; gap: 0.5rem; }
+        .action-buttons { justify-content: center; }
+    }
+</style>
+{% endblock %}
 
-    <div class="card">
-        <h3><i class="fas fa-chart-line"></i> Why Partner With DroneDine?</h3>
-        <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
-            <li>✅ No hidden GST burden – transparent 5% fee on food value only</li>
-            <li>✅ Drone delivery within 10‑15 minutes – faster than Swiggy/Zomato</li>
-            <li>✅ Keep 100% of dine‑in price – we don't force discounts</li>
-            <li>✅ No exclusivity – you can stay on other platforms</li>
-        </ul>
-    </div>
-    <div class="footer">
-        © 2026 DroneDine Hyderabad | Zero markup, zero GST on restaurants
-    </div>
+{% block content %}
+<h1><i class="fas fa-store"></i> Restaurant Dashboard</h1>
+<div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+    <button id="logoutBtn" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    <button id="refreshBtn" class="refresh-btn"><i class="fas fa-sync-alt"></i> Refresh Orders</button>
+</div>
+
+<div class="stats-grid" id="statsContainer">
+    <div class="stat-card"><div class="stat-value" id="todayOrders">0</div><div>Today's Orders</div></div>
+    <div class="stat-card"><div class="stat-value" id="todayRevenue">₹0</div><div>Today's Revenue</div></div>
+    <div class="stat-card"><div class="stat-value" id="activeOrders">0</div><div>Active Orders</div></div>
+</div>
+
+<div id="ordersContainer" class="orders-list">
+    <p>Loading orders...</p>
 </div>
 
 <script>
-    // Mock data – in production, replace with calls to /api/restaurant/stats and /api/orders/pending
-    // For demo, we simulate with hardcoded values and update periodically
-    function loadStats() {
-        // Simulate today's orders
-        document.getElementById('todayOrders').innerText = Math.floor(Math.random() * 15) + 3;
-        const revenue = (Math.random() * 5000 + 1000).toFixed(0);
-        document.getElementById('todayRevenue').innerHTML = `₹${revenue}`;
+    // Helper: fetch with credentials (session cookie)
+    async function apiFetch(url, options = {}) {
+        const response = await fetch(url, {
+            ...options,
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', ...options.headers }
+        });
+        if (response.status === 401) {
+            window.location.href = '/restaurant/login';
+            throw new Error('Unauthorized');
+        }
+        return response;
     }
 
-    function loadOrders() {
-        const mockOrders = [
-            { id: 101, customer: "Rahul", items: "Chicken Biryani x1", total: 280, status: "pending" },
-            { id: 102, customer: "Priya", items: "Masala Dosa x2", total: 240, status: "accepted" }
-        ];
-        const container = document.getElementById('ordersList');
-        if (mockOrders.length === 0) {
-            container.innerHTML = '<p>No active orders</p>';
+    // Load restaurant info and stats
+    async function loadStats() {
+        try {
+            const res = await apiFetch('/api/restaurant/stats');
+            const stats = await res.json();
+            document.getElementById('todayOrders').innerText = stats.today_orders || 0;
+            document.getElementById('todayRevenue').innerHTML = `₹${(stats.today_revenue || 0).toFixed(2)}`;
+            document.getElementById('activeOrders').innerText = stats.active_orders || 0;
+        } catch (err) {
+            console.error('Stats error:', err);
+        }
+    }
+
+    // Load pending orders
+    async function loadOrders() {
+        try {
+            const res = await apiFetch('/api/orders/pending');
+            const orders = await res.json();
+            renderOrders(orders);
+        } catch (err) {
+            console.error('Orders error:', err);
+            document.getElementById('ordersContainer').innerHTML = '<p>Error loading orders. Please refresh.</p>';
+        }
+    }
+
+    // Update order status
+    async function updateOrderStatus(orderId, action) {
+        try {
+            const res = await apiFetch(`/api/orders/${orderId}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ action })
+            });
+            if (res.ok) {
+                // Reload orders and stats
+                await loadOrders();
+                await loadStats();
+            } else {
+                const err = await res.json();
+                alert(err.error || 'Failed to update status');
+            }
+        } catch (err) {
+            alert('Network error');
+        }
+    }
+
+    // Fetch and display password for an order (already shown on load)
+    async function fetchPassword(orderId, passwordSpanId) {
+        try {
+            const res = await apiFetch(`/api/orders/${orderId}/password`);
+            if (res.ok) {
+                const data = await res.json();
+                const span = document.getElementById(passwordSpanId);
+                if (span) span.innerText = data.password;
+            } else {
+                const span = document.getElementById(passwordSpanId);
+                if (span) span.innerText = 'Error';
+            }
+        } catch (err) {
+            console.error('Password fetch error:', err);
+        }
+    }
+
+    function renderOrders(orders) {
+        const container = document.getElementById('ordersContainer');
+        if (!orders.length) {
+            container.innerHTML = '<p>No active orders at the moment.</p>';
             return;
         }
-        let html = `<table>
-            <thead><tr><th>Order ID</th><th>Customer</th><th>Items</th><th>Amount</th><th>Status</th></tr></thead>
-            <tbody>`;
-        mockOrders.forEach(order => {
-            html += `<tr>
-                <td>#${order.id}</td>
-                <td>${order.customer}</td>
-                <td>${order.items}</td>
-                <td>₹${order.total}</td>
-                <td><span class="badge">${order.status}</span></td>
-            </tr>`;
+        container.innerHTML = orders.map(order => {
+            const passwordId = `pw-${order.id}`;
+            // Items display
+            let itemsHtml = '';
+            if (order.items) {
+                const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+                itemsHtml = items.map(i => `${i.name} x${i.quantity}`).join(', ');
+            }
+            // Determine which action buttons to show based on current status
+            let actionButtons = '';
+            const status = order.status;
+            if (status === 'pending') {
+                actionButtons = `<button class="action-btn" data-id="${order.id}" data-action="accept">Accept Order</button>
+                                 <button class="action-btn" data-id="${order.id}" data-action="decline">Decline</button>`;
+            } else if (status === 'accepted') {
+                actionButtons = `<button class="action-btn" data-id="${order.id}" data-action="preparing">Mark Preparing</button>`;
+            } else if (status === 'preparing') {
+                actionButtons = `<button class="action-btn" data-id="${order.id}" data-action="out_for_delivery">Send for Delivery</button>`;
+            } else if (status === 'out_for_delivery') {
+                actionButtons = `<button class="action-btn" data-id="${order.id}" data-action="delivered">Mark Delivered</button>`;
+            }
+            return `
+                <div class="order-card" data-order-id="${order.id}">
+                    <div class="order-header">
+                        <span class="order-id">Order #${order.id}</span>
+                        <span class="order-status">${order.status.replace(/_/g, ' ')}</span>
+                    </div>
+                    <div class="order-details">
+                        <strong>${order.customer_name}</strong> | 📞 ${order.customer_phone}<br>
+                        📍 ${order.customer_address}
+                    </div>
+                    <div class="order-items">
+                        🍽️ ${itemsHtml || 'Items not available'}
+                    </div>
+                    <div class="order-details">
+                        💰 Total: ₹${order.total_amount}
+                    </div>
+                    <div class="password-display">
+                        🔐 Drone Box Password: <span id="${passwordId}">Loading...</span>
+                    </div>
+                    <div class="action-buttons">
+                        ${actionButtons}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Attach event listeners to action buttons
+        document.querySelectorAll('.action-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const orderId = btn.getAttribute('data-id');
+                const action = btn.getAttribute('data-action');
+                updateOrderStatus(orderId, action);
+            });
         });
-        html += `</tbody></table><p style="margin-top:1rem; font-size:0.8rem;">* Demo data – connect to live API for real orders.</p>`;
-        container.innerHTML = html;
+
+        // Fetch passwords for each order
+        orders.forEach(order => {
+            fetchPassword(order.id, `pw-${order.id}`);
+        });
     }
 
+    // Logout
+    document.getElementById('logoutBtn').onclick = async () => {
+        await apiFetch('/api/restaurant/logout', { method: 'POST' });
+        window.location.href = '/restaurant/login';
+    };
+    document.getElementById('refreshBtn').onclick = () => {
+        loadOrders();
+        loadStats();
+    };
+
+    // Initial load
     loadStats();
     loadOrders();
-    // Auto-refresh every 30 seconds (demo)
+    // Auto-refresh every 15 seconds
     setInterval(() => {
-        loadStats();
         loadOrders();
-    }, 30000);
+        loadStats();
+    }, 15000);
 </script>
-</body>
-</html>
+{% endblock %}
