@@ -1,0 +1,166 @@
+{% extends "layout.html" %}
+
+{% block title %}Live Order Tracking{% endblock %}
+
+{% block extra_head %}
+<style>
+    #map { height: 400px; border-radius: 24px; margin: 1rem 0; }
+    .tracking-card {
+        background: #1e293b;
+        border-radius: 20px;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    .delivery-partner {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin: 1rem 0;
+    }
+    .chat-button {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #25D366;
+        color: white;
+        border-radius: 50px;
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        z-index: 1000;
+        font-weight: bold;
+        border: none;
+    }
+    .eta {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #f59e0b;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1><i class="fas fa-map-marked-alt"></i> Your Order is On the Way</h1>
+
+<div class="tracking-card">
+    <div class="delivery-partner">
+        <i class="fas fa-drone" style="font-size: 2rem;"></i>
+        <div>
+            <strong>Drone: Flyer-01</strong><br>
+            <span id="deliveryPartnerName">Captain Arjun (Remote Pilot)</span>
+        </div>
+    </div>
+    <div class="eta">
+        ARRIVING IN <span id="etaSeconds">120</span> seconds
+    </div>
+    <div id="orderPasswordDisplay" class="status-text" style="margin-top: 1rem;">
+        Delivery PIN: <strong>****</strong> (shown after landing)
+    </div>
+</div>
+
+<div id="map"></div>
+
+<div class="tracking-card" id="unlockCard" style="display:none;">
+    <h3>🔐 Drone Landed – Enter PIN to Unlock Box</h3>
+    <div class="keypad" id="keypad"></div>
+    <input type="text" id="pinInput" maxlength="4" placeholder="____" style="width:100%; padding:8px; margin-top:8px;">
+    <button id="unlockBtn" class="btn">Unlock</button>
+</div>
+
+<button id="chatSupportBtn" class="chat-button">
+    <i class="fab fa-whatsapp"></i> Chat Support
+</button>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // Load order from sessionStorage
+    const order = JSON.parse(sessionStorage.getItem('currentOrder'));
+    if (!order) {
+        alert('No active order. Redirecting to home.');
+        window.location.href = '/';
+    }
+    const correctPassword = order.password;
+
+    // Map setup (same as simulator)
+    const map = L.map('map').setView([17.4265, 78.3450], 14);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: 'OSM & CartoDB'
+    }).addTo(map);
+
+    const kitchen = [17.4416, 78.3489];
+    const drop = [17.4116, 78.3400];
+    L.marker(kitchen).addTo(map).bindPopup('Kitchen');
+    L.marker(drop).addTo(map).bindPopup('Your Drop Zone');
+    L.polyline([kitchen, drop], { color: '#f59e0b', dashArray: '5,10' }).addTo(map);
+
+    const droneIcon = L.divIcon({ html: '<i class="fas fa-drone" style="font-size:28px; color:#f59e0b;"></i>', iconSize: [32,32] });
+    let droneMarker = L.marker(kitchen, { icon: droneIcon }).addTo(map);
+
+    // ETA countdown
+    let eta = 120; // seconds
+    const etaSpan = document.getElementById('etaSeconds');
+    const interval = setInterval(() => {
+        if (eta <= 0) {
+            clearInterval(interval);
+            etaSpan.innerText = '0';
+            // Drone lands
+            document.getElementById('unlockCard').style.display = 'block';
+            document.getElementById('orderPasswordDisplay').innerHTML = `Delivery PIN: <strong>${correctPassword}</strong>`;
+            // Also move drone marker to drop point if not already
+            droneMarker.setLatLng(drop);
+            map.setView(drop, 16);
+        } else {
+            eta--;
+            etaSpan.innerText = eta;
+            // Smooth drone movement (simulate)
+            const t = 1 - (eta / 120);
+            const lat = kitchen[0] + (drop[0] - kitchen[0]) * t;
+            const lng = kitchen[1] + (drop[1] - kitchen[1]) * t;
+            droneMarker.setLatLng([lat, lng]);
+        }
+    }, 1000);
+
+    // Keypad and unlock
+    function generateKeypad() {
+        const pad = document.getElementById('keypad');
+        if (!pad) return;
+        pad.innerHTML = '';
+        for (let i=1; i<=9; i++) {
+            const btn = document.createElement('div');
+            btn.className = 'key';
+            btn.innerText = i;
+            btn.onclick = () => { const inp = document.getElementById('pinInput'); if (inp.value.length < 4) inp.value += i; };
+            pad.appendChild(btn);
+        }
+        const zero = document.createElement('div');
+        zero.className = 'key'; zero.innerText = '0';
+        zero.onclick = () => { const inp = document.getElementById('pinInput'); if (inp.value.length < 4) inp.value += '0'; };
+        const clear = document.createElement('div');
+        clear.className = 'key'; clear.innerText = '⌫';
+        clear.onclick = () => { const inp = document.getElementById('pinInput'); inp.value = inp.value.slice(0,-1); };
+        pad.appendChild(zero);
+        pad.appendChild(clear);
+    }
+    generateKeypad();
+
+    document.getElementById('unlockBtn').onclick = () => {
+        const entered = document.getElementById('pinInput').value;
+        if (entered === correctPassword) {
+            alert('✅ Box unlocked! Enjoy your meal.');
+            document.getElementById('unlockCard').style.display = 'none';
+        } else {
+            alert('❌ Wrong PIN. Please try again.');
+            document.getElementById('pinInput').value = '';
+        }
+    };
+
+    // Chat support button – opens WhatsApp
+    document.getElementById('chatSupportBtn').onclick = () => {
+        window.open('https://wa.me/919876543210?text=I%20need%20help%20with%20my%20DroneDine%20order', '_blank');
+    };
+</script>
+{% endblock %}
