@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>DroneDine | Gachibowli Logistics Simulator</title>
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Font Awesome (optional for icons) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a1a2f;
+            color: #eee;
+        }
+        /* Map takes full screen */
+        #map {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+        /* Dashboard overlay - translucent dark */
+        .dashboard {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 320px;
+            background: rgba(10, 26, 47, 0.92);
+            backdrop-filter: blur(12px);
+            border-radius: 24px;
+            padding: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.2);
+            z-index: 10;
+            font-size: 14px;
+        }
+        .dashboard h2 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #f59e0b;
+        }
+        .dashboard button {
+            width: 100%;
+            background: #f59e0b;
+            border: none;
+            padding: 10px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 1rem;
+            margin: 8px 0;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .dashboard button:hover {
+            background: #e67e22;
+            transform: translateY(-1px);
+        }
+        .status-box {
+            background: #00000066;
+            border-radius: 16px;
+            padding: 10px;
+            margin: 12px 0;
+            font-family: monospace;
+            font-size: 0.85rem;
+            border-left: 3px solid #f59e0b;
+        }
+        .camera-feed {
+            background: #000000aa;
+            border-radius: 12px;
+            padding: 10px;
+            text-align: center;
+            margin: 12px 0;
+            font-style: italic;
+            border: 1px solid #334155;
+        }
+        .password-area {
+            margin: 12px 0;
+        }
+        .password-area input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 40px;
+            border: none;
+            background: #1e293b;
+            color: white;
+            text-align: center;
+            font-size: 1.2rem;
+            letter-spacing: 4px;
+        }
+        .password-area input:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .small-note {
+            font-size: 11px;
+            text-align: center;
+            margin-top: 10px;
+            color: #94a3b8;
+        }
+        @media (max-width: 640px) {
+            .dashboard {
+                width: calc(100% - 30px);
+                left: 15px;
+                right: 15px;
+                top: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+
+<div class="dashboard">
+    <h2><i class="fas fa-drone"></i> DroneDine · Gachibowli</h2>
+    <button id="launchBtn">🚁 Launch Delivery</button>
+    <div class="status-box" id="statusText">📍 Status: Standby at Base Kitchen</div>
+    <div class="camera-feed" id="cameraFeed">
+        <i class="fas fa-video"></i> Camera Feed: <span id="cameraText">Secure (locked)</span>
+    </div>
+    <div class="password-area">
+        <label>🔐 Delivery Password (4-digit)</label>
+        <input type="password" id="passwordInput" maxlength="4" placeholder="****" disabled>
+    </div>
+    <div class="small-note">
+        <i class="fas fa-map-marker-alt"></i> Green Zone Corridor | Pista House → My Home Avatar
+    </div>
+</div>
+
+<script>
+    // ========================
+    // 1. Initialize Map (centered on Gachibowli)
+    // ========================
+    const map = L.map('map').setView([17.4265, 78.3450], 14); // approximate center of Gachibowli
+
+    // Use CartoDB light tile layer (free, no API key)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; CartoDB',
+        subdomains: 'abcd',
+        maxZoom: 19
+    }).addTo(map);
+
+    // ========================
+    // 2. Define Coordinates
+    // ========================
+    const kitchenCoords = [17.4416, 78.3489];    // Pista House Gachibowli
+    const apartmentCoords = [17.4116, 78.3400]; // My Home Avatar Apartment
+
+    // Add markers
+    const kitchenMarker = L.marker(kitchenCoords).addTo(map)
+        .bindPopup('<b>Pista House</b><br>Base Kitchen & Drone Launch Pad')
+        .openPopup();
+    const apartmentMarker = L.marker(apartmentCoords).addTo(map)
+        .bindPopup('<b>My Home Avatar</b><br>Target Hub Slot (Drop Zone)');
+
+    // Optional: draw a line connecting them (static)
+    const routeLine = L.polyline([kitchenCoords, apartmentCoords], { color: '#f59e0b', weight: 2, dashArray: '5, 10' }).addTo(map);
+
+    // ========================
+    // 3. Custom Drone Icon & Marker
+    // ========================
+    const droneIcon = L.divIcon({
+        html: '<i class="fas fa-drone" style="font-size: 28px; color: #f59e0b; text-shadow: 0 0 3px black;"></i>',
+        iconSize: [32, 32],
+        className: 'drone-marker'
+    });
+    let droneMarker = L.marker(kitchenCoords, { icon: droneIcon }).addTo(map);
+
+    // ========================
+    // 4. Animation State
+    // ========================
+    let animationId = null;
+    let isAnimating = false;
+    const launchBtn = document.getElementById('launchBtn');
+    const statusDiv = document.getElementById('statusText');
+    const cameraTextSpan = document.getElementById('cameraText');
+    const passwordInput = document.getElementById('passwordInput');
+
+    // Helper: update status text
+    function updateStatus(msg) {
+        statusDiv.innerHTML = msg;
+    }
+
+    // Smooth linear interpolation function
+    function animateDrone(start, end, duration = 10000) {
+        if (isAnimating) return;
+        isAnimating = true;
+        updateStatus('🚁 Status: En Route to Gachibowli Sector 1 (Green Zone Corridor)');
+        launchBtn.disabled = true;
+        launchBtn.style.opacity = '0.6';
+
+        const startLat = start[0], startLng = start[1];
+        const endLat = end[0], endLng = end[1];
+        const startTime = performance.now();
+
+        function step(currentTime) {
+            const elapsed = currentTime - startTime;
+            let t = Math.min(1, elapsed / duration);
+            // ease in-out for smoothness
+            const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+            const lat = startLat + (endLat - startLat) * ease;
+            const lng = startLng + (endLng - startLng) * ease;
+            droneMarker.setLatLng([lat, lng]);
+
+            if (t < 1) {
+                animationId = requestAnimationFrame(step);
+            } else {
+                // Arrived at destination
+                cancelAnimationFrame(animationId);
+                isAnimating = false;
+                launchBtn.disabled = false;
+                launchBtn.style.opacity = '1';
+                // Final position exactly at end point
+                droneMarker.setLatLng(end);
+                updateStatus('🟢 Status: Landed at Hub Slot. Awaiting Password Verification.');
+                // Enable password input
+                passwordInput.disabled = false;
+                passwordInput.focus();
+                // Also change camera text to indicate landed state (still locked)
+                cameraTextSpan.innerText = 'Landed – awaiting unlock code';
+            }
+        }
+
+        animationId = requestAnimationFrame(step);
+    }
+
+    // ========================
+    // 5. Launch Button Click Handler
+    // ========================
+    launchBtn.addEventListener('click', () => {
+        if (isAnimating) {
+            updateStatus('⚠️ Delivery already in progress. Please wait.');
+            return;
+        }
+        // Reset password input and camera text for a fresh delivery
+        passwordInput.value = '';
+        passwordInput.disabled = true;   // will be re-enabled after landing
+        cameraTextSpan.innerText = 'Secure (locked)';
+        updateStatus('📍 Status: Standby at Base Kitchen');
+        // Reset drone position to kitchen (if it's not already there)
+        droneMarker.setLatLng(kitchenCoords);
+        // Start animation
+        animateDrone(kitchenCoords, apartmentCoords, 10000);
+    });
+
+    // ========================
+    // 6. Password Verification Logic
+    // ========================
+    passwordInput.addEventListener('input', (e) => {
+        const entered = e.target.value;
+        if (entered.length === 4) {
+            if (entered === '1234') {
+                alert('✅ Lock Disengaged. Delivery Box Open.');
+                cameraTextSpan.innerText = 'Box Empty / Delivered';
+                updateStatus('✅ Status: Delivery completed. Box unlocked.');
+                passwordInput.disabled = true;   // prevent reuse
+                // optional: reset after 5 seconds? Keep as delivered state.
+            } else {
+                alert('❌ Wrong password! Please use the 4-digit password set at checkout (demo: 1234).');
+                passwordInput.value = '';
+                // keep camera as is, don't change status
+            }
+        }
+    });
+
+    // Optional: Add a little note to console for debugging
+    console.log('DroneDine Simulator Ready | Gachibowli Green Zone');
+</script>
+</body>
+</html>
