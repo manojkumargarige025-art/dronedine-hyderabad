@@ -468,35 +468,7 @@
     }
 
     // ---------- Step 3: Pay & Launch with 5-second timer ----------
-    document.getElementById('payAndLaunchBtn').onclick = async () => {
-        const pin = document.getElementById('checkoutPin').value;
-        if (!pin || pin.length !== 4 || !/^\d+$/.test(pin)) {
-            showToast("Please set a valid 4-digit numeric PIN", true);
-            return;
-        }
-        deliveryPin = pin;
-        if (!customerCoords) {
-            showToast("Please confirm your delivery address first", true);
-            return;
-        }
-        setActiveStep(4);
-        initTrackingMap();
-        const statusElem = document.getElementById('trackingStatus');
-        const payBtn = document.getElementById('payAndLaunchBtn');
-        payBtn.disabled = true;
-        payBtn.innerText = "Processing...";
-        statusElem.innerText = "⏳ Status: Confirming secure wallet processing split... (PIN Verified)";
-        setTimeout(() => {
-            statusElem.innerText = "🍳 Status: Order accepted by kitchen. Chef is preparing your fresh meal...";
-            setTimeout(() => {
-                statusElem.innerText = "🛫 Status: Cargo locked. Drone launching autonomously via Gachibowli Green Zone...";
-                startDroneAnimation();
-                payBtn.disabled = false;
-                payBtn.innerText = "Pay & Launch DroneDine";
-            }, 2500);
-        }, 2500);
-    };
-
+    document.getElementById('payAndLaunchBtn').onclick = async () => 
     // ---------- Step 4: Tracking map and drone animation ----------
     function initTrackingMap() {
         if (trackingMap) trackingMap.remove();
