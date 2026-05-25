@@ -1,124 +1,208 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DroneDine — Food Delivery by Drone | Hyderabad</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="/static/css/style.css">
-  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-</head>
-<body>
-  {% set active_page = 'home' %}
-  {% set show_cart = true %}
-  {% include '_navbar.html' %}
+{% extends "layout.html" %}
 
-  <div class="cart-overlay" id="cart-overlay"></div>
+{% block title %}DroneDine — Food Delivery by Drone | Hyderabad{% endblock %}
 
-  <main class="page-main">
-    <div class="card location-bar">
-      <div>
-        <i class="fas fa-map-marker-alt"></i>
-        <strong>Delivering to:</strong> Hyderabad, Telangana
-      </div>
-      <button type="button" class="btn btn-outline btn-small" disabled title="Coming soon">
-        <i class="fas fa-pen"></i> Change
-      </button>
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="/static/css/style.css">
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+{% endblock %}
+
+{% block content %}
+
+{% set active_page = 'home' %}
+{% set show_cart = true %}
+
+<div class="cart-overlay" id="cart-overlay"></div>
+
+<main class="page-main">
+  <div class="card location-bar">
+    <div>
+      <i class="fas fa-map-marker-alt"></i>
+      <strong>Delivering to:</strong> Hyderabad, Telangana
     </div>
-
-    <div class="card search-bar-wrap">
-      <div class="search-bar">
-        <i class="fas fa-search"></i>
-        <input type="search" id="restaurant-search" placeholder="Search restaurants or dishes..." autocomplete="off">
-      </div>
-    </div>
-
-    <div class="filter-chips" id="filter-chips">
-      <button type="button" class="filter-chip active" data-filter="all">🍔 All</button>
-      <button type="button" class="filter-chip" data-filter="veg">🌿 Veg</button>
-      <button type="button" class="filter-chip" data-filter="nonveg">🍗 Non-Veg</button>
-      <button type="button" class="filter-chip" data-filter="drone"><i class="fas fa-helicopter"></i> Drone Ready</button>
-    </div>
-
-    <p class="alert alert-info">
-      <i class="fas fa-lock"></i> Unique 4-digit drone password assigned after payment.
-      <a href="/track">Track your order</a> with order ID + phone.
-    </p>
-
-    <h2 class="section-heading"><i class="fas fa-fire" style="color:var(--secondary)"></i> Top Restaurants Near You</h2>
-    <section id="restaurants-section">
-      <div id="restaurant-list" class="restaurant-grid"></div>
-    </section>
-
-    <section id="menu-section" class="menu-section hidden">
-      <h2 id="menu-title" class="section-heading">Menu</h2>
-      <div id="menu-list"></div>
-    </section>
-
-    <section id="unlock-section" class="menu-section hidden">
-      <h2 class="section-heading"><i class="fas fa-box-open"></i> Drone arrived? Unlock your box</h2>
-      <div class="form-group">
-        <label>Order ID</label>
-        <input type="number" class="form-control" id="unlock-order-id" placeholder="From confirmation">
-      </div>
-      <div class="password-box">
-        <label>Enter your 4-digit password</label>
-        <input type="password" class="form-control password-input" id="unlock-password" maxlength="4" inputmode="numeric" placeholder="••••" style="max-width:140px;margin:0.5rem auto;">
-      </div>
-      <button type="button" class="btn btn-success" id="btn-verify-password">
-        <i class="fas fa-unlock"></i> Unlock Drone Box
-      </button>
-      <p id="unlock-message"></p>
-    </section>
-  </main>
-
-  <aside class="cart-panel" id="cart-panel">
-    <h2><i class="fas fa-shopping-cart"></i> Your Order</h2>
-    <p class="hint" id="cart-restaurant-name"></p>
-    <div id="cart-items"></div>
-    <div class="checkout-summary" id="cart-summary">
-      <div class="checkout-row"><span>Subtotal</span><span>₹<span id="cart-subtotal">0</span></span></div>
-      <div class="checkout-row"><span><i class="fas fa-helicopter"></i> Drone delivery</span><span>₹20</span></div>
-      <div class="checkout-row"><span>Platform fee</span><span>₹0</span></div>
-      <div class="checkout-row grand"><span>Grand Total</span><span>₹<span id="cart-total">0</span></span></div>
-    </div>
-    <button type="button" class="btn" id="btn-checkout" style="width:100%">
-      <i class="fas fa-credit-card"></i> Checkout
+    <button type="button" class="btn btn-outline btn-small" disabled title="Coming soon">
+      <i class="fas fa-pen"></i> Change
     </button>
-    <button type="button" class="btn btn-outline btn-small" id="btn-close-cart" style="margin-top:0.5rem;width:100%">Close</button>
-  </aside>
+  </div>
 
-  <div class="modal-overlay" id="checkout-modal">
-    <div class="modal">
-      <h2><i class="fas fa-receipt"></i> Confirm Order & Pay</h2>
-      <form id="checkout-form">
-        <div class="form-group">
-          <label>Full name</label>
-          <input type="text" class="form-control" id="customer-name" required placeholder="Your name">
-        </div>
-        <div class="form-group">
-          <label>Phone</label>
-          <input type="tel" class="form-control" id="customer-phone" required placeholder="10-digit mobile">
-        </div>
-        <div class="form-group">
-          <label>Delivery address</label>
-          <textarea class="form-control" id="customer-address" rows="2" required placeholder="Flat, street, landmark — Hyderabad"></textarea>
-        </div>
-        <div class="checkout-summary">
-          <div class="checkout-row"><span>Food total</span><span>₹<span id="checkout-food-total">0</span></span></div>
-          <div class="checkout-row"><span>Drone delivery</span><span>₹20</span></div>
-          <div class="checkout-row grand"><span>Pay now</span><span>₹<span id="checkout-total">0</span></span></div>
-        </div>
-        <p class="hint"><i class="fas fa-key"></i> Unique drone password assigned after successful payment.</p>
-        <button type="submit" class="btn btn-success" style="width:100%">
-          <i class="fas fa-check"></i> Place Order & Pay
-        </button>
-        <button type="button" class="btn btn-outline btn-small" id="btn-cancel-checkout" style="margin-top:0.5rem;width:100%">Cancel</button>
-      </form>
-      <p id="checkout-message"></p>
+  <div class="card search-bar-wrap">
+    <div class="search-bar">
+      <i class="fas fa-search"></i>
+      <input type="search" id="restaurant-search" placeholder="Search restaurants or dishes..." autocomplete="off">
     </div>
   </div>
 
-  <script src="/static/js/customer.js"></script>
-</body>
-</html>
+  <div class="filter-chips" id="filter-chips">
+    <button type="button" class="filter-chip active" data-filter="all">🍔 All</button>
+    <button type="button" class="filter-chip" data-filter="veg">🌿 Veg</button>
+    <button type="button" class="filter-chip" data-filter="nonveg">🍗 Non-Veg</button>
+    <button type="button" class="filter-chip" data-filter="drone"><i class="fas fa-helicopter"></i> Drone Ready</button>
+  </div>
+
+  <p class="alert alert-info">
+    <i class="fas fa-lock"></i> Unique 4-digit drone password assigned after payment.
+    <a href="/track">Track your order</a> with order ID + phone.
+  </p>
+
+  <h2 class="section-heading">
+    <i class="fas fa-fire" style="color:var(--secondary)"></i>
+    Top Restaurants Near You
+  </h2>
+
+  <section id="restaurants-section">
+    <div id="restaurant-list" class="restaurant-grid"></div>
+  </section>
+
+  <section id="menu-section" class="menu-section hidden">
+    <h2 id="menu-title" class="section-heading">Menu</h2>
+    <div id="menu-list"></div>
+  </section>
+
+  <section id="unlock-section" class="menu-section hidden">
+    <h2 class="section-heading">
+      <i class="fas fa-box-open"></i>
+      Drone arrived? Unlock your box
+    </h2>
+
+    <div class="form-group">
+      <label>Order ID</label>
+      <input type="number" class="form-control" id="unlock-order-id" placeholder="From confirmation">
+    </div>
+
+    <div class="password-box">
+      <label>Enter your 4-digit password</label>
+      <input type="password"
+             class="form-control password-input"
+             id="unlock-password"
+             maxlength="4"
+             inputmode="numeric"
+             placeholder="••••"
+             style="max-width:140px;margin:0.5rem auto;">
+    </div>
+
+    <button type="button" class="btn btn-success" id="btn-verify-password">
+      <i class="fas fa-unlock"></i> Unlock Drone Box
+    </button>
+
+    <p id="unlock-message"></p>
+  </section>
+</main>
+
+<aside class="cart-panel" id="cart-panel">
+  <h2><i class="fas fa-shopping-cart"></i> Your Order</h2>
+
+  <p class="hint" id="cart-restaurant-name"></p>
+
+  <div id="cart-items"></div>
+
+  <div class="checkout-summary" id="cart-summary">
+    <div class="checkout-row">
+      <span>Subtotal</span>
+      <span>₹<span id="cart-subtotal">0</span></span>
+    </div>
+
+    <div class="checkout-row">
+      <span><i class="fas fa-helicopter"></i> Drone delivery</span>
+      <span>₹20</span>
+    </div>
+
+    <div class="checkout-row">
+      <span>Platform fee</span>
+      <span>₹0</span>
+    </div>
+
+    <div class="checkout-row grand">
+      <span>Grand Total</span>
+      <span>₹<span id="cart-total">0</span></span>
+    </div>
+  </div>
+
+  <button type="button" class="btn" id="btn-checkout" style="width:100%">
+    <i class="fas fa-credit-card"></i> Checkout
+  </button>
+
+  <button type="button"
+          class="btn btn-outline btn-small"
+          id="btn-close-cart"
+          style="margin-top:0.5rem;width:100%">
+    Close
+  </button>
+</aside>
+
+<div class="modal-overlay" id="checkout-modal">
+  <div class="modal">
+    <h2><i class="fas fa-receipt"></i> Confirm Order & Pay</h2>
+
+    <form id="checkout-form">
+      <div class="form-group">
+        <label>Full name</label>
+        <input type="text"
+               class="form-control"
+               id="customer-name"
+               required
+               placeholder="Your name">
+      </div>
+
+      <div class="form-group">
+        <label>Phone</label>
+        <input type="tel"
+               class="form-control"
+               id="customer-phone"
+               required
+               placeholder="10-digit mobile">
+      </div>
+
+      <div class="form-group">
+        <label>Delivery address</label>
+        <textarea class="form-control"
+                  id="customer-address"
+                  rows="2"
+                  required
+                  placeholder="Flat, street, landmark — Hyderabad"></textarea>
+      </div>
+
+      <div class="checkout-summary">
+        <div class="checkout-row">
+          <span>Food total</span>
+          <span>₹<span id="checkout-food-total">0</span></span>
+        </div>
+
+        <div class="checkout-row">
+          <span>Drone delivery</span>
+          <span>₹20</span>
+        </div>
+
+        <div class="checkout-row grand">
+          <span>Pay now</span>
+          <span>₹<span id="checkout-total">0</span></span>
+        </div>
+      </div>
+
+      <p class="hint">
+        <i class="fas fa-key"></i>
+        Unique drone password assigned after successful payment.
+      </p>
+
+      <button type="submit" class="btn btn-success" style="width:100%">
+        <i class="fas fa-check"></i>
+        Place Order & Pay
+      </button>
+
+      <button type="button"
+              class="btn btn-outline btn-small"
+              id="btn-cancel-checkout"
+              style="margin-top:0.5rem;width:100%">
+        Cancel
+      </button>
+    </form>
+
+    <p id="checkout-message"></p>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/customer.js"></script>
+{% endblock %}
