@@ -167,7 +167,7 @@ def simulator():
 
 @app.route('/tracking_demo')
 def tracking_demo():
-    return render_template('tracking_demo.html')
+    return render_template('tracking_clean.html')
 
 
 # ---------- Restaurant auth ----------
@@ -706,7 +706,27 @@ def verify_payment():
 
 # Create SQLite tables on startup (local dev + Render/gunicorn)
 db.init_db()
-
+@app.route('/api/orders', methods=['POST'])
+def create_order_api():
+    from flask import request, jsonify
+    import json
+    data = request.get_json()
+    try:
+        new_order = Order(
+            restaurant_id=data.get('restaurant_id', 1),
+            items=json.dumps(data.get('items', [])),
+            total=data.get('total', 0),
+            password=data.get('password', ''),
+            customer_name=data.get('customer_name', 'Demo User'),
+            customer_phone=data.get('customer_phone', '9999999999'),
+            status='pending',
+            payment_status='unpaid'
+        )
+        db.session.add(new_order)
+        db.session.commit()
+        return jsonify({'order_id': new_order.id}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == "__main__":
     print("\n=== Drone Food Delivery MVP ===")
