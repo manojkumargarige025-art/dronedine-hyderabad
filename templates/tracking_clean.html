@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DroneDine - Live Tracking</title>
+    <title>DroneDine - Live Dynamic Tracking</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -71,12 +71,18 @@
             border-radius: 40px;
             cursor: pointer;
         }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
 <div id="map"></div>
 <div class="tracking-container">
     <h2><i class="fas fa-drone"></i> Your Order is On the Way</h2>
+    <div id="addressDisplay" class="status-text">📍 Delivering to: <span id="dynamicAddress">Loading...</span></div>
     <div class="eta">ARRIVING IN <span id="etaSeconds">120</span> seconds</div>
     <div id="passwordDisplay" class="status-text">Delivery PIN: <strong>****</strong> (shown after landing)</div>
     <div id="unlockSection" style="display:none;">
@@ -90,62 +96,152 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+    // ---------- Get order from sessionStorage ----------
     const order = JSON.parse(sessionStorage.getItem('currentOrder'));
     if (!order) {
         alert('No active order. Redirecting to home.');
         window.location.href = '/';
     }
     const correctPassword = order.password;
+    const deliveryAddress = order.customer_address || "Gachibowli, Hyderabad"; // fallback
 
-    // Map
-    const map = L.map('map').setView([17.4265, 78.3450], 14);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
-    const kitchen = [17.4416, 78.3489];
-    const drop = [17.4116, 78.3400];
-    L.marker(kitchen).addTo(map).bindPopup('Kitchen');
-    L.marker(drop).addTo(map).bindPopup('Your Drop Zone');
-    L.polyline([kitchen, drop], { color: '#f59e0b', dashArray: '5,10' }).addTo(map);
+    // Update address display
+    document.getElementById('dynamicAddress').innerText = deliveryAddress;
 
+    // ---------- Map setup (kitchen is fixed) ----------
+    const kitchenCoords = [17.4416, 78.3489]; // Pista House
+    let destinationCoords = null;
+
+    const map = L.map('map').setView([17.4265, 78.3450], 13);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; CartoDB'
+    }).addTo(map);
+
+    // Kitchen marker (fixed)
+    const kitchenMarker = L.marker(kitchenCoords).addTo(map).bindPopup('Pista House (Kitchen)');
+    let destinationMarker = null;
+    let routeLine = null;
+    let droneMarker = null;
     const droneIcon = L.divIcon({ html: '<i class="fas fa-drone" style="font-size:28px; color:#f59e0b;"></i>', iconSize: [32,32] });
-    let droneMarker = L.marker(kitchen, { icon: droneIcon }).addTo(map);
 
-    let eta = 120;
-    const etaSpan = document.getElementById('etaSeconds');
-    const interval = setInterval(() => {
-        if (eta <= 0) {
-            clearInterval(interval);
-            etaSpan.innerText = '0';
-            document.getElementById('unlockSection').style.display = 'block';
-            document.getElementById('passwordDisplay').innerHTML = `Delivery PIN: <strong>${correctPassword}</strong>`;
-            droneMarker.setLatLng(drop);
-            map.setView(drop, 16);
+    // ---------- Geocode address using Nominatim (free, no API key) ----------
+    async function geocodeAddress(address) {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
+        const response = await fetch(url, {
+            headers: { 'User-Agent': 'DroneDine-Hyderabad/1.0' } // Nominatim requires a User-Agent
+        });
+        const data = await response.json();
+        if (data && data.length > 0) {
+            return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
         } else {
-            eta--;
-            etaSpan.innerText = eta;
-            const t = 1 - (eta / 120);
-            const lat = kitchen[0] + (drop[0] - kitchen[0]) * t;
-            const lng = kitchen[1] + (drop[1] - kitchen[1]) * t;
-            droneMarker.setLatLng([lat, lng]);
+            throw new Error('Address not found. Please check the location.');
         }
-    }, 1000);
-
-    // Keypad
-    const pad = document.getElementById('keypad');
-    for (let i=1; i<=9; i++) {
-        const btn = document.createElement('div');
-        btn.className = 'key';
-        btn.innerText = i;
-        btn.onclick = () => { document.getElementById('pinInput').value += i; };
-        pad.appendChild(btn);
     }
-    const zero = document.createElement('div'); zero.className = 'key'; zero.innerText = '0';
-    zero.onclick = () => { document.getElementById('pinInput').value += '0'; };
-    const clear = document.createElement('div'); clear.className = 'key'; clear.innerText = '⌫';
-    clear.onclick = () => { const inp = document.getElementById('pinInput'); inp.value = inp.value.slice(0,-1); };
-    pad.appendChild(zero); pad.appendChild(clear);
+
+    // ---------- Main flow: geocode, then start simulation ----------
+    async function initTracking() {
+        document.getElementById('addressDisplay').innerHTML = `📍 Geocoding address...`;
+        try {
+            destinationCoords = await geocodeAddress(deliveryAddress);
+            document.getElementById('addressDisplay').innerHTML = `📍 Delivering to: ${deliveryAddress}`;
+
+            // Update map: add destination marker and route line
+            if (destinationMarker) map.removeLayer(destinationMarker);
+            destinationMarker = L.marker(destinationCoords).addTo(map).bindPopup('Your Drop Zone');
+            if (routeLine) map.removeLayer(routeLine);
+            routeLine = L.polyline([kitchenCoords, destinationCoords], { color: '#f59e0b', weight: 2, dashArray: '5, 10' }).addTo(map);
+            map.fitBounds([kitchenCoords, destinationCoords]);
+
+            // Add drone marker at kitchen
+            if (droneMarker) map.removeLayer(droneMarker);
+            droneMarker = L.marker(kitchenCoords, { icon: droneIcon }).addTo(map);
+
+            // Start the drone animation and countdown
+            startDroneAnimation();
+        } catch (err) {
+            alert('Failed to locate address: ' + err.message);
+            console.error(err);
+            // Fallback to a default location (e.g., Gachibowli center)
+            destinationCoords = [17.4265, 78.3450];
+            initTracking(); // retry with fallback (avoid infinite loop? but safe enough)
+        }
+    }
+
+    // ---------- Drone animation and countdown ----------
+    let animationId = null;
+    let countdownInterval = null;
+    let eta = 120; // seconds
+
+    function startDroneAnimation() {
+        if (!destinationCoords) return;
+        const start = kitchenCoords;
+        const end = destinationCoords;
+        const duration = 10000; // 10 seconds
+        const startTime = performance.now();
+        let isAnimating = true;
+
+        function step(now) {
+            const elapsed = now - startTime;
+            let t = Math.min(1, elapsed / duration);
+            const lat = start[0] + (end[0] - start[0]) * t;
+            const lng = start[1] + (end[1] - start[1]) * t;
+            if (droneMarker) droneMarker.setLatLng([lat, lng]);
+            if (t < 1) {
+                animationId = requestAnimationFrame(step);
+            } else {
+                cancelAnimationFrame(animationId);
+                isAnimating = false;
+                // Drone landed
+                document.getElementById('unlockSection').style.display = 'block';
+                document.getElementById('passwordDisplay').innerHTML = `Delivery PIN: <strong>${correctPassword}</strong>`;
+                map.setView(end, 16);
+                // Stop ETA timer
+                if (countdownInterval) clearInterval(countdownInterval);
+                document.getElementById('etaSeconds').innerText = '0';
+            }
+        }
+        animationId = requestAnimationFrame(step);
+
+        // ETA countdown
+        eta = 120;
+        const etaSpan = document.getElementById('etaSeconds');
+        if (countdownInterval) clearInterval(countdownInterval);
+        countdownInterval = setInterval(() => {
+            if (eta <= 0 || !isAnimating) {
+                clearInterval(countdownInterval);
+                etaSpan.innerText = '0';
+            } else {
+                eta--;
+                etaSpan.innerText = eta;
+            }
+        }, 1000);
+    }
+
+    // ---------- Keypad and PIN verification ----------
+    function generateKeypad() {
+        const pad = document.getElementById('keypad');
+        if (!pad) return;
+        pad.innerHTML = '';
+        for (let i = 1; i <= 9; i++) {
+            const btn = document.createElement('div');
+            btn.className = 'key';
+            btn.innerText = i;
+            btn.onclick = () => { const inp = document.getElementById('pinInput'); if (inp.value.length < 4) inp.value += i; };
+            pad.appendChild(btn);
+        }
+        const zero = document.createElement('div');
+        zero.className = 'key'; zero.innerText = '0';
+        zero.onclick = () => { const inp = document.getElementById('pinInput'); if (inp.value.length < 4) inp.value += '0'; };
+        const clear = document.createElement('div');
+        clear.className = 'key'; clear.innerText = '⌫';
+        clear.onclick = () => { const inp = document.getElementById('pinInput'); inp.value = inp.value.slice(0, -1); };
+        pad.appendChild(zero);
+        pad.appendChild(clear);
+    }
 
     document.getElementById('unlockBtn').onclick = () => {
-        if (document.getElementById('pinInput').value === correctPassword) {
+        const entered = document.getElementById('pinInput').value;
+        if (entered === correctPassword) {
             alert('✅ Box unlocked! Enjoy your meal.');
             document.getElementById('unlockSection').style.display = 'none';
         } else {
@@ -153,7 +249,13 @@
             document.getElementById('pinInput').value = '';
         }
     };
-    document.getElementById('chatSupportBtn').onclick = () => window.open('https://wa.me/919876543210?text=Help%20with%20order', '_blank');
+
+    document.getElementById('chatSupportBtn').onclick = () => {
+        window.open('https://wa.me/919876543210?text=Help%20with%20order', '_blank');
+    };
+
+    generateKeypad();
+    initTracking();
 </script>
 </body>
 </html>
