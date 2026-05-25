@@ -334,7 +334,11 @@
             });
             if (response.ok) {
                 const result = await response.json();
-                sessionStorage.setItem('currentOrder', JSON.stringify({ id: result.order_id, password: password }));
+                sessionStorage.setItem('currentOrder', JSON.stringify({ 
+                    id: result.order_id, 
+                    password: password,
+                    customer_address: address 
+                }));
                 showToast('Order placed! Redirecting to tracking...', 'success');
                 setTimeout(() => {
                     window.location.href = "/tracking_demo";
