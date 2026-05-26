@@ -1,331 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>DroneDine – Smart Drone Delivery</title>
-    <!-- Leaflet -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        :root {
-            --primary: #f97316;
-            --primary-dark: #c2410c;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --info: #3b82f6;
-            --bg-light: #f8fafc;
-            --text-dark: #1f2937;
-            --text-light: #6b7280;
-            --border: #e5e7eb;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-light);
-            color: var(--text-dark);
-        }
-        /* Hero Section */
-        .hero {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            padding: 3rem 2rem;
-            border-radius: 2rem;
-            margin-bottom: 2rem;
-            position: relative;
-            overflow: hidden;
-        }
-        .hero h1 {
-            font-size: 2.5rem;
-            font-weight: 800;
-            color: white;
-            margin-bottom: 1rem;
-        }
-        .hero p {
-            color: #cbd5e1;
-            margin-bottom: 2rem;
-        }
-        .search-bar {
-            display: flex;
-            gap: 1rem;
-            max-width: 600px;
-            background: white;
-            border-radius: 60px;
-            padding: 0.5rem;
-            margin-bottom: 2rem;
-        }
-        .search-bar input {
-            flex: 1;
-            border: none;
-            padding: 1rem;
-            border-radius: 60px;
-            font-size: 1rem;
-            outline: none;
-        }
-        .search-bar button {
-            background: var(--primary);
-            border: none;
-            border-radius: 60px;
-            padding: 0 2rem;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .live-stats {
-            display: flex;
-            gap: 2rem;
-            flex-wrap: wrap;
-            color: white;
-        }
-        .stat-badge {
-            background: rgba(255,255,255,0.1);
-            padding: 0.5rem 1rem;
-            border-radius: 40px;
-            backdrop-filter: blur(4px);
-        }
-        .animated-drone {
-            position: absolute;
-            right: 2rem;
-            top: 2rem;
-            width: 100px;
-            animation: float 3s ease-in-out infinite;
-        }
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-20px); }
-        }
-        /* Restaurant Grid */
-        .restaurant-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 1.5rem;
-            margin-top: 2rem;
-        }
-        .food-card {
-            background: white;
-            border-radius: 24px;
-            overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            transition: all 0.3s;
-            cursor: pointer;
-        }
-        .food-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(0,0,0,0.1);
-        }
-        .food-img {
-            height: 180px;
-            background: #f1f5f9;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 3rem;
-            position: relative;
-        }
-        .drone-badge {
-            position: absolute;
-            top: 12px;
-            left: 12px;
-            background: rgba(0,0,0,0.6);
-            backdrop-filter: blur(4px);
-            padding: 4px 8px;
-            border-radius: 20px;
-            font-size: 0.7rem;
-            color: white;
-        }
-        .food-info { padding: 1rem; }
-        .food-title { font-weight: 700; font-size: 1.2rem; }
-        .food-meta { color: var(--text-light); font-size: 0.85rem; margin: 0.25rem 0; }
-        .rating { display: flex; align-items: center; gap: 0.25rem; color: var(--warning); }
-        .btn-add {
-            background: var(--primary);
-            border: none;
-            padding: 10px;
-            border-radius: 40px;
-            color: white;
-            font-weight: bold;
-            width: 100%;
-            margin-top: 0.5rem;
-            cursor: pointer;
-        }
-        /* Filters */
-        .filters {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-            margin: 1.5rem 0;
-        }
-        .filter-chip {
-            padding: 0.5rem 1rem;
-            background: #f1f5f9;
-            border-radius: 40px;
-            cursor: pointer;
-            font-size: 0.85rem;
-        }
-        .filter-chip.active {
-            background: var(--primary);
-            color: white;
-        }
-        /* Cart sidebar (same as before) */
-        .cart-sidebar {
-            position: fixed; right: -380px; top: 0; width: 380px; height: 100%;
-            background: white; box-shadow: -2px 0 15px rgba(0,0,0,0.1);
-            transition: 0.3s; z-index: 1100; padding: 1.5rem; overflow-y: auto;
-        }
-        .cart-sidebar.open { right: 0; }
-        .cart-icon { position: relative; cursor: pointer; }
-        .cart-count { position: absolute; top: -8px; right: -12px; background: var(--primary); color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; }
-        .navbar {
-            display: flex; justify-content: space-between; align-items: center;
-            background: white; padding: 0.8rem 1.5rem; border-radius: 60px;
-            margin-bottom: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-        .logo { font-size: 1.4rem; font-weight: 700; color: var(--primary); cursor: pointer; }
-        .user-info { display: flex; gap: 1rem; align-items: center; }
-        .profile-icon { font-size: 1.4rem; cursor: pointer; color: var(--primary); }
-        .toast { position: fixed; bottom: 20px; left: 20px; background: #1f2937; color: white; padding: 10px 20px; border-radius: 40px; z-index: 1200; transform: translateX(-120%); transition: 0.3s; }
-        .toast.show { transform: translateX(0); }
-        .theme-picker { position: fixed; bottom: 20px; right: 20px; background: white; border-radius: 40px; padding: 6px 12px; display: flex; gap: 8px; z-index: 1000; }
-        .theme-btn { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 2px solid white; }
-        @media (max-width: 640px) {
-            .hero h1 { font-size: 1.5rem; }
-            .search-bar { flex-direction: column; }
-            .cart-sidebar { width: 100%; }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DroneDine Profile</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif}
+body{background:
+;color:#333}
+header{background:
+;color:#fff;padding:20px;text-align:center;font-size:1.5rem;font-weight:600}
+.profile-container{max-width:420px;margin:30px auto;background:#fff;border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,0.1);overflow:hidden}
+.profile-header{display:flex;align-items:center;justify-content:space-between;padding:20px;border-bottom:1px solid #eee}
+.profile-info{display:flex;align-items:center;gap:15px}
+.profile-info img{width:70px;height:70px;border-radius:50%;object-fit:cover;border:3px solid 
+}
+.profile-info h2{font-size:1.2rem}
+.edit-btn{background:
+;color:#fff;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:0.9rem}
+.stats{display:flex;justify-content:space-around;padding:15px 0;background:
+}
+.stat{text-align:center}
+.stat h3{color:
+;font-size:1.1rem}
+.stat p{font-size:0.8rem;color:#777}
+.menu{padding:10px 0}
+.menu-item{display:flex;align-items:center;justify-content:space-between;padding:15px 20px;border-bottom:1px solid #eee;cursor:pointer;transition:0.2s}
+.menu-item:hover{background:
+}
+.menu-item span{font-size:1rem}
+.menu-item i{color:
+}
+.logout{background:
+;color:#fff;text-align:center;padding:15px;font-weight:600;cursor:pointer;border-top:1px solid #eee}
+.logout:hover{background:
+}
+</style>
 </head>
 <body>
 
-<!-- Login Overlay (same as before) -->
-<div id="loginOverlay" class="login-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:linear-gradient(135deg,var(--primary),var(--primary-dark)); display:flex; align-items:center; justify-content:center; z-index:2000;">
-    <div class="login-card" style="background:white; border-radius:32px; padding:2rem; width:90%; max-width:400px; text-align:center;">
-        <h2><i class="fas fa-drone"></i> DroneDine</h2>
-        <p>Login with mobile number</p>
-        <input type="tel" id="mobileNumber" placeholder="10-digit mobile" maxlength="10" style="width:100%; padding:12px; margin:8px 0; border-radius:40px; border:1px solid #e5e7eb;">
-        <button id="requestOtpBtn" style="background:var(--primary); color:white; border:none; padding:12px; border-radius:40px; width:100%; font-weight:bold;">Request OTP</button>
-        <div id="otpGroup" style="display:none; margin-top:1rem;">
-            <input type="text" id="otpInput" placeholder="Enter OTP" maxlength="6" style="width:100%; padding:12px; border-radius:40px; border:1px solid #e5e7eb;">
-            <button id="verifyOtpBtn" style="background:var(--primary); color:white; border:none; padding:12px; border-radius:40px; width:100%; font-weight:bold;">Verify & Login</button>
-        </div>
-        <p style="font-size:0.7rem; margin-top:1rem;">Demo: any number, OTP = 123456</p>
+<header>DroneDine Profile</header>
+
+<div class="profile-container">
+  <div class="profile-header">
+    <div class="profile-info">
+      <img src="https://i.ibb.co/3zYtV7k/avatar.jpg" alt="User Avatar">
+      <div>
+        <h2>Manoj Kumar</h2>
+        <p>Premium Member</p>
+      </div>
     </div>
+    <button class="edit-btn">Edit</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <h3>42</h3>
+      <p>Orders</p>
+    </div>
+    <div class="stat">
+      <h3>38</h3>
+      <p>Drone Deliveries</p>
+    </div>
+    <div class="stat">
+      <h3>2.4kg</h3>
+      <p>CO₂ Saved</p>
+    </div>
+  </div>
+
+  <div class="menu">
+    <div class="menu-item"><span>My Orders</span><i>›</i></div>
+    <div class="menu-item"><span>Saved Addresses</span><i>›</i></div>
+    <div class="menu-item"><span>Payment Methods</span><i>›</i></div>
+    <div class="menu-item"><span>Delivery Preferences</span><i>›</i></div>
+    <div class="menu-item"><span>Referral Code</span><i>›</i></div>
+    <div class="menu-item"><span>Eco Impact Tracker</span><i>›</i></div>
+    <div class="menu-item"><span>Settings</span><i>›</i></div>
+    <div class="menu-item"><span>Help & Support</span><i>›</i></div>
+  </div>
+
+  <div class="logout">Logout</div>
 </div>
 
-<!-- Main App -->
-<div id="appContainer" style="display:none; max-width:1200px; margin:0 auto; padding:1rem;">
-    <div class="navbar">
-        <div class="logo" onclick="showHome()"><i class="fas fa-drone"></i> DroneDine</div>
-        <div class="user-info">
-            <span id="userDisplay"></span>
-            <div class="profile-icon" id="profileIcon"><i class="fas fa-user-circle"></i></div>
-            <div class="cart-icon" id="cartIcon">
-                <i class="fas fa-shopping-cart"></i>
-                <span id="cartCount" class="cart-count">0</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Hero Section -->
-    <div class="hero">
-        <div class="animated-drone"><i class="fas fa-drone" style="font-size:4rem; color:var(--primary);"></i></div>
-        <h1>What are you craving?</h1>
-        <p>Fresh food delivered by drone in minutes</p>
-        <div class="search-bar">
-            <input type="text" id="heroSearch" placeholder="Search for biryani, pizza, dosa...">
-            <button id="heroSearchBtn"><i class="fas fa-search"></i> Search</button>
-        </div>
-        <div class="live-stats">
-            <div class="stat-badge"><i class="fas fa-drone"></i> 12 drones active</div>
-            <div class="stat-badge"><i class="fas fa-bolt"></i> Avg. delivery: 15 min</div>
-            <div class="stat-badge"><i class="fas fa-check-circle"></i> 1,247 deliveries today</div>
-        </div>
-    </div>
-
-    <!-- Smart Filters -->
-    <div class="filters" id="filterRow">
-        <div class="filter-chip active" data-filter="all">All</div>
-        <div class="filter-chip" data-filter="veg">Veg</div>
-        <div class="filter-chip" data-filter="nonveg">Non-Veg</div>
-        <div class="filter-chip" data-filter="fast">Fastest Drone Route</div>
-        <div class="filter-chip" data-filter="rating">Top Rated</div>
-    </div>
-
-    <!-- Restaurant Grid -->
-    <div id="restaurantsGrid" class="restaurant-grid"></div>
-
-    <!-- Cart Sidebar -->
-    <div id="cartSidebar" class="cart-sidebar">
-        <button onclick="closeCart()" style="float:right; background:none; border:none; font-size:1.5rem;">&times;</button>
-        <h3>Your Cart</h3>
-        <div id="cartItemsList"></div>
-        <div style="margin:1rem 0;"><strong>Subtotal:</strong> ₹<span id="cartSubtotal">0</span></div>
-        <div><strong>Delivery:</strong> ₹20</div>
-        <div><strong>Total:</strong> ₹<span id="cartTotal">0</span></div>
-        <button id="checkoutBtn" style="background:var(--primary); color:white; border:none; padding:12px; border-radius:40px; width:100%;">Proceed to Checkout</button>
-        <button onclick="emptyCart()" style="background:transparent; border:1px solid var(--danger); color:var(--danger); padding:12px; border-radius:40px; width:100%; margin-top:0.5rem;">Empty Cart</button>
-    </div>
-
-    <!-- Checkout Panel (hidden initially) -->
-    <div id="checkoutPanel" style="display:none; background:white; border-radius:24px; padding:1.5rem; margin-top:1rem;">
-        <h3>Checkout</h3>
-        <div id="checkoutItems"></div>
-        <h4>Delivery Address</h4>
-        <div id="addressList"></div>
-        <button class="btn-add" onclick="addNewAddress()">+ Add New Address</button>
-        <h4>Payment Method</h4>
-        <div id="paymentMethods" style="display:flex; gap:1rem;">
-            <div class="chip" data-payment="upi">📱 UPI</div>
-            <div class="chip" data-payment="card">💳 Card</div>
-            <div class="chip" data-payment="cod">💵 Cash</div>
-        </div>
-        <button id="confirmCheckoutBtn" class="btn-add" style="margin-top:1rem;">Place Order</button>
-        <button onclick="showHome()" class="empty-cart-btn" style="margin-top:0.5rem;">Back to Menu</button>
-    </div>
-
-    <!-- Tracking Panel (similar to before) -->
-    <div id="trackingPanel" style="display:none; background:white; border-radius:24px; padding:1.5rem;">
-        <h3>Order Tracking</h3>
-        <div class="timeline" id="trackingTimeline" style="display:flex; justify-content:space-between; margin:2rem 0;">
-            <div class="timeline-step" data-step="accepted"><div class="step-icon"><i class="fas fa-check-circle"></i></div><div class="step-label">Accepted</div></div>
-            <div class="timeline-step" data-step="preparing"><div class="step-icon"><i class="fas fa-utensils"></i></div><div class="step-label">Preparing</div></div>
-            <div class="timeline-step" data-step="launching"><div class="step-icon"><i class="fas fa-rocket"></i></div><div class="step-label">Launching</div></div>
-            <div class="timeline-step" data-step="in_transit"><div class="step-icon"><i class="fas fa-drone"></i></div><div class="step-label">In Transit</div></div>
-            <div class="timeline-step" data-step="delivered"><div class="step-icon"><i class="fas fa-home"></i></div><div class="step-label">Delivered</div></div>
-        </div>
-        <div id="trackMap" style="height:280px; border-radius:20px; margin:1rem 0;"></div>
-        <div id="trackStatus" style="text-align:center;"></div>
-        <div id="unlockBox" style="display:none;">
-            <p>Enter 4-digit PIN:</p>
-            <input type="password" id="deliveryPin" maxlength="4" style="width:100%; padding:8px; border-radius:40px;">
-            <button id="unlockBtn" class="btn-add">Unlock Box</button>
-        </div>
-        <div id="ratingSection" style="display:none;"><h4>Rate your delivery</h4><div class="stars"></div><button id="submitRatingBtn">Submit</button></div>
-        <button id="placeAnotherOrderBtn" class="empty-cart-btn" style="margin-top:1rem;">Place Another Order</button>
-    </div>
-</div>
-
-<!-- Theme Switcher -->
-<div class="theme-picker">
-    <div class="theme-btn theme-orange" data-theme="orange"></div>
-    <div class="theme-btn theme-green" data-theme="green"></div>
-    <div class="theme-btn theme-blue" data-theme="blue"></div>
-    <div class="theme-btn theme-purple" data-theme="purple"></div>
-    <div class="theme-btn theme-pink" data-theme="pink"></div>
-    <div class="theme-btn theme-cyan" data-theme="cyan"></div>
-</div>
-<div id="toastMsg" class="toast"></div>
-
-<script>
-    // Theme, OTP, cart, etc. (same as before but with enhancements)
-    // I'll include the necessary parts, but to save space, I'll focus on the new features.
-    // The full working script is long; I'll provide a condensed but functional version.
-    // Due to character limits, I'll outline the key parts: 
-    // - setTheme, showToast, loadRestaurants (with drone badge, rating, etc.)
-    // - checkout, placeOrder, startPolling (fixed)
-    // - profile page redirect
-    // For brevity, I'll give the complete script in the final answer.
-</script>
 </body>
 </html>
