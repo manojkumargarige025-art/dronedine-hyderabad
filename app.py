@@ -1,6 +1,5 @@
 """
-Drone Food Delivery MVP - Flask Backend
-Hyderabad, India - Customer orders, restaurant dashboard, admin panel, shared password system.
+DroneDine - Complete Backend with User Auth, Orders, Drone Tracking, Admin/Restaurant Dashboards
 """
 
 import json
@@ -19,696 +18,349 @@ from flask import (
     url_for,
 )
 from flask_cors import CORS
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
 
-import database as db
-
-# Optional: Razorpay test keys (get yours from https://dashboard.razorpay.com/)
-RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
-RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
-
-# Session secret (change in production)
+# ==================== CONFIGURATION ====================
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "drone-food-mvp-dev-key-change-me")
+app.secret_key = os.environ.get("SECRET_KEY", "dronedine-super-secret-key-change-me")
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///dronedine.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 CORS(app, supports_credentials=True)
 
-# Orders that are still "active" (password must be unique among these)
-ACTIVE_STATUSES = ("pending", "accepted", "preparing", "out_for_delivery")
+db = SQLAlchemy(app)
 
-# Simple restaurant login for MVP (restaurant_id -> PIN)
-RESTAURANT_LOGINS = {
-    "bawarchi": {"pin": "1111", "name": "Bawarchi Restaurant"},
-    "paradise": {"pin": "2222", "name": "Paradise Biryani"},
-    "chutneys": {"pin": "3333", "name": "Chutneys South Indian"},
+# Mapbox token (your existing one)
+MAPBOX_TOKEN = "pk.eyJ1IjoibWFub2oyNTgwOCIsImEiOiJjbXBsZ3B3NmoxYzJmMnFzbHV6Zmt1NnNwIn0.hzkSfnkPO_KRL3urJbFtxA"
+
+# ==================== MODELS ====================
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    phone = db.Column(db.String(10), unique=True, nullable=False)
+    name = db.Column(db.String(100))
+    email = db.Column(db.String(100))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    orders = db.relationship('Order', backref='user', lazy=True)
+
+class Restaurant(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    cuisine = db.Column(db.String(50))
+    rating = db.Column(db.Float, default=4.0)
+    delivery_time = db.Column(db.Integer, default=20)  # minutes
+    is_active = db.Column(db.Boolean, default=True)
+    image_url = db.Column(db.String(200))
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
+    menu = db.relationship('MenuItem', backref='restaurant', lazy=True)
+
+class MenuItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    price = db.Column(db.Float, nullable=False)
+    description = db.Column(db.String(200))
+    category = db.Column(db.String(50))
+    image_url = db.Column(db.String(200))
+    is_veg = db.Column(db.Boolean, default=True)
+
+class Order(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
+    items = db.Column(db.Text, nullable=False)  # JSON string
+    total_amount = db.Column(db.Float, nullable=False)
+    unlock_code = db.Column(db.String(4), nullable=False)
+    status = db.Column(db.String(50), default='placed')  # placed, accepted, preparing, out_for_delivery, delivered, cancelled
+    delivery_lat = db.Column(db.Float)
+    delivery_lng = db.Column(db.Float)
+    delivery_address = db.Column(db.String(200))
+    drone_id = db.Column(db.String(20))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    delivered_at = db.Column(db.DateTime)
+
+class DroneTracking(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False)
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
+    altitude = db.Column(db.Float, default=0)
+    speed = db.Column(db.Float, default=0)
+    battery = db.Column(db.Integer, default=100)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+# ==================== HELPER FUNCTIONS ====================
+def generate_unlock_code():
+    return str(random.randint(1000, 9999))
+
+def calculate_co2_saved(orders):
+    # Assuming each drone delivery saves ~0.065 kg CO2 compared to car delivery
+    delivered = [o for o in orders if o.status == 'delivered']
+    return len(delivered) * 0.065
+
+# ==================== AUTH ROUTES ====================
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        phone = request.form.get('phone')
+        if not phone or len(phone) != 10:
+            return render_template('login.html', error="Invalid phone number")
+        # Generate OTP (simulate)
+        otp = random.randint(1000, 9999)
+        session['login_otp'] = otp
+        session['login_phone'] = phone
+        print(f"[DEMO] OTP for {phone}: {otp}")
+        return redirect(url_for('verify_otp'))
+    return render_template('login.html')
+
+@app.route('/verify-otp', methods=['GET', 'POST'])
+def verify_otp():
+    if request.method == 'POST':
+        entered_otp = request.form.get('otp')
+        if str(entered_otp) == str(session.get('login_otp')):
+            phone = session.get('login_phone')
+            user = User.query.filter_by(phone=phone).first()
+            if not user:
+                user = User(phone=phone)
+                db.session.add(user)
+                db.session.commit()
+            session['user_id'] = user.id
+            session.pop('login_otp', None)
+            session.pop('login_phone', None)
+            return redirect(url_for('home'))
+        else:
+            return render_template('verify_otp.html', error="Wrong OTP")
+    return render_template('verify_otp.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('home'))
+
+# ==================== MAIN PAGES ====================
+@app.route('/')
+def home():
+    restaurants = Restaurant.query.filter_by(is_active=True).all()
+    return render_template('home.html', restaurants=restaurants)
+
+@app.route('/restaurant/<int:restaurant_id>')
+def restaurant_menu(restaurant_id):
+    restaurant = Restaurant.query.get_or_404(restaurant_id)
+    menu_items = MenuItem.query.filter_by(restaurant_id=restaurant_id).all()
+    return render_template('menu.html', restaurant=restaurant, items=menu_items)
+
+@app.route('/profile')
+def profile():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    user = User.query.get(session['user_id'])
+    orders = Order.query.filter_by(user_id=user.id).order_by(Order.created_at.desc()).all()
+    co2_saved = calculate_co2_saved(orders)
+    return render_template('profile.html', user=user, orders=orders, co2_saved=co2_saved)
+
+@app.route('/track-order/<int:order_id>')
+def track_order(order_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    order = Order.query.get_or_404(order_id)
+    if order.user_id != session['user_id']:
+        return "Unauthorized", 403
+    return render_template('track.html', order=order)
+
+# ==================== API ENDPOINTS ====================
+@app.route('/api/place-order', methods=['POST'])
+def place_order():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not logged in'}), 401
+    data = request.get_json()
+    required = ['restaurant_id', 'items', 'total', 'delivery_address', 'latitude', 'longitude']
+    for field in required:
+        if field not in data:
+            return jsonify({'error': f'Missing {field}'}), 400
+    unlock_code = generate_unlock_code()
+    order = Order(
+        user_id=session['user_id'],
+        restaurant_id=data['restaurant_id'],
+        items=json.dumps(data['items']),
+        total_amount=data['total'],
+        unlock_code=unlock_code,
+        status='placed',
+        delivery_lat=data['latitude'],
+        delivery_lng=data['longitude'],
+        delivery_address=data['delivery_address']
+    )
+    db.session.add(order)
+    db.session.commit()
+    # Simulate initial tracking entry
+    tracking = DroneTracking(
+        order_id=order.id,
+        latitude=data['latitude'],
+        longitude=data['longitude'],
+        altitude=0,
+        speed=0,
+        battery=100
+    )
+    db.session.add(tracking)
+    db.session.commit()
+    return jsonify({
+        'order_id': order.id,
+        'unlock_code': unlock_code,
+        'status': 'success'
+    })
+
+@app.route('/api/order/<int:order_id>')
+def get_order(order_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    order = Order.query.get_or_404(order_id)
+    if order.user_id != session['user_id']:
+        return jsonify({'error': 'Unauthorized'}), 403
+    return jsonify({
+        'id': order.id,
+        'status': order.status,
+        'unlock_code': order.unlock_code,
+        'total': order.total_amount,
+        'created_at': order.created_at.isoformat(),
+        'delivery_address': order.delivery_address,
+        'drone_id': order.drone_id
+    })
+
+@app.route('/api/tracking/<int:order_id>')
+def get_tracking(order_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    order = Order.query.get_or_404(order_id)
+    if order.user_id != session['user_id']:
+        return jsonify({'error': 'Unauthorized'}), 403
+    # Get latest tracking entry
+    tracking = DroneTracking.query.filter_by(order_id=order_id).order_by(DroneTracking.timestamp.desc()).first()
+    if not tracking:
+        # Return default based on order status
+        return jsonify({
+            'latitude': order.delivery_lat,
+            'longitude': order.delivery_lng,
+            'altitude': 0,
+            'speed': 0,
+            'battery': 100,
+            'status': order.status,
+            'unlock_code': order.unlock_code
+        })
+    return jsonify({
+        'latitude': tracking.latitude,
+        'longitude': tracking.longitude,
+        'altitude': tracking.altitude,
+        'speed': tracking.speed,
+        'battery': tracking.battery,
+        'status': order.status,
+        'unlock_code': order.unlock_code
+    })
+
+# ==================== RESTAURANT DASHBOARD (Protected with PIN) ====================
+# Simplified for demo – we'll use same restaurant IDs as before
+RESTAURANT_PINS = {
+    'bawarchi': '1111',
+    'paradise': '2222',
+    'chutneys': '3333'
 }
 
-RESTAURANTS = [
-    {
-        "id": "bawarchi",
-        "name": "Bawarchi Restaurant",
-        "area": "RTC Cross Roads, Hyderabad",
-        "rating": 4.5,
-        "menu": [
-            {"id": "m1", "name": "Hyderabadi Chicken Biryani", "price": 280},
-            {"id": "m2", "name": "Mutton Biryani", "price": 350},
-            {"id": "m3", "name": "Double Ka Meetha", "price": 80},
-            {"id": "m4", "name": "Irani Chai", "price": 30},
-        ],
-    },
-    {
-        "id": "paradise",
-        "name": "Paradise Biryani",
-        "area": "Secunderabad, Hyderabad",
-        "rating": 4.7,
-        "menu": [
-            {"id": "m1", "name": "Paradise Special Biryani", "price": 320},
-            {"id": "m2", "name": "Keema Samosa (2 pcs)", "price": 90},
-            {"id": "m3", "name": "Qubani Ka Meetha", "price": 120},
-            {"id": "m4", "name": "Lassi", "price": 60},
-        ],
-    },
-    {
-        "id": "chutneys",
-        "name": "Chutneys South Indian",
-        "area": "Banjara Hills, Hyderabad",
-        "rating": 4.4,
-        "menu": [
-            {"id": "m1", "name": "Masala Dosa", "price": 120},
-            {"id": "m2", "name": "Idli Sambar (2 pcs)", "price": 80},
-            {"id": "m3", "name": "Filter Coffee", "price": 50},
-            {"id": "m4", "name": "Pesarattu Upma", "price": 140},
-        ],
-    },
-]
-
-
-def row_to_dict(row):
-    """Convert sqlite3.Row to a plain dictionary."""
-    d = dict(row)
-    if d.get("items"):
-        try:
-            d["items"] = json.loads(d["items"])
-        except json.JSONDecodeError:
-            pass
-    return d
-
-
-def generate_unique_password(cursor):
-    """Generate a 4-digit password not used by any active order."""
-    placeholders = ",".join("?" * len(ACTIVE_STATUSES))
-    for _ in range(200):
-        password = str(random.randint(1000, 9999))
-        cursor.execute(
-            f"""
-            SELECT id FROM orders
-            WHERE password = ? AND status IN ({placeholders})
-            """,
-            (password,) + ACTIVE_STATUSES,
-        )
-        if not cursor.fetchone():
-            return password
-    raise RuntimeError("Could not generate unique password")
-
-
-def restaurant_required(f):
-    """API decorator: restaurant must be logged in."""
-
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if not session.get("restaurant_id"):
-            return jsonify({"error": "Login required", "login_required": True}), 401
-        return f(*args, **kwargs)
-
-    return decorated
-
-
-def get_order_row(cursor, order_id):
-    cursor.execute("SELECT * FROM orders WHERE id = ?", (order_id,))
-    return cursor.fetchone()
-
-
-# ---------- Page routes ----------
-
-
-@app.route("/")
-def customer_page():
-    return render_template("index.html")
-
-
-@app.route("/track")
-def track_page():
-    return render_template("track.html")
-
-
-@app.route("/restaurant/login")
+@app.route('/restaurant/login', methods=['GET', 'POST'])
 def restaurant_login_page():
-    if session.get("restaurant_id"):
-        return redirect(url_for("restaurant_page"))
-    return render_template("restaurant_login.html")
+    if request.method == 'POST':
+        rid = request.form.get('restaurant_id')
+        pin = request.form.get('pin')
+        if rid in RESTAURANT_PINS and RESTAURANT_PINS[rid] == pin:
+            session['restaurant_id'] = rid
+            session['restaurant_name'] = rid.capitalize()
+            return redirect(url_for('restaurant_dashboard'))
+        else:
+            return render_template('restaurant_login.html', error="Invalid credentials")
+    return render_template('restaurant_login.html')
 
-
-@app.route("/restaurant")
-def restaurant_page():
-    if not session.get("restaurant_id"):
-        return redirect(url_for("restaurant_login_page"))
-    return render_template("restaurant.html")
-
-
-@app.route("/admin")
-def admin_page():
-    return render_template("admin.html")
-
-
-@app.route("/support")
-def support():
-    return render_template("support.html")
-
-
-@app.route("/simulator")
-def simulator():
-    return render_template("simulator.html")
-
-
-@app.route("/tracking_demo")
-def tracking_demo():
-    return render_template("tracking_clean.html")
-
-
-# ---------- Restaurant auth ----------
-
-
-@app.route("/api/restaurant/login", methods=["POST"])
-def restaurant_login():
-    data = request.get_json() or {}
-    restaurant_id = data.get("restaurant_id", "").strip()
-    pin = str(data.get("pin", "")).strip()
-
-    creds = RESTAURANT_LOGINS.get(restaurant_id)
-    if not creds or creds["pin"] != pin:
-        return jsonify({"error": "Invalid restaurant or PIN"}), 401
-
-    session["restaurant_id"] = restaurant_id
-    session["restaurant_name"] = creds["name"]
-    return jsonify(
-        {
-            "success": True,
-            "restaurant_id": restaurant_id,
-            "restaurant_name": creds["name"],
-        }
-    )
-
-
-@app.route("/api/restaurant/logout", methods=["POST"])
-def restaurant_logout():
-    session.clear()
-    return jsonify({"success": True})
-
-
-@app.route("/api/restaurant/me")
-def restaurant_me():
-    if not session.get("restaurant_id"):
-        return jsonify({"logged_in": False}), 401
-    return jsonify(
-        {
-            "logged_in": True,
-            "restaurant_id": session["restaurant_id"],
-            "restaurant_name": session.get("restaurant_name"),
-        }
-    )
-
-
-# ---------- API: Restaurants ----------
-
-
-@app.route("/api/restaurants")
-def get_restaurants():
-    return jsonify(RESTAURANTS)
-
-
-# ---------- API: Orders (auto-mark paid) ----------
-
-
-@app.route("/api/orders", methods=["POST"])
-def create_order():
-    """
-    Create order. Server assigns a unique 4-digit drone box password.
-    For demo, payment_status is set to 'paid' automatically.
-    """
-    data = request.get_json() or {}
-
-    required = [
-        "customer_name",
-        "customer_phone",
-        "customer_address",
-        "restaurant_id",
-        "items",
-        "total_amount",
-    ]
-    for field in required:
-        if not data.get(field):
-            return jsonify({"error": f"Missing field: {field}"}), 400
-
-    restaurant = next(
-        (r for r in RESTAURANTS if r["id"] == data["restaurant_id"]), None
-    )
+@app.route('/restaurant/dashboard')
+def restaurant_dashboard():
+    if 'restaurant_id' not in session:
+        return redirect(url_for('restaurant_login_page'))
+    rid = session['restaurant_id']
+    # Find restaurant by name (simplified)
+    restaurant = Restaurant.query.filter_by(name=rid.capitalize()).first()
     if not restaurant:
-        return jsonify({"error": "Invalid restaurant"}), 400
+        # Create dummy if not exists
+        restaurant = Restaurant(name=rid.capitalize(), cuisine='Indian', rating=4.5, is_active=True)
+        db.session.add(restaurant)
+        db.session.commit()
+    orders = Order.query.filter_by(restaurant_id=restaurant.id).order_by(Order.created_at.desc()).all()
+    return render_template('restaurant/dashboard.html', restaurant=restaurant, orders=orders)
 
-    conn = db.get_connection()
-    cursor = conn.cursor()
-    try:
-        password = generate_unique_password(cursor)
-    except RuntimeError:
-        conn.close()
-        return jsonify({"error": "Could not generate password. Try again."}), 500
-
-    # DEMO: auto-mark payment as 'paid' so drone can be dispatched
-    cursor.execute(
-        """
-        INSERT INTO orders (
-            customer_name, customer_phone, customer_address,
-            restaurant_id, restaurant_name, items, total_amount,
-            password, status, payment_status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'paid')
-        """,
-        (
-            data["customer_name"],
-            data["customer_phone"],
-            data["customer_address"],
-            data["restaurant_id"],
-            restaurant["name"],
-            json.dumps(data["items"]),
-            float(data["total_amount"]),
-            password,
-        ),
-    )
-    order_id = cursor.lastrowid
-    conn.commit()
-    conn.close()
-
-    return jsonify(
-        {
-            "success": True,
-            "order_id": order_id,
-            "password": password,
-            "message": "Order placed. Save your drone password!",
-            "track_url": f"/track?order_id={order_id}&phone={data['customer_phone']}",
-        }
-    )
-
-
-@app.route("/api/orders")
-def list_orders():
-    """All orders for admin — supports status, payment, and search filters."""
-    status = request.args.get("status", "").strip()
-    payment = request.args.get("payment", "").strip()
-    search = request.args.get("q", "").strip()
-
-    conn = db.get_connection()
-    cursor = conn.cursor()
-
-    query = "SELECT * FROM orders WHERE 1=1"
-    params = []
-
-    if status:
-        query += " AND status = ?"
-        params.append(status)
-
-    if payment:
-        query += " AND payment_status = ?"
-        params.append(payment)
-
-    if search:
-        query += " AND (customer_name LIKE ? OR customer_phone LIKE ? OR CAST(id AS TEXT) = ?)"
-        like = f"%{search}%"
-        params.extend([like, like, search])
-
-    query += " ORDER BY created_at DESC"
-    cursor.execute(query, params)
-    orders = [row_to_dict(row) for row in cursor.fetchall()]
-    conn.close()
-    return jsonify(orders)
-
-
-@app.route("/api/orders/track")
-def track_order():
-    """Customer tracking: order ID + phone number."""
-    order_id = request.args.get("order_id", "").strip()
-    phone = request.args.get("phone", "").strip()
-
-    if not order_id or not phone:
-        return jsonify({"error": "order_id and phone are required"}), 400
-
-    conn = db.get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT * FROM orders WHERE id = ? AND customer_phone = ?",
-        (order_id, phone),
-    )
-    row = cursor.fetchone()
-    conn.close()
-
-    if not row:
-        return jsonify({"error": "Order not found. Check ID and phone."}), 404
-
-    order = row_to_dict(row)
-    # Do not expose full password on tracking page (customer already has it from checkout)
-    order.pop("password", None)
-    return jsonify(order)
-
-
-@app.route("/api/restaurant/stats")
-@restaurant_required
-def restaurant_stats():
-    """Today's order count and revenue for logged-in restaurant."""
-    restaurant_id = session["restaurant_id"]
-    conn = db.get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute(
-        """
-        SELECT COUNT(*), COALESCE(SUM(total_amount), 0)
-        FROM orders
-        WHERE restaurant_id = ?
-        AND date(created_at) = date('now')
-        """,
-        (restaurant_id,),
-    )
-    row = cursor.fetchone()
-    today_orders = row[0]
-    today_revenue = row[1]
-
-    placeholders = ",".join("?" * len(ACTIVE_STATUSES))
-    cursor.execute(
-        f"""
-        SELECT COUNT(*) FROM orders
-        WHERE restaurant_id = ? AND status IN ({placeholders})
-        """,
-        (restaurant_id,) + ACTIVE_STATUSES,
-    )
-    active_orders = cursor.fetchone()[0]
-    conn.close()
-
-    return jsonify(
-        {
-            "today_orders": today_orders,
-            "today_revenue": round(float(today_revenue), 2),
-            "active_orders": active_orders,
-            "drone_status": "Ready",
-        }
-    )
-
-
-@app.route("/api/orders/pending")
-@restaurant_required
-def pending_orders():
-    """Active orders for logged-in restaurant only."""
-    restaurant_id = session["restaurant_id"]
-    conn = db.get_connection()
-    cursor = conn.cursor()
-    placeholders = ",".join("?" * len(ACTIVE_STATUSES))
-    cursor.execute(
-        f"""
-        SELECT * FROM orders
-        WHERE restaurant_id = ?
-        AND status IN ({placeholders})
-        ORDER BY created_at DESC
-        """,
-        (restaurant_id,) + ACTIVE_STATUSES,
-    )
-    orders = [row_to_dict(row) for row in cursor.fetchall()]
-    conn.close()
-    return jsonify(orders)
-
-
-@app.route("/api/orders/<int:order_id>", methods=["PATCH"])
-@restaurant_required
-def update_order(order_id):
-    """
-    Restaurant: accept, decline, or advance status.
-    For demo, payment check is bypassed (payment_status is always 'paid').
-    """
-    data = request.get_json() or {}
-    action = data.get("action")
-
+@app.route('/api/restaurant/update-order/<int:order_id>', methods=['POST'])
+def restaurant_update_order(order_id):
+    if 'restaurant_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.get_json()
+    action = data.get('action')
+    order = Order.query.get_or_404(order_id)
+    # Verify restaurant owns the order
+    restaurant = Restaurant.query.filter_by(name=session['restaurant_id'].capitalize()).first()
+    if not restaurant or order.restaurant_id != restaurant.id:
+        return jsonify({'error': 'Unauthorized'}), 403
     status_map = {
-        "accept": "accepted",
-        "decline": "declined",
-        "preparing": "preparing",
-        "out_for_delivery": "out_for_delivery",
-        "delivered": "delivered",
+        'accept': 'accepted',
+        'prepare': 'preparing',
+        'dispatch': 'out_for_delivery',
+        'deliver': 'delivered'
     }
+    if action in status_map:
+        order.status = status_map[action]
+        if action == 'deliver':
+            order.delivered_at = datetime.utcnow()
+        db.session.commit()
+        return jsonify({'success': True, 'status': order.status})
+    return jsonify({'error': 'Invalid action'}), 400
 
-    if action not in status_map:
-        return jsonify({"error": "Invalid action"}), 400
+# ==================== ADMIN DASHBOARD ====================
+@app.route('/admin/dashboard')
+def admin_dashboard():
+    # Simple admin check (hardcoded for demo)
+    # In production, add proper admin authentication
+    total_orders = Order.query.count()
+    active_orders = Order.query.filter(Order.status.in_(['accepted', 'preparing', 'out_for_delivery'])).count()
+    delivered_orders = Order.query.filter_by(status='delivered').count()
+    total_revenue = db.session.query(db.func.sum(Order.total_amount)).filter_by(status='delivered').scalar() or 0
+    orders = Order.query.order_by(Order.created_at.desc()).all()
+    return render_template('admin/dashboard.html', 
+                         total_orders=total_orders,
+                         active_orders=active_orders,
+                         delivered_orders=delivered_orders,
+                         total_revenue=total_revenue,
+                         orders=orders)
 
-    new_status = status_map[action]
+# ==================== INITIAL DATA SEED (Run once) ====================
+def init_db():
+    db.create_all()
+    # Add sample restaurants if empty
+    if Restaurant.query.count() == 0:
+        sample_restaurants = [
+            Restaurant(name='Bawarchi', cuisine='Biryani, Kebabs', rating=4.5, delivery_time=15, is_active=True, image_url='https://via.placeholder.com/300x200?text=Bawarchi'),
+            Restaurant(name='Paradise', cuisine='Biryani, Kebab', rating=4.7, delivery_time=20, is_active=True, image_url='https://via.placeholder.com/300x200?text=Paradise'),
+            Restaurant(name='Chutneys', cuisine='South Indian', rating=4.3, delivery_time=12, is_active=True, image_url='https://via.placeholder.com/300x200?text=Chutneys')
+        ]
+        db.session.add_all(sample_restaurants)
+        db.session.commit()
+        # Add menu items
+        menu_items = [
+            MenuItem(restaurant_id=1, name='Chicken Biryani (Full)', price=280, description='Hyderabadi special', category='Biryani', is_veg=False),
+            MenuItem(restaurant_id=1, name='Mutton Biryani (Full)', price=350, description='Tender mutton', category='Biryani', is_veg=False),
+            MenuItem(restaurant_id=1, name='Haleem', price=180, description='Ramadan special', category='Starters', is_veg=False),
+            MenuItem(restaurant_id=2, name='Paradise Special Biryani', price=320, description='Signature dish', category='Biryani', is_veg=False),
+            MenuItem(restaurant_id=2, name='Keema Samosa', price=90, description='Crispy snack', category='Starters', is_veg=False),
+            MenuItem(restaurant_id=3, name='Masala Dosa', price=120, description='Crispy dosa', category='Main Course', is_veg=True),
+            MenuItem(restaurant_id=3, name='Idli Sambar', price=80, description='Soft idlis', category='Main Course', is_veg=True),
+        ]
+        db.session.add_all(menu_items)
+        db.session.commit()
 
-    conn = db.get_connection()
-    cursor = conn.cursor()
-    row = get_order_row(cursor, order_id)
-
-    if not row:
-        conn.close()
-        return jsonify({"error": "Order not found"}), 404
-
-    if row["restaurant_id"] != session["restaurant_id"]:
-        conn.close()
-        return jsonify({"error": "Not your order"}), 403
-
-    # DEMO: No payment check – payment_status is already 'paid' from creation
-
-    cursor.execute(
-        "UPDATE orders SET status = ? WHERE id = ?",
-        (new_status, order_id),
-    )
-    conn.commit()
-    conn.close()
-
-    return jsonify({"success": True, "status": new_status})
-
-
-@app.route("/api/orders/<int:order_id>/password")
-@restaurant_required
-def get_order_password(order_id):
-    """Restaurant views drone box password (only for their orders)."""
-    conn = db.get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT password, customer_name, status, restaurant_id, payment_status FROM orders WHERE id = ?",
-        (order_id,),
-    )
-    row = cursor.fetchone()
-    conn.close()
-
-    if not row:
-        return jsonify({"error": "Order not found"}), 404
-
-    if row["restaurant_id"] != session["restaurant_id"]:
-        return jsonify({"error": "Not your order"}), 403
-
-    return jsonify(
-        {
-            "order_id": order_id,
-            "password": row["password"],
-            "customer_name": row["customer_name"],
-            "status": row["status"],
-            "payment_status": row["payment_status"],
-        }
-    )
-
-
-@app.route("/api/orders/<int:order_id>/refund", methods=["POST"])
-def admin_refund(order_id):
-    """Admin: mark order payment as refunded (simple MVP action)."""
-    conn = db.get_connection()
-    cursor = conn.cursor()
-    row = get_order_row(cursor, order_id)
-    if not row:
-        conn.close()
-        return jsonify({"error": "Order not found"}), 404
-
-    cursor.execute(
-        "UPDATE orders SET payment_status = 'refunded' WHERE id = ?",
-        (order_id,),
-    )
-    conn.commit()
-    conn.close()
-    return jsonify({"success": True, "payment_status": "refunded"})
-
-
-@app.route("/api/verify-password", methods=["POST"])
-def verify_password():
-    """
-    Customer unlocks drone box at delivery.
-    Requires correct password and order status out_for_delivery/delivered.
-    Payment is already 'paid' (demo).
-    """
-    data = request.get_json() or {}
-    order_id = data.get("order_id")
-    password = str(data.get("password", "")).strip()
-
-    if not order_id or not password:
-        return jsonify({"error": "order_id and password required"}), 400
-
-    conn = db.get_connection()
-    cursor = conn.cursor()
-    row = get_order_row(cursor, order_id)
-    conn.close()
-
-    if not row:
-        return jsonify({"error": "Order not found"}), 404
-
-    # No payment check because we auto-mark paid
-
-    if row["status"] not in ("out_for_delivery", "delivered"):
-        return jsonify(
-            {
-                "success": False,
-                "message": f"Drone not ready yet. Status: {row['status']}",
-            }
-        ), 400
-
-    if row["password"] == password:
-        return jsonify(
-            {
-                "success": True,
-                "message": "Password correct! Drone box unlocked. Enjoy your meal!",
-            }
-        )
-
-    return jsonify({"success": False, "message": "Wrong password. Try again."}), 401
-
-
-# ---------- Razorpay (test mode) ----------
-
-
-@app.route("/api/razorpay-config")
-def razorpay_config():
-    return jsonify(
-        {
-            "key_id": RAZORPAY_KEY_ID,
-            "demo_mode": not (RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET),
-        }
-    )
-
-
-@app.route("/api/create-razorpay-order", methods=["POST"])
-def create_razorpay_order():
-    data = request.get_json() or {}
-    amount = int(float(data.get("amount", 0)) * 100)
-    order_id = data.get("order_id")
-
-    if amount <= 0:
-        return jsonify({"error": "Invalid amount"}), 400
-
-    if RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET:
-        try:
-            import razorpay
-
-            client = razorpay.Client(
-                auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET)
-            )
-            rp_order = client.order.create(
-                {
-                    "amount": amount,
-                    "currency": "INR",
-                    "receipt": f"order_{order_id}_{random.randint(1000, 9999)}",
-                }
-            )
-            razorpay_order_id = rp_order["id"]
-
-            conn = db.get_connection()
-            cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE orders SET razorpay_order_id = ? WHERE id = ?",
-                (razorpay_order_id, order_id),
-            )
-            conn.commit()
-            conn.close()
-
-            return jsonify(
-                {
-                    "razorpay_order_id": razorpay_order_id,
-                    "amount": amount,
-                    "currency": "INR",
-                    "key_id": RAZORPAY_KEY_ID,
-                }
-            )
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
-
-    # Demo mode: mark paid immediately for local testing
-    demo_id = f"demo_order_{order_id}_{datetime.now().strftime('%H%M%S')}"
-    conn = db.get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "UPDATE orders SET razorpay_order_id = ?, payment_status = 'paid' WHERE id = ?",
-        (demo_id, order_id),
-    )
-    conn.commit()
-    conn.close()
-
-    return jsonify(
-        {
-            "razorpay_order_id": demo_id,
-            "amount": amount,
-            "currency": "INR",
-            "key_id": "",
-            "demo_mode": True,
-        }
-    )
-
-
-@app.route("/api/verify-payment", methods=["POST"])
-def verify_payment():
-    data = request.get_json() or {}
-    order_id = data.get("order_id")
-    razorpay_order_id = data.get("razorpay_order_id")
-    razorpay_payment_id = data.get("razorpay_payment_id")
-    razorpay_signature = data.get("razorpay_signature")
-
-    if data.get("demo_mode"):
-        conn = db.get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            UPDATE orders SET payment_status = 'paid',
-            razorpay_payment_id = 'demo_payment'
-            WHERE id = ?
-            """,
-            (order_id,),
-        )
-        conn.commit()
-        conn.close()
-        return jsonify({"success": True, "message": "Demo payment recorded"})
-
-    if not all([razorpay_order_id, razorpay_payment_id, razorpay_signature]):
-        return jsonify({"error": "Missing payment fields"}), 400
-
-    if RAZORPAY_KEY_SECRET:
-        try:
-            import razorpay
-
-            client = razorpay.Client(
-                auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET)
-            )
-            client.utility.verify_payment_signature(
-                {
-                    "razorpay_order_id": razorpay_order_id,
-                    "razorpay_payment_id": razorpay_payment_id,
-                    "razorpay_signature": razorpay_signature,
-                }
-            )
-
-            conn = db.get_connection()
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                UPDATE orders SET payment_status = 'paid',
-                razorpay_payment_id = ?
-                WHERE id = ?
-                """,
-                (razorpay_payment_id, order_id),
-            )
-            conn.commit()
-            conn.close()
-
-            return jsonify({"success": True, "message": "Payment verified"})
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
-
-    return jsonify({"error": "Razorpay not configured"}), 500
-
-
-# Create SQLite tables on startup
-db.init_db()
-
-if __name__ == "__main__":
-    print("\n=== Drone Food Delivery MVP ===")
-    print("DroneDine:  http://127.0.0.1:5000/")
-    print("Track:      http://127.0.0.1:5000/track")
-    print("Restaurant: http://127.0.0.1:5000/restaurant/login")
-    print("Admin:      http://127.0.0.1:5000/admin")
-    print("\nRestaurant PINs: bawarchi=1111, paradise=2222, chutneys=3333")
-    print("==============================\n")
-    app.run(debug=True, host="127.0.0.1", port=5000)
+# ==================== RUN ====================
+if __name__ == '__main__':
+    with app.app_context():
+        init_db()
+    app.run(debug=True, host='0.0.0.0', port=5000)
