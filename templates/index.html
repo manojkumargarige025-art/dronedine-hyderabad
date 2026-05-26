@@ -354,7 +354,7 @@
         <button class="empty-cart-btn" onclick="emptyCart()">Empty Cart</button>
     </div>
 
-    <!-- Profile Sidebar -->
+    <!-- Profile Sidebar (Zomato style) -->
     <div id="profileSidebar" class="profile-sidebar">
         <button class="close-sidebar" onclick="closeProfile()">&times;</button>
         <div style="text-align:center; margin-bottom:1rem;">
@@ -362,10 +362,12 @@
             <h3 id="profileName"></h3>
             <p id="profileMobile"></p>
         </div>
-        <button class="checkout-btn" onclick="showOrderHistory()">📋 Order History</button>
-        <button class="checkout-btn" style="margin-top:0.5rem;" onclick="showFavorites()">❤️ Favorites</button>
-        <button class="checkout-btn" style="margin-top:0.5rem;" onclick="showAddresses()">📍 Saved Addresses</button>
-        <button class="empty-cart-btn" style="margin-top:0.5rem;" onclick="logout()">Logout</button>
+        <div class="profile-menu">
+            <button class="checkout-btn" onclick="showOrderHistory()">📋 Order History</button>
+            <button class="checkout-btn" style="margin-top:0.5rem;" onclick="showFavorites()">❤️ Favorites</button>
+            <button class="checkout-btn" style="margin-top:0.5rem;" onclick="showAddresses()">📍 Saved Addresses</button>
+            <button class="empty-cart-btn" style="margin-top:0.5rem;" onclick="logout()">Logout</button>
+        </div>
     </div>
 
     <!-- Checkout Panel -->
@@ -501,7 +503,6 @@
     const ZONE_RADIUS_KM = 3.0;
     const MAPBOX_TOKEN = "pk.eyJ1IjoibWFub2oyNTgwOCIsImEiOiJjbXBsZ3B3NmoxYzJmMnFzbHV6Zmt1NnNwIn0.hzkSfnkPO_KRL3urJbFtxA";
 
-    // Demo restaurants
     const restaurants = [
         { id: "bawarchi", name: "Bawarchi", cuisine: "Biryani, Kebabs", rating: 4.5, deliveryTime: "15-20 min", image: "🍗", veg: false, items: [
             { name: "Chicken Biryani (Full)", price: 280, veg: false },
@@ -528,7 +529,6 @@
     let currentDiscount = 0;
     let currentPromo = "";
 
-    // Helper functions
     function showToast(msg, isErr = false) {
         const toast = document.getElementById('toastMsg');
         toast.innerText = msg;
@@ -703,7 +703,6 @@
         return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
     }
 
-    // Location modal
     function askLocation() {
         return new Promise((resolve) => {
             const modal = document.getElementById('locationModal');
@@ -768,7 +767,6 @@
             deliveryPinCode = pin;
             orderHistory.unshift({ id: currentOrderId, date: new Date(), items: [...selectedItems], total, status: 'pending' });
             localStorage.setItem('orderHistory', JSON.stringify(orderHistory));
-            // Switch to tracking panel
             document.getElementById('menuContainer').style.display = 'none';
             document.getElementById('checkoutPanel').style.display = 'none';
             document.getElementById('trackingPanel').style.display = 'block';
@@ -791,7 +789,6 @@
         droneMarker = L.marker(kitchenCoords, {icon: droneIcon}).addTo(trackMap);
     }
 
-    // Update timeline based on backend status
     function updateTimeline(status) {
         const steps = ['accepted', 'preparing', 'launching', 'in_transit', 'delivered'];
         let currentIndex = steps.indexOf(status);
@@ -804,22 +801,6 @@
                 else stepDiv.classList.remove('completed', 'active');
             }
         });
-        // If status is delivered, also show rating section after landing
-        if (status === 'delivered') {
-            document.getElementById('trackStatus').innerText = "✅ Your order has arrived!";
-            document.getElementById('unlockBox').style.display = 'none';
-            document.getElementById('ratingSection').style.display = 'block';
-        } else if (status === 'out_for_delivery') {
-            document.getElementById('trackStatus').innerText = "🚁 Drone is on the way!";
-        } else if (status === 'preparing') {
-            document.getElementById('trackStatus').innerText = "🍳 Kitchen is preparing your meal...";
-        } else if (status === 'accepted') {
-            document.getElementById('trackStatus').innerText = "✅ Order accepted! Preparing food...";
-        } else if (status === 'declined') {
-            document.getElementById('trackStatus').innerText = "❌ Restaurant declined your order.";
-        } else {
-            document.getElementById('trackStatus').innerText = "⏳ Waiting for restaurant acceptance...";
-        }
     }
 
     function startDroneAnimation() {
@@ -849,36 +830,42 @@
                 if (!res.ok) { if (res.status === 404) document.getElementById('trackStatus').innerText = "Order not found"; return; }
                 const order = await res.json();
                 const status = order.status;
-                // Map backend status to timeline steps
+                console.log("Polling status:", status);
                 let mappedStatus = status;
                 if (status === 'out_for_delivery') mappedStatus = 'in_transit';
-                if (status === 'delivered') mappedStatus = 'delivered';
-                if (status === 'accepted') mappedStatus = 'accepted';
-                if (status === 'preparing') mappedStatus = 'preparing';
-                // Launching is triggered manually after accepted? We'll treat 'accepted' as first step.
-                // If status is 'out_for_delivery', we animate drone if not already done.
                 updateTimeline(mappedStatus);
                 if (status === 'accepted') {
+                    document.getElementById('trackStatus').innerText = "✅ Order accepted! Preparing food...";
                     setTimeout(() => {
                         updateTimeline('preparing');
+                        document.getElementById('trackStatus').innerText = "🍳 Kitchen preparing your meal...";
                         setTimeout(() => {
                             updateTimeline('launching');
+                            document.getElementById('trackStatus').innerText = "🛫 Drone launching...";
                             startDroneAnimation();
                             updateTimeline('in_transit');
                         }, 3000);
                     }, 2000);
                     clearInterval(statusPollInterval);
+                } else if (status === 'preparing') {
+                    updateTimeline('preparing');
+                    document.getElementById('trackStatus').innerText = "🍳 Kitchen is preparing your meal...";
                 } else if (status === 'out_for_delivery') {
+                    updateTimeline('in_transit');
+                    document.getElementById('trackStatus').innerText = "🛫 Drone is on the way!";
                     startDroneAnimation();
                     clearInterval(statusPollInterval);
                 } else if (status === 'delivered') {
                     updateTimeline('delivered');
+                    document.getElementById('trackStatus').innerText = "✅ Delivery completed!";
                     document.getElementById('unlockBox').style.display = 'none';
                     document.getElementById('ratingSection').style.display = 'block';
                     clearInterval(statusPollInterval);
                 } else if (status === 'declined') {
-                    updateTimeline('declined');
+                    document.getElementById('trackStatus').innerText = "❌ Restaurant declined your order.";
                     clearInterval(statusPollInterval);
+                } else {
+                    document.getElementById('trackStatus').innerText = "⏳ Waiting for restaurant acceptance...";
                 }
             } catch(e) { console.warn(e); }
         };
@@ -982,7 +969,6 @@
     document.getElementById('offersBanner').onclick = () => showToast("Use code WELCOME50 for 50% off!");
     document.getElementById('placeAnotherOrderBtn').onclick = showHome;
 
-    // Rating stars
     let selectedRating = 0;
     document.querySelectorAll('#ratingStars .fa-star').forEach(star => {
         star.addEventListener('click', function() {
@@ -998,7 +984,6 @@
         else showToast("Please select a rating", true);
     });
 
-    // OTP Login
     document.getElementById('requestOtpBtn').onclick = () => {
         const mobile = document.getElementById('mobileNumber').value.trim();
         if (!mobile || mobile.length !== 10) { alert("Enter 10-digit number"); return; }
@@ -1017,7 +1002,6 @@
         } else alert("Wrong OTP");
     };
 
-    // Filters
     document.querySelectorAll('.chip').forEach(chip => {
         chip.addEventListener('click', () => {
             document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
