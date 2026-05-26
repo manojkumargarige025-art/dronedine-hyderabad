@@ -178,6 +178,22 @@
             font-weight: bold;
             cursor: pointer;
         }
+        .success-message {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #d4af37;
+            color: #0f0f0f;
+            padding: 12px 20px;
+            border-radius: 40px;
+            z-index: 2000;
+            font-weight: bold;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
         @media (max-width: 768px) {
             .hero h1 { font-size: 2rem; }
             .section-title { font-size: 1.8rem; }
@@ -186,7 +202,6 @@
 </head>
 <body>
 
-<!-- Login Overlay -->
 <div id="loginOverlay" class="login-overlay">
     <div class="login-card">
         <h2 style="color:#d4af37;">Restaurant Login</h2>
@@ -198,7 +213,6 @@
     </div>
 </div>
 
-<!-- Main Dashboard (hidden until login) -->
 <div id="dashboardContainer" style="display:none;">
     <button id="logoutBtn" class="logout-btn">Logout</button>
     <header style="background: #0f0f0f; border-bottom: 1px solid #d4af37; padding: 15px 20px; position: sticky; top:0; z-index:100;">
@@ -223,7 +237,6 @@
         </div>
     </section>
 
-    <!-- Stats -->
     <section id="stats" class="container-section">
         <h2 class="section-title">Today's Performance</h2>
         <div class="features-grid" id="statsGrid">
@@ -234,7 +247,6 @@
         </div>
     </section>
 
-    <!-- Orders Section -->
     <section id="orders" class="container-section" style="background-color:#1a1a1a;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h2 class="section-title" style="margin-bottom:0;">Active Orders</h2>
@@ -245,17 +257,15 @@
         </div>
     </section>
 
-    <!-- Menu Management (static for now, can be extended) -->
     <section id="menu" class="container-section">
         <h2 class="section-title">Menu Items</h2>
         <div class="orders-container" id="menuGrid">
-            <!-- Will be populated from restaurant data -->
+            <div class="order-card"><p>Loading menu...</p></div>
         </div>
     </section>
 </div>
 
 <script>
-    // ---------- Backend API calls ----------
     let currentRestaurantId = null;
     let currentRestaurantName = null;
     let refreshInterval = null;
@@ -277,6 +287,7 @@
         const res = await fetch('/api/restaurant/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
             body: JSON.stringify({ restaurant_id: restaurantId, pin: pin })
         });
         if (!res.ok) throw new Error('Invalid credentials');
@@ -287,7 +298,9 @@
     }
 
     async function logout() {
-        await fetch('/api/restaurant/logout', { method: 'POST' });
+        try {
+            await fetch('/api/restaurant/logout', { method: 'POST', credentials: 'same-origin' });
+        } catch(e) { console.warn(e); }
         window.location.reload();
     }
 
@@ -337,7 +350,6 @@
             return;
         }
         container.innerHTML = orders.map(order => {
-            // Parse items
             let itemsText = '';
             if (order.items) {
                 const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
@@ -370,10 +382,10 @@
                 <div class="order-card" data-order-id="${order.id}">
                     <div class="order-header">
                         <h3>Order #${order.id}</h3>
-                        <span class="order-status ${statusClass}">${status.replace(/_/g, ' ')}</span>
+                        <span class="order-status ${statusClass}">${order.status.replace(/_/g, ' ')}</span>
                     </div>
-                    <p><strong>Customer:</strong> ${order.customer_name || 'Guest'}</p>
-                    <p><strong>Items:</strong> ${itemsText}</p>
+                    <p><strong>Customer:</strong> ${escapeHtml(order.customer_name || 'Guest')}</p>
+                    <p><strong>Items:</strong> ${escapeHtml(itemsText)}</p>
                     <p><strong>Total:</strong> ₹${order.total_amount}</p>
                     <p><strong>Delivery PIN:</strong> <span style="color:#d4af37; font-weight:bold;">${order.password || 'N/A'}</span></p>
                     ${actionButtons}
@@ -381,7 +393,6 @@
             `;
         }).join('');
 
-        // Attach event listeners to action buttons
         document.querySelectorAll('.action-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const orderId = btn.getAttribute('data-id');
@@ -391,53 +402,59 @@
         });
     }
 
-    // Menu loading (static from predefined data)
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
     async function loadMenu() {
         try {
             const res = await fetch('/api/restaurants');
             const restaurants = await res.json();
             const ourRest = restaurants.find(r => r.id === currentRestaurantId);
-            if (ourRest && ourRest.menu) {
-                const grid = document.getElementById('menuGrid');
+            const grid = document.getElementById('menuGrid');
+            if (ourRest && ourRest.menu && ourRest.menu.length) {
                 grid.innerHTML = ourRest.menu.map(item => `
                     <div class="order-card" style="cursor:default;">
-                        <h3 style="color:#d4af37;">${item.name}</h3>
-                        <p>${item.description || 'Delicious dish'}</p>
+                        <h3 style="color:#d4af37;">${escapeHtml(item.name)}</h3>
+                        <p>${escapeHtml(item.description || 'Delicious dish')}</p>
                         <div class="price" style="font-size:1.5rem; color:#d4af37;">₹${item.price}</div>
                         <div class="action-buttons">
                             <button class="action-btn toggle-stock" data-id="${item.id}" data-available="true">In Stock</button>
                         </div>
                     </div>
                 `).join('');
-                // Toggle stock (simulated)
                 document.querySelectorAll('.toggle-stock').forEach(btn => {
                     btn.addEventListener('click', () => {
                         const isAvailable = btn.innerText === 'In Stock';
                         btn.innerText = isAvailable ? 'Out of Stock' : 'In Stock';
-                        showToast(`Item ${isAvailable ? 'disabled' : 'enabled'}`);
+                        showToast(`Item ${isAvailable ? 'disabled' : 'enabled'} (demo)`);
                     });
                 });
+            } else {
+                grid.innerHTML = '<div class="order-card"><p>No menu items found.</p></div>';
             }
-        } catch(e) { console.warn(e); }
+        } catch(e) {
+            console.warn(e);
+            document.getElementById('menuGrid').innerHTML = '<div class="order-card"><p>Error loading menu.</p></div>';
+        }
     }
 
     function showToast(msg, isError = false) {
         const toast = document.createElement('div');
         toast.className = 'success-message';
-        toast.style.position = 'fixed';
-        toast.style.bottom = '20px';
-        toast.style.right = '20px';
         toast.style.background = isError ? '#dc2626' : '#d4af37';
         toast.style.color = '#0f0f0f';
-        toast.style.padding = '12px 20px';
-        toast.style.borderRadius = '40px';
-        toast.style.zIndex = '2000';
         toast.innerText = msg;
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 3000);
     }
 
-    // Login handler
     document.getElementById('loginBtn').onclick = async () => {
         const restId = document.getElementById('restaurantId').value.trim();
         const pin = document.getElementById('pin').value.trim();
@@ -446,9 +463,9 @@
             await login(restId, pin);
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('dashboardContainer').style.display = 'block';
-            loadStats();
-            loadOrders();
-            loadMenu();
+            await loadStats();
+            await loadOrders();
+            await loadMenu();
             if (refreshInterval) clearInterval(refreshInterval);
             refreshInterval = setInterval(() => {
                 loadStats();
