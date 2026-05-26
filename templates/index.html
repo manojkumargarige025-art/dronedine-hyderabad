@@ -417,73 +417,87 @@
 
     // Place order
     document.getElementById('placeOrderBtn').onclick = async () => {
-        const pin = document.getElementById('pinInput').value;
-        if (!pin || pin.length !== 4 || isNaN(pin)) { showToast("Enter 4-digit PIN", true); return; }
-        if (!customerCoords) { showToast("Location not set", true); return; }
-        const subtotal = selectedItems.reduce((s,i)=>s+(i.price*i.qty),0);
-        const total = subtotal + 15;
-        const orderData = {
-            customer_name: userMobile,
-            customer_phone: userMobile,
-            customer_address: document.getElementById('modalAddressInput').value,
-            restaurant_id: selectedRestaurantId,
-            items: selectedItems.map(i=>({name:i.name, quantity:i.qty, price:i.price})),
-            total_amount: total,
-            password: pin
-        };
-        try {
-            const res = await fetch('/api/orders', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(orderData) });
-            if (!res.ok) throw new Error(await res.text());
-            const data = await res.json();
-            currentOrderId = data.order_id;
-            deliveryPinCode = pin;
-            // Switch to tracking panel
-            document.getElementById('menuContainer').style.display = 'none';
-            document.getElementById('checkoutPanel').style.display = 'none';
-            document.getElementById('trackingPanel').style.display = 'block';
-            initTrackMap();
-            // Start polling for status
-            if (statusPollInterval) clearInterval(statusPollInterval);
-            const pollStatus = async () => {
-                try {
-                    const ordRes = await fetch(`/api/orders/${currentOrderId}`);
-                    const order = await ordRes.json();
-                    const status = order.status;
-                    const statusElem = document.getElementById('trackStatus');
-                    if (status === 'accepted') {
-                        statusElem.innerText = "✅ Order accepted! Preparing food...";
-                        setTimeout(() => {
-                            statusElem.innerText = "🍳 Kitchen preparing your meal...";
-                            setTimeout(() => {
-                                statusElem.innerText = "🛫 Drone launching...";
-                                startDroneAnimation();
-                            }, 3000);
-                        }, 2000);
-                        clearInterval(statusPollInterval);
-                    } else if (status === 'preparing') {
-                        statusElem.innerText = "🍳 Kitchen is preparing your meal...";
-                    } else if (status === 'out_for_delivery') {
-                        statusElem.innerText = "🛫 Drone is on the way!";
-                        startDroneAnimation();
-                        clearInterval(statusPollInterval);
-                    } else if (status === 'delivered') {
-                        statusElem.innerText = "✅ Delivery completed! Enjoy your meal!";
-                        document.getElementById('unlockBox').style.display = 'block';
-                        document.getElementById('unlockBox').innerHTML = '<p style="color:green;">🎉 Already delivered!</p>';
-                        clearInterval(statusPollInterval);
-                    } else if (status === 'declined') {
-                        statusElem.innerText = "❌ Restaurant declined your order.";
-                        clearInterval(statusPollInterval);
-                    } else {
-                        statusElem.innerText = "⏳ Waiting for restaurant acceptance...";
-                    }
-                } catch(e) { console.warn(e); }
-            };
-            await pollStatus(); // immediate first check
-            statusPollInterval = setInterval(pollStatus, 5000);
-        } catch(err) { showToast("Order failed: "+err.message, true); }
+    const pin = document.getElementById('pinInput').value;
+    if (!pin || pin.length !== 4 || isNaN(pin)) {
+        showToast("Enter 4-digit PIN", true);
+        return;
+    }
+    if (!customerCoords) {
+        showToast("Location not set. Please refresh and set address.", true);
+        return;
+    }
+    const subtotal = selectedItems.reduce((s, i) => s + (i.price * i.qty), 0);
+    const total = subtotal + 15;
+    const orderData = {
+        customer_name: userMobile || "Demo User",
+        customer_phone: userMobile,
+        customer_address: document.getElementById('modalAddressInput').value,
+        restaurant_id: selectedRestaurantId,
+        items: selectedItems.map(i => ({ name: i.name, quantity: i.qty, price: i.price })),
+        total_amount: total,
+        password: pin
     };
-
+    try {
+        const res = await fetch('/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(orderData)
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        currentOrderId = data.order_id;
+        deliveryPinCode = pin;
+        // Switch to tracking panel
+        document.getElementById('menuContainer').style.display = 'none';
+        document.getElementById('checkoutPanel').style.display = 'none';
+        document.getElementById('trackingPanel').style.display = 'block';
+        initTrackMap();
+        // Start polling for status
+        if (statusPollInterval) clearInterval(statusPollInterval);
+        const pollStatus = async () => {
+            try {
+                const ordRes = await fetch(`/api/orders/${currentOrderId}`);
+                const order = await ordRes.json();
+                const status = order.status;
+                const statusElem = document.getElementById('trackStatus');
+                if (status === 'accepted') {
+                    statusElem.innerText = "✅ Order accepted! Preparing food...";
+                    setTimeout(() => {
+                        statusElem.innerText = "🍳 Kitchen preparing your meal...";
+                        setTimeout(() => {
+                            statusElem.innerText = "🛫 Drone launching...";
+                            startDroneAnimation();
+                        }, 3000);
+                    }, 2000);
+                    clearInterval(statusPollInterval);
+                } else if (status === 'preparing') {
+                    statusElem.innerText = "🍳 Kitchen is preparing your meal...";
+                } else if (status === 'out_for_delivery') {
+                    statusElem.innerText = "🛫 Drone is on the way!";
+                    startDroneAnimation();
+                    clearInterval(statusPollInterval);
+                } else if (status === 'delivered') {
+                    statusElem.innerText = "✅ Delivery completed! Enjoy your meal!";
+                    document.getElementById('unlockBox').style.display = 'block';
+                    document.getElementById('unlockBox').innerHTML = '<p style="color:green;">🎉 Already delivered!</p>';
+                    clearInterval(statusPollInterval);
+                } else if (status === 'declined') {
+                    statusElem.innerText = "❌ Restaurant declined your order.";
+                    clearInterval(statusPollInterval);
+                } else {
+                    statusElem.innerText = "⏳ Waiting for restaurant acceptance...";
+                }
+            } catch(e) {
+                console.warn(e);
+                document.getElementById('trackStatus').innerText = "⚠️ Error fetching status. Please click 'Refresh Status'.";
+            }
+        };
+        await pollStatus();
+        statusPollInterval = setInterval(pollStatus, 5000);
+    } catch(err) {
+        showToast("Order failed: " + err.message, true);
+    }
+};
     document.getElementById('refreshStatusBtn').onclick = async () => {
         if (!currentOrderId) return;
         try {
