@@ -19,7 +19,7 @@
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 0.8rem; text-align: left; border-bottom: 1px solid #334155; }
         th { color: #f97316; }
-        .status-badge { padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.7rem; }
+        .status-badge { padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.7rem; display: inline-block; }
         .status-placed { background: #f59e0b; color: #0f172a; }
         .status-accepted { background: #3b82f6; }
         .status-preparing { background: #8b5cf6; }
@@ -44,9 +44,9 @@
                 {% for order in orders %}
                 <tr>
                     <td>{{ order.id }}</td>
-                    <td>{{ order.user.phone }}</td>
-                    <td>{{ order.restaurant.name }}</td>
-                    <td>{{ order.items[:50] | safe }}...</td>
+                    <td>{{ order.user.phone if order.user else 'N/A' }}</td>
+                    <td>{{ order.restaurant.name if order.restaurant else 'N/A' }}</td>
+                    <td>{{ order.items[:50] | safe if order.items else '-' }}...</td>
                     <td>₹{{ order.total_amount }}</td>
                     <td><span class="status-badge status-{{ order.status.replace('_', '-') }}">{{ order.status }}</span></td>
                     <td>{{ order.unlock_code }}</td>
