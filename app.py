@@ -1,6 +1,6 @@
 """
-DroneDine - Complete Backend with User Auth, Orders, Drone Tracking, 
-Admin/Restaurant Dashboards
+DroneDine - Complete Backend with User Auth, Orders, Drone Tracking,
+Admin/Restaurant Dashboards, Profile Updates, and Saved Addresses
 """
 
 import json
@@ -20,8 +20,6 @@ from flask import (
 )
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash
-
 
 # ==================== CONFIGURATION ====================
 app = Flask(__name__)
@@ -34,13 +32,13 @@ db = SQLAlchemy(app)
 # Mapbox token (your existing one)
 MAPBOX_TOKEN = "pk.eyJ1IjoibWFub2oyNTgwOCIsImEiOiJjbXBsZ3B3NmoxYzJmMnFzbHV6Zmt1NnNwIn0.hzkSfnkPO_KRL3urJbFtxA"
 
-
 # ==================== MODELS ====================
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     phone = db.Column(db.String(10), unique=True, nullable=False)
     name = db.Column(db.String(100))
     email = db.Column(db.String(100))
+    addresses = db.Column(db.Text, default='[]')  # JSON array of address objects
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     orders = db.relationship('Order', backref='user', lazy=True)
 
@@ -92,7 +90,6 @@ class DroneTracking(db.Model):
     battery = db.Column(db.Integer, default=100)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
-
 # ==================== HELPER FUNCTIONS ====================
 def generate_unlock_code():
     return str(random.randint(1000, 9999))
@@ -101,54 +98,14 @@ def calculate_co2_saved(orders):
     delivered = [o for o in orders if o.status == 'delivered']
     return len(delivered) * 0.065
 
-
-# ==================== AUTH ROUTES ====================
-@app.route('/api/user/update', methods=['POST'])
-def update_user_profile():
-    if 'user_id' not in session:
-        return jsonify({'error': 'Not logged in'}), 401
-    data = request.get_json()
-    user = User.query.get(session['user_id'])
-    if 'name' in data:
-        user.name = data['name']
-    if 'email' in data:
-        user.email = data['email']
-    db.session.commit()
-    return jsonify({'success': True, 'name': user.name, 'email': user.email})
-
-@app.route('/api/user/addresses', methods=['GET', 'POST', 'DELETE'])
-def user_addresses():
-    if 'user_id' not in session:
-        return jsonify({'error': 'Not logged in'}), 401
-    user = User.query.get(session['user_id'])
-    if request.method == 'GET':
-        addresses = json.loads(user.addresses) if user.addresses else []
-        return jsonify(addresses)
-    elif request.method == 'POST':
-        data = request.get_json()
-        addresses = json.loads(user.addresses) if user.addresses else []
-        addresses.append(data)
-        user.addresses = json.dumps(addresses)
-        db.session.commit()
-        return jsonify({'success': True, 'addresses': addresses})
-    elif request.method == 'DELETE':
-        # Delete address by index
-        index = request.args.get('index', type=int)
-        addresses = json.loads(user.addresses) if user.addresses else []
-        if 0 <= index < len(addresses):
-            addresses.pop(index)
-            user.addresses = json.dumps(addresses)
-            db.session.commit()
-        return jsonify({'success': True, 'addresses': addresses})
-        
+# ==================== ROUTES: AUTH ====================
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         phone = request.form.get('phone')
         if not phone or len(phone) != 10:
             return render_template('login.html', error="Invalid phone number")
-        # For demo, always use OTP 123456
-        otp = "123456"
+        otp = "123456"  # always 123456 for demo
         session['login_otp'] = otp
         session['login_phone'] = phone
         print(f"[DEMO] OTP for {phone}: {otp}")
@@ -159,7 +116,6 @@ def login():
 def verify_otp():
     if request.method == 'POST':
         entered_otp = request.form.get('otp')
-        # Also accept "123456" directly as a fallback
         if str(entered_otp) == str(session.get('login_otp')) or str(entered_otp) == "123456":
             phone = session.get('login_phone')
             user = User.query.filter_by(phone=phone).first()
@@ -180,8 +136,7 @@ def logout():
     session.clear()
     return redirect(url_for('home'))
 
-
-# ==================== MAIN PAGES ====================
+# ==================== ROUTES: PAGES ====================
 @app.route('/')
 def home():
     restaurants = Restaurant.query.filter_by(is_active=True).all()
@@ -211,8 +166,45 @@ def track_order(order_id):
         return "Unauthorized", 403
     return render_template('track.html', order=order)
 
+# ==================== ROUTES: PROFILE API ====================
+@app.route('/api/user/update', methods=['POST'])
+def update_user_profile():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not logged in'}), 401
+    data = request.get_json()
+    user = User.query.get(session['user_id'])
+    if 'name' in data:
+        user.name = data['name']
+    if 'email' in data:
+        user.email = data['email']
+    db.session.commit()
+    return jsonify({'success': True, 'name': user.name, 'email': user.email})
 
-# ==================== API ENDPOINTS ====================
+@app.route('/api/user/addresses', methods=['GET', 'POST', 'DELETE'])
+def user_addresses():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not logged in'}), 401
+    user = User.query.get(session['user_id'])
+    if request.method == 'GET':
+        addresses = json.loads(user.addresses) if user.addresses else []
+        return jsonify(addresses)
+    elif request.method == 'POST':
+        data = request.get_json()
+        addresses = json.loads(user.addresses) if user.addresses else []
+        addresses.append(data)
+        user.addresses = json.dumps(addresses)
+        db.session.commit()
+        return jsonify({'success': True, 'addresses': addresses})
+    elif request.method == 'DELETE':
+        index = request.args.get('index', type=int)
+        addresses = json.loads(user.addresses) if user.addresses else []
+        if 0 <= index < len(addresses):
+            addresses.pop(index)
+            user.addresses = json.dumps(addresses)
+            db.session.commit()
+        return jsonify({'success': True, 'addresses': addresses})
+
+# ==================== ROUTES: ORDER API ====================
 @app.route('/api/place-order', methods=['POST'])
 def place_order():
     if 'user_id' not in session:
@@ -297,8 +289,7 @@ def get_tracking(order_id):
         'unlock_code': order.unlock_code
     })
 
-
-# ==================== RESTAURANT DASHBOARD ====================
+# ==================== ROUTES: RESTAURANT DASHBOARD ====================
 RESTAURANT_PINS = {
     'bawarchi': '1111',
     'paradise': '2222',
@@ -355,8 +346,7 @@ def restaurant_update_order(order_id):
         return jsonify({'success': True, 'status': order.status})
     return jsonify({'error': 'Invalid action'}), 400
 
-
-# ==================== ADMIN DASHBOARD ====================
+# ==================== ROUTES: ADMIN DASHBOARD ====================
 @app.route('/admin/dashboard')
 def admin_dashboard():
     total_orders = Order.query.count()
@@ -371,8 +361,7 @@ def admin_dashboard():
                          total_revenue=total_revenue,
                          orders=orders)
 
-
-# ==================== INITIAL DATA SEED ====================
+# ==================== INITIAL DATA SEED (run at startup) ====================
 def init_db():
     db.create_all()
     if Restaurant.query.count() == 0:
@@ -395,8 +384,7 @@ def init_db():
         db.session.add_all(menu_items)
         db.session.commit()
 
-# ==================== RUN ====================
-# Create tables and seed data when the app starts (for gunicorn)
+# ==================== RUN (tables created on app load) ====================
 with app.app_context():
     init_db()
 
