@@ -23,8 +23,24 @@
         .action-buttons { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
         .action-btn { background: #f97316; border: none; padding: 0.3rem 0.8rem; border-radius: 40px; cursor: pointer; font-size: 0.8rem; }
         .action-btn.decline { background: #dc2626; color: white; }
-        .toast { position: fixed; bottom: 20px; left: 20px; background: #1e293b; color: white; padding: 0.8rem 1.5rem; border-radius: 40px; z-index: 2000; transform: translateX(-120%); transition: 0.3s; }
+        .refresh-btn { background: #f97316; border: none; padding: 0.4rem 1rem; border-radius: 40px; cursor: pointer; margin-bottom: 1rem; }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #1e293b;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 40px;
+            z-index: 2000;
+            transform: translateX(120%);
+            transition: 0.3s;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
         .toast.show { transform: translateX(0); }
+        .toast.success { background: #10b981; }
+        .toast.info { background: #3b82f6; }
     </style>
 </head>
 <body>
@@ -37,42 +53,50 @@
         <div class="stat-card"><div class="stat-value" id="totalOrders">0</div><div>Total Orders</div></div>
         <div class="stat-card"><div class="stat-value" id="activeOrders">0</div><div>Active Orders</div></div>
     </div>
-    <div class="orders-list">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h2>📋 Orders</h2>
-        <div id="ordersContainer">
-            {% for order in orders %}
-            <div class="order-card" data-id="{{ order.id }}">
-                <div class="order-header"><strong>Order #{{ order.id }}</strong><span class="order-status">{{ order.status }}</span></div>
-                <div>Customer: {{ order.user.phone }}</div>
-                <div>Amount: ₹{{ order.total_amount }}</div>
-                <div>Address: {{ order.delivery_address[:60] }}</div>
-                <div>Unlock Code: <strong>{{ order.unlock_code }}</strong></div>
-                <div class="action-buttons">
-                    {% if order.status == 'placed' %}
-                        <button class="action-btn" onclick="updateOrderStatus({{ order.id }}, 'accept')">Accept</button>
-                        <button class="action-btn decline" onclick="updateOrderStatus({{ order.id }}, 'decline')">Decline</button>
-                    {% elif order.status == 'accepted' %}
-                        <button class="action-btn" onclick="updateOrderStatus({{ order.id }}, 'prepare')">Mark Preparing</button>
-                    {% elif order.status == 'preparing' %}
-                        <button class="action-btn" onclick="updateOrderStatus({{ order.id }}, 'dispatch')">Dispatch Drone</button>
-                    {% elif order.status == 'out_for_delivery' %}
-                        <button class="action-btn" onclick="updateOrderStatus({{ order.id }}, 'deliver')">Mark Delivered</button>
-                    {% endif %}
-                </div>
+        <button id="manualRefreshBtn" class="refresh-btn">⟳ Refresh</button>
+    </div>
+    <div class="orders-list" id="ordersContainer">
+        {% for order in orders %}
+        <div class="order-card" data-id="{{ order.id }}">
+            <div class="order-header"><strong>Order #{{ order.id }}</strong><span class="order-status">{{ order.status }}</span></div>
+            <div>Customer: {{ order.user.phone if order.user else 'N/A' }}</div>
+            <div>Amount: ₹{{ order.total_amount }}</div>
+            <div>Address: {{ order.delivery_address[:60] if order.delivery_address else 'N/A' }}</div>
+            <div>Unlock Code: <strong>{{ order.unlock_code }}</strong></div>
+            <div class="action-buttons">
+                {% if order.status == 'placed' %}
+                    <button class="action-btn" onclick="updateOrderStatus({{ order.id }}, 'accept')">Accept</button>
+                    <button class="action-btn decline" onclick="updateOrderStatus({{ order.id }}, 'decline')">Decline</button>
+                {% elif order.status == 'accepted' %}
+                    <button class="action-btn" onclick="updateOrderStatus({{ order.id }}, 'prepare')">Mark Preparing</button>
+                {% elif order.status == 'preparing' %}
+                    <button class="action-btn" onclick="updateOrderStatus({{ order.id }}, 'dispatch')">Dispatch Drone</button>
+                {% elif order.status == 'out_for_delivery' %}
+                    <button class="action-btn" onclick="updateOrderStatus({{ order.id }}, 'deliver')">Mark Delivered</button>
+                {% endif %}
             </div>
-            {% else %}<p>No orders yet.</p>{% endfor %}
         </div>
+        {% else %}
+        <p>No orders yet.</p>
+        {% endfor %}
     </div>
 </div>
 <div id="toast" class="toast"></div>
+
 <script>
-    function showToast(msg, isError = false) {
+    let previousOrderIds = new Set();
+
+    function showToast(msg, type = 'info') {
         const toast = document.getElementById('toast');
         toast.innerText = msg;
-        toast.style.background = isError ? '#dc2626' : '#1e293b';
-        toast.classList.add('show');
+        toast.className = 'toast show';
+        if (type === 'success') toast.classList.add('success');
+        else if (type === 'info') toast.classList.add('info');
         setTimeout(() => toast.classList.remove('show'), 3000);
     }
+
     async function updateOrderStatus(orderId, action) {
         try {
             const res = await fetch(`/api/restaurant/update-order/${orderId}`, {
@@ -82,17 +106,101 @@
             });
             const data = await res.json();
             if (data.success) {
-                showToast(`Order #${orderId} updated to ${action}`);
+                showToast(`Order #${orderId} updated to ${action}`, 'success');
                 setTimeout(() => window.location.reload(), 1000);
             } else {
-                showToast(data.error || 'Update failed', true);
+                showToast(data.error || 'Update failed', 'error');
             }
-        } catch(e) { showToast('Network error', true); }
+        } catch(e) {
+            showToast('Network error', true);
+        }
     }
-    const total = document.querySelectorAll('.order-card').length;
-    const active = document.querySelectorAll('.order-card:has(.order-status:not(:contains("delivered")))').length;
-    document.getElementById('totalOrders').innerText = total;
-    document.getElementById('activeOrders').innerText = active;
+
+    async function loadOrders() {
+        try {
+            const res = await fetch('/api/orders/pending');
+            const orders = await res.json();
+            const currentOrderIds = new Set(orders.map(o => o.id));
+            // Check for new orders
+            for (let id of currentOrderIds) {
+                if (!previousOrderIds.has(id)) {
+                    showToast(`🆕 New order #${id} received!`, 'info');
+                }
+            }
+            previousOrderIds = currentOrderIds;
+            renderOrders(orders);
+            updateStats(orders);
+        } catch(e) {
+            console.error(e);
+        }
+    }
+
+    function renderOrders(orders) {
+        const container = document.getElementById('ordersContainer');
+        if (!orders.length) {
+            container.innerHTML = '<p>No active orders at the moment.</p>';
+            return;
+        }
+        container.innerHTML = orders.map(order => {
+            const statusClass = `order-status ${order.status}`;
+            let actionButtons = '';
+            if (order.status === 'placed') {
+                actionButtons = `<div class="action-buttons">
+                                    <button class="action-btn" onclick="updateOrderStatus(${order.id}, 'accept')">Accept</button>
+                                    <button class="action-btn decline" onclick="updateOrderStatus(${order.id}, 'decline')">Decline</button>
+                                </div>`;
+            } else if (order.status === 'accepted') {
+                actionButtons = `<div class="action-buttons">
+                                    <button class="action-btn" onclick="updateOrderStatus(${order.id}, 'prepare')">Mark Preparing</button>
+                                </div>`;
+            } else if (order.status === 'preparing') {
+                actionButtons = `<div class="action-buttons">
+                                    <button class="action-btn" onclick="updateOrderStatus(${order.id}, 'dispatch')">Dispatch Drone</button>
+                                </div>`;
+            } else if (order.status === 'out_for_delivery') {
+                actionButtons = `<div class="action-buttons">
+                                    <button class="action-btn" onclick="updateOrderStatus(${order.id}, 'deliver')">Mark Delivered</button>
+                                </div>`;
+            } else {
+                actionButtons = `<div class="action-buttons"><span style="color:#aaa;">Completed</span></div>`;
+            }
+            return `
+                <div class="order-card" data-id="${order.id}">
+                    <div class="order-header"><strong>Order #${order.id}</strong><span class="${statusClass}">${order.status}</span></div>
+                    <div>Customer: ${escapeHtml(order.customer_name || order.user?.phone || 'N/A')}</div>
+                    <div>Amount: ₹${order.total_amount}</div>
+                    <div>Address: ${escapeHtml(order.delivery_address || 'N/A')}</div>
+                    <div>Unlock Code: <strong>${order.unlock_code}</strong></div>
+                    ${actionButtons}
+                </div>
+            `;
+        }).join('');
+    }
+
+    function updateStats(orders) {
+        const total = orders.length;
+        const active = orders.filter(o => ['placed','accepted','preparing','out_for_delivery'].includes(o.status)).length;
+        document.getElementById('totalOrders').innerText = total;
+        document.getElementById('activeOrders').innerText = active;
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    // Initial load and set interval
+    async function init() {
+        await loadOrders();
+        setInterval(loadOrders, 15000);
+    }
+    document.getElementById('manualRefreshBtn').onclick = () => loadOrders();
+    init();
 </script>
 </body>
 </html>
