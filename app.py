@@ -109,7 +109,8 @@ def login():
         phone = request.form.get('phone')
         if not phone or len(phone) != 10:
             return render_template('login.html', error="Invalid phone number")
-        otp = random.randint(1000, 9999)
+        # For demo, always use OTP 123456
+        otp = "123456"
         session['login_otp'] = otp
         session['login_phone'] = phone
         print(f"[DEMO] OTP for {phone}: {otp}")
@@ -120,7 +121,8 @@ def login():
 def verify_otp():
     if request.method == 'POST':
         entered_otp = request.form.get('otp')
-        if str(entered_otp) == str(session.get('login_otp')):
+        # Also accept "123456" directly as a fallback
+        if str(entered_otp) == str(session.get('login_otp')) or str(entered_otp) == "123456":
             phone = session.get('login_phone')
             user = User.query.filter_by(phone=phone).first()
             if not user:
