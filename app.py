@@ -20,7 +20,10 @@ from flask import (
 )
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
 
+
+# ==================== CONFIGURATION ====================
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dronedine-super-secret-key-change-me")
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///dronedine.db'
@@ -46,7 +49,7 @@ class Restaurant(db.Model):
     name = db.Column(db.String(100), nullable=False)
     cuisine = db.Column(db.String(50))
     rating = db.Column(db.Float, default=4.0)
-    delivery_time = db.Column(db.Integer, default=20)
+    delivery_time = db.Column(db.Integer, default=20)  # minutes
     is_active = db.Column(db.Boolean, default=True)
     image_url = db.Column(db.String(200))
     latitude = db.Column(db.Float)
@@ -67,10 +70,10 @@ class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
-    items = db.Column(db.Text, nullable=False)
+    items = db.Column(db.Text, nullable=False)  # JSON string
     total_amount = db.Column(db.Float, nullable=False)
     unlock_code = db.Column(db.String(4), nullable=False)
-    status = db.Column(db.String(50), default='placed')
+    status = db.Column(db.String(50), default='placed')  # placed, accepted, preparing, out_for_delivery, delivered, cancelled
     delivery_lat = db.Column(db.Float)
     delivery_lng = db.Column(db.Float)
     delivery_address = db.Column(db.String(200))
@@ -90,6 +93,7 @@ class DroneTracking(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 
+# ==================== HELPER FUNCTIONS ====================
 def generate_unlock_code():
     return str(random.randint(1000, 9999))
 
@@ -328,13 +332,14 @@ def admin_dashboard():
                          orders=orders)
 
 
+# ==================== INITIAL DATA SEED ====================
 def init_db():
     db.create_all()
     if Restaurant.query.count() == 0:
         sample_restaurants = [
-            Restaurant(name='Bawarchi', cuisine='Biryani, Kebabs', rating=4.5, delivery_time=15, is_active=True, image_url='https://via.placeholder.com/300x200?text=Bawarchi'),
-            Restaurant(name='Paradise', cuisine='Biryani, Kebab', rating=4.7, delivery_time=20, is_active=True, image_url='https://via.placeholder.com/300x200?text=Paradise'),
-            Restaurant(name='Chutneys', cuisine='South Indian', rating=4.3, delivery_time=12, is_active=True, image_url='https://via.placeholder.com/300x200?text=Chutneys')
+            Restaurant(name='Bawarchi', cuisine='Biryani, Kebabs', rating=4.5, delivery_time=15, is_active=True),
+            Restaurant(name='Paradise', cuisine='Biryani, Kebab', rating=4.7, delivery_time=20, is_active=True),
+            Restaurant(name='Chutneys', cuisine='South Indian', rating=4.3, delivery_time=12, is_active=True)
         ]
         db.session.add_all(sample_restaurants)
         db.session.commit()
@@ -350,8 +355,10 @@ def init_db():
         db.session.add_all(menu_items)
         db.session.commit()
 
+# ==================== RUN ====================
+# Create tables and seed data when the app starts (for gunicorn)
+with app.app_context():
+    init_db()
 
 if __name__ == '__main__':
-    with app.app_context():
-        init_db()
     app.run(debug=True, host='0.0.0.0', port=5000)
