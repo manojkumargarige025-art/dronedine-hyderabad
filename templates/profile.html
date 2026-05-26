@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Profile - DroneDine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+        }
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .logo {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #f97316;
+            cursor: pointer;
+        }
+        .profile-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .profile-header {
+            background: white;
+            border-radius: 28px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .avatar {
+            width: 80px;
+            height: 80px;
+            background: #f97316;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 2rem;
+            color: white;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .stat-card {
+            background: #f1f5f9;
+            border-radius: 20px;
+            padding: 1rem;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #f97316;
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+        .section {
+            background: white;
+            border-radius: 28px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .order-item {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 1rem 0;
+        }
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        .order-status {
+            background: #f97316;
+            color: white;
+            padding: 0.2rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.7rem;
+        }
+        .order-status.delivered { background: #10b981; }
+        .eco-impact {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 1rem;
+            border-radius: 20px;
+            text-align: center;
+        }
+        .eco-value {
+            font-size: 2rem;
+            font-weight: 800;
+        }
+        .menu-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid #e2e8f0;
+            cursor: pointer;
+        }
+        .menu-item:hover { background: #f8fafc; }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: #1e293b;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 40px;
+            z-index: 2000;
+            transform: translateX(-120%);
+            transition: 0.3s;
+        }
+        .toast.show { transform: translateX(0); }
+        @media (max-width: 640px) {
+            .stats-grid { gap: 0.5rem; }
+            .stat-value { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="navbar">
+    <div class="logo" onclick="window.location.href='/'"><i class="fas fa-drone"></i> DroneDine</div>
+    <div class="nav-links">
+        <a href="/" style="text-decoration:none; color:#475569;">Home</a>
+        <a href="/logout" style="text-decoration:none; color:#475569; margin-left:1rem;">Logout</a>
+    </div>
+</div>
+
+<div class="profile-container">
+    <div class="profile-header">
+        <div class="avatar"><i class="fas fa-user"></i></div>
+        <h2>{{ user.name or 'Customer' }}</h2>
+        <p><i class="fas fa-phone"></i> {{ user.phone }}</p>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">{{ orders|length }}</div>
+                <div class="stat-label">Total Orders</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ orders|selectattr("status","equalto","delivered")|list|length }}</div>
+                <div class="stat-label">Drone Deliveries</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ "%.1f"|format(co2_saved) }} kg</div>
+                <div class="stat-label">CO₂ Saved</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Eco Impact Tracker -->
+    <div class="eco-impact">
+        <i class="fas fa-leaf" style="font-size: 2rem;"></i>
+        <div class="eco-value">{{ "%.2f"|format(co2_saved) }} kg CO₂ saved</div>
+        <div>Your drone deliveries have reduced carbon footprint equivalent to planting {{ (co2_saved / 0.2)|round|int }} trees 🌳</div>
+    </div>
+
+    <!-- Order History -->
+    <div class="section">
+        <div class="section-title"><i class="fas fa-history"></i> Order History</div>
+        {% if orders %}
+            {% for order in orders %}
+            <div class="order-item">
+                <div class="order-header">
+                    <strong>Order #{{ order.id }}</strong>
+                    <span class="order-status {{ order.status }}">{{ order.status }}</span>
+                </div>
+                <div><i class="fas fa-rupee-sign"></i> {{ order.total_amount }}</div>
+                <div><i class="fas fa-calendar"></i> {{ order.created_at.strftime('%d %b %Y, %I:%M %p') }}</div>
+                <div><i class="fas fa-map-marker-alt"></i> {{ order.delivery_address[:50] }}</div>
+                {% if order.status == 'delivered' %}
+                <div><i class="fas fa-star"></i> Unlock code: {{ order.unlock_code }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <p>No orders yet. Order now to see history!</p>
+        {% endif %}
+    </div>
+
+    <!-- Profile Menu Options -->
+    <div class="section">
+        <div class="section-title"><i class="fas fa-list"></i> Menu</div>
+        <div class="menu-item" onclick="alert('Saved addresses feature coming soon')">
+            <span><i class="fas fa-map-pin"></i> Saved Addresses</span>
+            <i class="fas fa-chevron-right"></i>
+        </div>
+        <div class="menu-item" onclick="alert('Payment methods coming soon')">
+            <span><i class="fas fa-credit-card"></i> Payment Methods</span>
+            <i class="fas fa-chevron-right"></i>
+        </div>
+        <div class="menu-item" onclick="alert('Delivery preferences coming soon')">
+            <span><i class="fas fa-sliders-h"></i> Delivery Preferences</span>
+            <i class="fas fa-chevron-right"></i>
+        </div>
+        <div class="menu-item" onclick="alert('Referral: Share code DRONEDINE100')">
+            <span><i class="fas fa-gift"></i> Referral Code</span>
+            <i class="fas fa-chevron-right"></i>
+        </div>
+        <div class="menu-item" onclick="alert('Settings coming soon')">
+            <span><i class="fas fa-cog"></i> Settings</span>
+            <i class="fas fa-chevron-right"></i>
+        </div>
+        <div class="menu-item" onclick="alert('Help & Support: support@dronedine.com')">
+            <span><i class="fas fa-headset"></i> Help & Support</span>
+            <i class="fas fa-chevron-right"></i>
+        </div>
+    </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+    function showToast(msg, isError = false) {
+        const toast = document.getElementById('toast');
+        toast.innerText = msg;
+        toast.style.background = isError ? '#dc2626' : '#1e293b';
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+    {% if user.name %}
+        showToast("Welcome back, {{ user.name }}!", false);
+    {% endif %}
+</script>
+</body>
+</html>
