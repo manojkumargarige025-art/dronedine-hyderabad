@@ -1,5 +1,6 @@
 """
-DroneDine - Complete Backend with User Auth, Orders, Drone Tracking, Admin/Restaurant Dashboards
+DroneDine - Complete Backend with User Auth, Orders, Drone Tracking, 
+Admin/Restaurant Dashboards
 """
 
 import json
@@ -19,19 +20,17 @@ from flask import (
 )
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash
 
-# ==================== CONFIGURATION ====================
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dronedine-super-secret-key-change-me")
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///dronedine.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 CORS(app, supports_credentials=True)
-
 db = SQLAlchemy(app)
 
 # Mapbox token (your existing one)
 MAPBOX_TOKEN = "pk.eyJ1IjoibWFub2oyNTgwOCIsImEiOiJjbXBsZ3B3NmoxYzJmMnFzbHV6Zmt1NnNwIn0.hzkSfnkPO_KRL3urJbFtxA"
+
 
 # ==================== MODELS ====================
 class User(db.Model):
@@ -47,7 +46,7 @@ class Restaurant(db.Model):
     name = db.Column(db.String(100), nullable=False)
     cuisine = db.Column(db.String(50))
     rating = db.Column(db.Float, default=4.0)
-    delivery_time = db.Column(db.Integer, default=20)  # minutes
+    delivery_time = db.Column(db.Integer, default=20)
     is_active = db.Column(db.Boolean, default=True)
     image_url = db.Column(db.String(200))
     latitude = db.Column(db.Float)
@@ -68,10 +67,10 @@ class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
-    items = db.Column(db.Text, nullable=False)  # JSON string
+    items = db.Column(db.Text, nullable=False)
     total_amount = db.Column(db.Float, nullable=False)
     unlock_code = db.Column(db.String(4), nullable=False)
-    status = db.Column(db.String(50), default='placed')  # placed, accepted, preparing, out_for_delivery, delivered, cancelled
+    status = db.Column(db.String(50), default='placed')
     delivery_lat = db.Column(db.Float)
     delivery_lng = db.Column(db.Float)
     delivery_address = db.Column(db.String(200))
@@ -90,14 +89,14 @@ class DroneTracking(db.Model):
     battery = db.Column(db.Integer, default=100)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
-# ==================== HELPER FUNCTIONS ====================
+
 def generate_unlock_code():
     return str(random.randint(1000, 9999))
 
 def calculate_co2_saved(orders):
-    # Assuming each drone delivery saves ~0.065 kg CO2 compared to car delivery
     delivered = [o for o in orders if o.status == 'delivered']
     return len(delivered) * 0.065
+
 
 # ==================== AUTH ROUTES ====================
 @app.route('/login', methods=['GET', 'POST'])
@@ -106,7 +105,6 @@ def login():
         phone = request.form.get('phone')
         if not phone or len(phone) != 10:
             return render_template('login.html', error="Invalid phone number")
-        # Generate OTP (simulate)
         otp = random.randint(1000, 9999)
         session['login_otp'] = otp
         session['login_phone'] = phone
@@ -138,6 +136,7 @@ def logout():
     session.clear()
     return redirect(url_for('home'))
 
+
 # ==================== MAIN PAGES ====================
 @app.route('/')
 def home():
@@ -168,6 +167,7 @@ def track_order(order_id):
         return "Unauthorized", 403
     return render_template('track.html', order=order)
 
+
 # ==================== API ENDPOINTS ====================
 @app.route('/api/place-order', methods=['POST'])
 def place_order():
@@ -192,7 +192,6 @@ def place_order():
     )
     db.session.add(order)
     db.session.commit()
-    # Simulate initial tracking entry
     tracking = DroneTracking(
         order_id=order.id,
         latitude=data['latitude'],
@@ -233,10 +232,8 @@ def get_tracking(order_id):
     order = Order.query.get_or_404(order_id)
     if order.user_id != session['user_id']:
         return jsonify({'error': 'Unauthorized'}), 403
-    # Get latest tracking entry
     tracking = DroneTracking.query.filter_by(order_id=order_id).order_by(DroneTracking.timestamp.desc()).first()
     if not tracking:
-        # Return default based on order status
         return jsonify({
             'latitude': order.delivery_lat,
             'longitude': order.delivery_lng,
@@ -256,8 +253,8 @@ def get_tracking(order_id):
         'unlock_code': order.unlock_code
     })
 
-# ==================== RESTAURANT DASHBOARD (Protected with PIN) ====================
-# Simplified for demo – we'll use same restaurant IDs as before
+
+# ==================== RESTAURANT DASHBOARD ====================
 RESTAURANT_PINS = {
     'bawarchi': '1111',
     'paradise': '2222',
@@ -282,10 +279,8 @@ def restaurant_dashboard():
     if 'restaurant_id' not in session:
         return redirect(url_for('restaurant_login_page'))
     rid = session['restaurant_id']
-    # Find restaurant by name (simplified)
     restaurant = Restaurant.query.filter_by(name=rid.capitalize()).first()
     if not restaurant:
-        # Create dummy if not exists
         restaurant = Restaurant(name=rid.capitalize(), cuisine='Indian', rating=4.5, is_active=True)
         db.session.add(restaurant)
         db.session.commit()
@@ -299,7 +294,6 @@ def restaurant_update_order(order_id):
     data = request.get_json()
     action = data.get('action')
     order = Order.query.get_or_404(order_id)
-    # Verify restaurant owns the order
     restaurant = Restaurant.query.filter_by(name=session['restaurant_id'].capitalize()).first()
     if not restaurant or order.restaurant_id != restaurant.id:
         return jsonify({'error': 'Unauthorized'}), 403
@@ -317,11 +311,10 @@ def restaurant_update_order(order_id):
         return jsonify({'success': True, 'status': order.status})
     return jsonify({'error': 'Invalid action'}), 400
 
+
 # ==================== ADMIN DASHBOARD ====================
 @app.route('/admin/dashboard')
 def admin_dashboard():
-    # Simple admin check (hardcoded for demo)
-    # In production, add proper admin authentication
     total_orders = Order.query.count()
     active_orders = Order.query.filter(Order.status.in_(['accepted', 'preparing', 'out_for_delivery'])).count()
     delivered_orders = Order.query.filter_by(status='delivered').count()
@@ -334,10 +327,9 @@ def admin_dashboard():
                          total_revenue=total_revenue,
                          orders=orders)
 
-# ==================== INITIAL DATA SEED (Run once) ====================
+
 def init_db():
     db.create_all()
-    # Add sample restaurants if empty
     if Restaurant.query.count() == 0:
         sample_restaurants = [
             Restaurant(name='Bawarchi', cuisine='Biryani, Kebabs', rating=4.5, delivery_time=15, is_active=True, image_url='https://via.placeholder.com/300x200?text=Bawarchi'),
@@ -346,7 +338,6 @@ def init_db():
         ]
         db.session.add_all(sample_restaurants)
         db.session.commit()
-        # Add menu items
         menu_items = [
             MenuItem(restaurant_id=1, name='Chicken Biryani (Full)', price=280, description='Hyderabadi special', category='Biryani', is_veg=False),
             MenuItem(restaurant_id=1, name='Mutton Biryani (Full)', price=350, description='Tender mutton', category='Biryani', is_veg=False),
@@ -359,7 +350,7 @@ def init_db():
         db.session.add_all(menu_items)
         db.session.commit()
 
-# ==================== RUN ====================
+
 if __name__ == '__main__':
     with app.app_context():
         init_db()
