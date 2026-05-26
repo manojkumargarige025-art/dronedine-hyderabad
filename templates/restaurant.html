@@ -327,21 +327,26 @@
     }
 
     async function updateOrderStatus(orderId, action) {
-        try {
-            const res = await apiFetch(`/api/orders/${orderId}`, {
-                method: 'PATCH',
-                body: JSON.stringify({ action })
-            });
-            if (res.ok) {
-                showToast(`Order #${orderId} updated to ${action}`);
-                loadOrders();
-                loadStats();
-            } else {
-                const err = await res.json();
-                showToast(err.error || 'Update failed', true);
-            }
-        } catch(e) { showToast('Network error', true); }
+    try {
+        const res = await apiFetch(`/api/orders/${orderId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ action })
+        });
+        if (res.ok) {
+            const data = await res.json();
+            showToast(`Order #${orderId} updated to ${data.status || action}`);
+            loadOrders();  // refresh list
+            loadStats();
+        } else {
+            const err = await res.json();
+            showToast(err.error || 'Update failed', true);
+            console.error('PATCH error:', err);
+        }
+    } catch(e) {
+        console.error(e);
+        showToast('Network error', true);
     }
+}
 
     function renderOrders(orders) {
         const container = document.getElementById('ordersList');
