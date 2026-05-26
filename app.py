@@ -32,6 +32,7 @@ db = SQLAlchemy(app)
 # Mapbox token (your existing one)
 MAPBOX_TOKEN = "pk.eyJ1IjoibWFub2oyNTgwOCIsImEiOiJjbXBsZ3B3NmoxYzJmMnFzbHV6Zmt1NnNwIn0.hzkSfnkPO_KRL3urJbFtxA"
 
+
 # ==================== MODELS ====================
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -90,6 +91,7 @@ class DroneTracking(db.Model):
     battery = db.Column(db.Integer, default=100)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
+
 # ==================== HELPER FUNCTIONS ====================
 def generate_unlock_code():
     return str(random.randint(1000, 9999))
@@ -97,6 +99,7 @@ def generate_unlock_code():
 def calculate_co2_saved(orders):
     delivered = [o for o in orders if o.status == 'delivered']
     return len(delivered) * 0.065
+
 
 # ==================== ROUTES: AUTH ====================
 @app.route('/login', methods=['GET', 'POST'])
@@ -136,6 +139,7 @@ def logout():
     session.clear()
     return redirect(url_for('home'))
 
+
 # ==================== ROUTES: PAGES ====================
 @app.route('/')
 def home():
@@ -165,6 +169,7 @@ def track_order(order_id):
     if order.user_id != session['user_id']:
         return "Unauthorized", 403
     return render_template('track.html', order=order)
+
 
 # ==================== ROUTES: PROFILE API ====================
 @app.route('/api/user/update', methods=['POST'])
@@ -203,6 +208,7 @@ def user_addresses():
             user.addresses = json.dumps(addresses)
             db.session.commit()
         return jsonify({'success': True, 'addresses': addresses})
+
 
 # ==================== ROUTES: ORDER API ====================
 @app.route('/api/place-order', methods=['POST'])
@@ -289,6 +295,7 @@ def get_tracking(order_id):
         'unlock_code': order.unlock_code
     })
 
+
 # ==================== ROUTES: RESTAURANT DASHBOARD ====================
 RESTAURANT_PINS = {
     'bawarchi': '1111',
@@ -346,6 +353,7 @@ def restaurant_update_order(order_id):
         return jsonify({'success': True, 'status': order.status})
     return jsonify({'error': 'Invalid action'}), 400
 
+
 # ==================== ROUTES: ADMIN DASHBOARD ====================
 @app.route('/admin/dashboard')
 def admin_dashboard():
@@ -360,6 +368,7 @@ def admin_dashboard():
                          delivered_orders=delivered_orders,
                          total_revenue=total_revenue,
                          orders=orders)
+
 
 # ==================== INITIAL DATA SEED (run at startup) ====================
 def init_db():
@@ -383,6 +392,7 @@ def init_db():
         ]
         db.session.add_all(menu_items)
         db.session.commit()
+
 
 # ==================== RUN (tables created on app load) ====================
 with app.app_context():
