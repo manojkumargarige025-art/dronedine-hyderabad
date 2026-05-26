@@ -157,17 +157,20 @@ def restaurant_page():
 def admin_page():
     return render_template("admin.html")
 
+
 @app.route("/support")
 def support():
     return render_template("support.html")
 
-@app.route('/simulator')
-def simulator():
-    return render_template('simulator.html')
 
-@app.route('/tracking_demo')
+@app.route("/simulator")
+def simulator():
+    return render_template("simulator.html")
+
+
+@app.route("/tracking_demo")
 def tracking_demo():
-    return render_template('tracking_clean.html')
+    return render_template("tracking_clean.html")
 
 
 # ---------- Restaurant auth ----------
@@ -221,7 +224,7 @@ def get_restaurants():
     return jsonify(RESTAURANTS)
 
 
-# ---------- API: Orders (modified to auto-mark paid) ----------
+# ---------- API: Orders (auto-mark paid) ----------
 
 
 @app.route("/api/orders", methods=["POST"])
