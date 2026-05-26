@@ -194,9 +194,7 @@
     document.getElementById('paymentFilter').onchange = () => fetchOrders();
     document.getElementById('searchInput').oninput = () => fetchOrders();
 
-    // Initial load
     fetchOrders();
-    // Auto-refresh every 30 seconds
     setInterval(fetchOrders, 30000);
 </script>
 {% endblock %}
