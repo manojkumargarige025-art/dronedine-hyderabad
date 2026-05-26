@@ -103,6 +103,44 @@ def calculate_co2_saved(orders):
 
 
 # ==================== AUTH ROUTES ====================
+@app.route('/api/user/update', methods=['POST'])
+def update_user_profile():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not logged in'}), 401
+    data = request.get_json()
+    user = User.query.get(session['user_id'])
+    if 'name' in data:
+        user.name = data['name']
+    if 'email' in data:
+        user.email = data['email']
+    db.session.commit()
+    return jsonify({'success': True, 'name': user.name, 'email': user.email})
+
+@app.route('/api/user/addresses', methods=['GET', 'POST', 'DELETE'])
+def user_addresses():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not logged in'}), 401
+    user = User.query.get(session['user_id'])
+    if request.method == 'GET':
+        addresses = json.loads(user.addresses) if user.addresses else []
+        return jsonify(addresses)
+    elif request.method == 'POST':
+        data = request.get_json()
+        addresses = json.loads(user.addresses) if user.addresses else []
+        addresses.append(data)
+        user.addresses = json.dumps(addresses)
+        db.session.commit()
+        return jsonify({'success': True, 'addresses': addresses})
+    elif request.method == 'DELETE':
+        # Delete address by index
+        index = request.args.get('index', type=int)
+        addresses = json.loads(user.addresses) if user.addresses else []
+        if 0 <= index < len(addresses):
+            addresses.pop(index)
+            user.addresses = json.dumps(addresses)
+            db.session.commit()
+        return jsonify({'success': True, 'addresses': addresses})
+        
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
