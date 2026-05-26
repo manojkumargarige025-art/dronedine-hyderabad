@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Track Order - DroneDine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #0f172a; color: white; }
+        .tracking-container { max-width: 500px; margin: 0 auto; padding: 1rem; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .back-btn { background: none; border: none; color: white; font-size: 1.2rem; cursor: pointer; }
+        .drone-visual { background: linear-gradient(135deg, #1e293b, #0f172a); border-radius: 32px; padding: 1.5rem; text-align: center; margin-bottom: 1.5rem; }
+        .drone-icon { font-size: 5rem; color: #f97316; animation: float 2s ease-in-out infinite; }
+        @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+        .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+        .metric-card { background: #1e293b; border-radius: 20px; padding: 1rem; text-align: center; }
+        .metric-label { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; }
+        .metric-value { font-size: 1.3rem; font-weight: 700; color: #f97316; }
+        .timeline { background: #1e293b; border-radius: 24px; padding: 1.5rem; margin-bottom: 1.5rem; }
+        .timeline-item { display: flex; align-items: center; margin-bottom: 1rem; }
+        .timeline-icon { width: 40px; height: 40px; background: #334155; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 1rem; }
+        .timeline-item.completed .timeline-icon { background: #10b981; }
+        .timeline-item.active .timeline-icon { background: #f97316; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(249,115,22,0.4); } 50% { box-shadow: 0 0 0 8px rgba(249,115,22,0); } }
+        .unlock-section { background: #1e293b; border-radius: 24px; padding: 1.5rem; text-align: center; margin-bottom: 1.5rem; }
+        .unlock-code { font-size: 2.5rem; font-weight: 800; letter-spacing: 8px; color: #f97316; margin: 0.5rem 0; }
+        .map-container { height: 280px; border-radius: 20px; overflow: hidden; margin-bottom: 1.5rem; }
+        .pin-input { background: #334155; border: none; padding: 1rem; border-radius: 40px; width: 100%; text-align: center; font-size: 1.2rem; letter-spacing: 4px; color: white; margin-top: 1rem; }
+        .btn-unlock { background: #f97316; border: none; padding: 0.8rem; border-radius: 40px; width: 100%; font-weight: bold; margin-top: 0.5rem; cursor: pointer; }
+        .toast { position: fixed; bottom: 20px; left: 20px; background: #1e293b; color: white; padding: 0.8rem 1.5rem; border-radius: 40px; z-index: 2000; transform: translateX(-120%); transition: 0.3s; }
+        .toast.show { transform: translateX(0); }
+    </style>
+</head>
+<body>
+<div class="tracking-container">
+    <div class="header">
+        <button class="back-btn" onclick="window.location.href='/'"><i class="fas fa-arrow-left"></i> Back</button>
+        <h2>Order Tracking</h2>
+        <div></div>
+    </div>
+    <div class="drone-visual"><div class="drone-icon"><i class="fas fa-drone"></i></div><div id="etaDisplay" style="margin-top:0.5rem;">🕒 Estimated arrival: <span id="eta">--</span> min</div></div>
+    <div class="metrics">
+        <div class="metric-card"><div class="metric-label">Altitude</div><div class="metric-value" id="altitude">0 m</div></div>
+        <div class="metric-card"><div class="metric-label">Speed</div><div class="metric-value" id="speed">0 km/h</div></div>
+        <div class="metric-card"><div class="metric-label">Battery</div><div class="metric-value" id="battery">100%</div></div>
+    </div>
+    <div class="timeline" id="timeline">
+        <div class="timeline-item" data-status="placed"><div class="timeline-icon"><i class="fas fa-receipt"></i></div><div class="timeline-content"><div class="timeline-title">Order Placed</div><div class="timeline-time" id="placedTime">-</div></div></div>
+        <div class="timeline-item" data-status="accepted"><div class="timeline-icon"><i class="fas fa-check-circle"></i></div><div class="timeline-content"><div class="timeline-title">Order Accepted</div><div class="timeline-time" id="acceptedTime">-</div></div></div>
+        <div class="timeline-item" data-status="preparing"><div class="timeline-icon"><i class="fas fa-utensils"></i></div><div class="timeline-content"><div class="timeline-title">Preparing Food</div><div class="timeline-time" id="preparingTime">-</div></div></div>
+        <div class="timeline-item" data-status="out_for_delivery"><div class="timeline-icon"><i class="fas fa-drone"></i></div><div class="timeline-content"><div class="timeline-title">Drone Dispatched</div><div class="timeline-time" id="dispatchTime">-</div></div></div>
+        <div class="timeline-item" data-status="delivered"><div class="timeline-icon"><i class="fas fa-home"></i></div><div class="timeline-content"><div class="timeline-title">Delivered</div><div class="timeline-time" id="deliveredTime">-</div></div></div>
+    </div>
+    <div class="unlock-section" id="unlockSection">
+        <div>Your Unlock Code</div>
+        <div class="unlock-code" id="unlockCode">----</div>
+        <div>Enter this code when drone arrives</div>
+        <input type="password" id="pinInput" class="pin-input" placeholder="Enter 4-digit code" maxlength="4">
+        <button id="unlockBtn" class="btn-unlock">Unlock Box</button>
+    </div>
+    <div id="map" class="map-container"></div>
+</div>
+<div id="toast" class="toast"></div>
+<script>
+    const orderId = {{ order.id }};
+    let statusPollInterval = null;
+    let map = null, droneMarker = null;
+    const kitchenCoords = [17.4416, 78.3489];
+    let destinationCoords = [{{ order.delivery_lat }}, {{ order.delivery_lng }}];
+    function showToast(msg, isError = false) {
+        const toast = document.getElementById('toast');
+        toast.innerText = msg;
+        toast.style.background = isError ? '#dc2626' : '#1e293b';
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+    function updateTimeline(status, timestamp = null) {
+        const statusMap = { 'placed':0, 'accepted':1, 'preparing':2, 'out_for_delivery':3, 'delivered':4 };
+        const currentIndex = statusMap[status] !== undefined ? statusMap[status] : -1;
+        const items = document.querySelectorAll('.timeline-item');
+        for (let i = 0; i < items.length; i++) {
+            const itemStatus = items[i].getAttribute('data-status');
+            if (i < currentIndex) { items[i].classList.add('completed'); items[i].classList.remove('active'); }
+            else if (i === currentIndex) { items[i].classList.add('active'); items[i].classList.remove('completed'); }
+            else { items[i].classList.remove('completed', 'active'); }
+        }
+        if (timestamp) {
+            const timeStr = new Date(timestamp).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+            const timeElem = document.getElementById(`${status}Time`);
+            if (timeElem && timeStr !== 'Invalid Date') timeElem.innerText = timeStr;
+        }
+    }
+    function updateMetrics(altitude, speed, battery) {
+        document.getElementById('altitude').innerText = altitude + ' m';
+        document.getElementById('speed').innerText = speed + ' km/h';
+        document.getElementById('battery').innerText = battery + '%';
+        if (battery < 30) document.getElementById('battery').style.color = '#ef4444';
+        else document.getElementById('battery').style.color = '#f97316';
+    }
+    async function fetchTracking() {
+        try {
+            const res = await fetch(`/api/tracking/${orderId}`);
+            const data = await res.json();
+            updateMetrics(data.altitude, data.speed, data.battery);
+            updateTimeline(data.status);
+            document.getElementById('unlockCode').innerText = data.unlock_code || '----';
+            if (data.status === 'delivered') {
+                document.getElementById('unlockSection').style.display = 'none';
+                if (statusPollInterval) clearInterval(statusPollInterval);
+                showToast('Delivery completed! Enjoy your meal!');
+            }
+            if (data.status === 'out_for_delivery' && !droneMarker) startDroneAnimation();
+        } catch(e) { console.warn(e); }
+    }
+    function initMap() {
+        if (map) map.remove();
+        map = L.map('map').setView(destinationCoords, 14);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: 'CartoDB' }).addTo(map);
+        L.marker(kitchenCoords).addTo(map).bindPopup('Kitchen');
+        L.marker(destinationCoords).addTo(map).bindPopup('Your location');
+        L.polyline([kitchenCoords, destinationCoords], { color: '#f97316', dashArray: '5,10' }).addTo(map);
+        const droneIcon = L.divIcon({ html: '<i class="fas fa-drone" style="font-size:28px; color:#f97316;"></i>', iconSize: [32,32] });
+        droneMarker = L.marker(kitchenCoords, { icon: droneIcon }).addTo(map);
+    }
+    function startDroneAnimation() {
+        if (!droneMarker) return;
+        const start = kitchenCoords, end = destinationCoords, duration = 8000, startTime = performance.now();
+        function animate(now) {
+            let t = Math.min(1, (now - startTime) / duration);
+            const lat = start[0] + (end[0] - start[0]) * t;
+            const lng = start[1] + (end[1] - start[1]) * t;
+            droneMarker.setLatLng([lat, lng]);
+            if (t < 1) requestAnimationFrame(animate);
+            else { droneMarker.setLatLng(end); showToast('Drone has arrived! Enter your unlock code.'); }
+        }
+        requestAnimationFrame(animate);
+    }
+    document.getElementById('unlockBtn').onclick = async () => {
+        const pin = document.getElementById('pinInput').value;
+        if (!pin || pin.length !== 4) { showToast('Enter 4-digit code', true); return; }
+        const storedCode = document.getElementById('unlockCode').innerText;
+        if (pin === storedCode) { showToast('✅ Box unlocked! Enjoy your meal!'); document.getElementById('unlockSection').style.display = 'none'; }
+        else { showToast('❌ Wrong code. Try again.', true); }
+    };
+    initMap();
+    fetchTracking();
+    statusPollInterval = setInterval(fetchTracking, 5000);
+</script>
+</body>
+</html>
