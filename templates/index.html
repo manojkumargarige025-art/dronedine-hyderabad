@@ -29,7 +29,7 @@
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            font-family: 'Segoe UI', system-ui, sans-serif;
             background: #f8fafc;
             color: var(--text-dark);
             transition: background 0.2s;
@@ -80,17 +80,6 @@
             width: 18px; height: 18px; font-size: 0.7rem; display: flex;
             align-items: center; justify-content: center;
         }
-        /* Step wizard */
-        .steps {
-            display: flex; gap: 1rem; margin-bottom: 1.5rem;
-            background: white; padding: 0.5rem 1rem; border-radius: 60px;
-            width: fit-content;
-        }
-        .step {
-            padding: 0.3rem 1rem; border-radius: 40px; background: #f3f4f6;
-            color: #6b7280; cursor: pointer;
-        }
-        .step.active { background: var(--primary); color: white; }
         /* Theme switcher */
         .theme-picker {
             position: fixed; bottom: 20px; right: 20px;
@@ -143,8 +132,28 @@
             display: flex; justify-content: space-between;
             margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border);
         }
-        /* Map */
+        /* Map container for tracking */
         .map-container { height: 280px; border-radius: 20px; overflow: hidden; margin: 1rem 0; }
+        /* Modal (location popup) */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); display: flex; align-items: center;
+            justify-content: center; z-index: 1500;
+        }
+        .modal-content {
+            background: white; border-radius: 32px; width: 90%; max-width: 500px;
+            padding: 1.5rem; text-align: center;
+        }
+        .modal-content input {
+            width: 100%; padding: 12px; margin: 1rem 0; border-radius: 40px;
+            border: 1px solid var(--border);
+        }
+        .modal-content button {
+            background: var(--primary); color: white; border: none;
+            padding: 12px; border-radius: 40px; width: 100%; font-weight: bold;
+            cursor: pointer;
+        }
+        #locationMapModal { height: 200px; border-radius: 20px; margin: 1rem 0; }
         .toast {
             position: fixed; bottom: 20px; left: 20px;
             background: #1f2937; color: white; padding: 10px 20px;
@@ -154,7 +163,6 @@
         .toast.show { transform: translateX(0); }
         @media (max-width: 640px) {
             .cart-sidebar { width: 100%; }
-            .steps { flex-wrap: wrap; }
         }
     </style>
 </head>
@@ -185,43 +193,31 @@
         </div>
     </div>
 
-    <div class="steps">
-        <div class="step active" data-step="1">📍 Location</div>
-        <div class="step" data-step="2">🍽️ Menu</div>
-        <div class="step" data-step="3">💰 Checkout</div>
-        <div class="step" data-step="4">🚁 Tracking</div>
-    </div>
-
-    <!-- Step 1: Address -->
-    <div id="step1Panel">
-        <div style="background:white; border-radius:24px; padding:1.5rem;">
-            <h3>Where should we deliver?</h3>
-            <input type="text" id="addressInput" placeholder="e.g., Wipro Circle, Gachibowli" style="width:100%; padding:12px; border-radius:40px; border:1px solid #ddd; margin:1rem 0;">
-            <button id="confirmAddressBtn" style="background:var(--primary); color:white; border:none; padding:10px; border-radius:40px; width:100%;">Confirm Address</button>
-            <div id="addressMap" class="map-container"></div>
-            <p style="font-size:0.8rem;">📍 We deliver within 3km Green Zone around Gachibowli.</p>
-        </div>
-    </div>
-
-    <!-- Step 2: Menu -->
-    <div id="step2Panel" style="display:none;">
+    <!-- Restaurant grid (menu) -->
+    <div id="menuContainer">
         <div id="restaurantsGrid" class="restaurant-grid"></div>
-        <button id="proceedCheckoutBtn" style="background:var(--primary); color:white; border:none; padding:12px; border-radius:40px; width:100%; margin-top:1rem;">Proceed to Checkout →</button>
     </div>
 
-    <!-- Step 3: Checkout -->
-    <div id="step3Panel" style="display:none;">
-        <div style="background:white; border-radius:24px; padding:1.5rem;">
-            <h3>Order Summary</h3>
-            <div id="checkoutItems"></div>
-            <div id="checkoutTotal" style="font-weight:bold; margin:1rem 0;"></div>
-            <input type="password" id="pinInput" placeholder="4-digit delivery PIN" maxlength="4" style="width:100%; padding:10px; border-radius:40px; border:1px solid #ddd;">
-            <button id="placeOrderBtn" style="background:var(--primary); color:white; border:none; padding:12px; border-radius:40px; width:100%; margin-top:1rem;">Pay & Launch Drone</button>
-        </div>
+    <!-- Cart Sidebar -->
+    <div id="cartSidebar" class="cart-sidebar">
+        <h3>Your Cart</h3>
+        <div id="cartItemsList"></div>
+        <div id="cartSidebarTotal" style="font-weight:bold; margin:1rem 0;">Total: ₹0</div>
+        <button id="checkoutSidebarBtn" style="background:var(--primary); color:white; border:none; padding:12px; border-radius:40px; width:100%;">Checkout</button>
     </div>
 
-    <!-- Step 4: Tracking -->
-    <div id="step4Panel" style="display:none;">
+    <!-- Checkout Panel (hidden initially) -->
+    <div id="checkoutPanel" style="display:none; background:white; border-radius:24px; padding:1.5rem; margin-top:1rem;">
+        <h3>Order Summary</h3>
+        <div id="checkoutItems"></div>
+        <div id="checkoutTotal" style="font-weight:bold; margin:1rem 0;"></div>
+        <input type="password" id="pinInput" placeholder="4-digit delivery PIN" maxlength="4" style="width:100%; padding:10px; border-radius:40px; border:1px solid #ddd;">
+        <button id="placeOrderBtn" style="background:var(--primary); color:white; border:none; padding:12px; border-radius:40px; width:100%; margin-top:1rem;">Pay & Launch Drone</button>
+        <button id="backToMenuBtn" style="margin-top:0.5rem; background:transparent; border:1px solid var(--primary); color:var(--primary); padding:8px; border-radius:40px;">Back to Menu</button>
+    </div>
+
+    <!-- Tracking Panel (hidden initially) -->
+    <div id="trackingPanel" style="display:none;">
         <div style="background:white; border-radius:24px; padding:1rem;">
             <div id="trackMap" class="map-container"></div>
             <div id="trackStatus" style="text-align:center; margin:1rem 0;">⏳ Waiting for restaurant acceptance...</div>
@@ -230,16 +226,20 @@
                 <input type="password" id="deliveryPin" maxlength="4" style="width:100%; padding:10px; border-radius:40px;">
                 <button id="unlockBtn" style="background:var(--primary); margin-top:0.5rem; width:100%;">Unlock Box</button>
             </div>
+            <button id="newOrderBtn" style="margin-top:1rem; background:var(--primary); color:white; border:none; padding:8px; border-radius:40px; width:100%;">Order Again</button>
         </div>
     </div>
 </div>
 
-<!-- Cart Sidebar -->
-<div id="cartSidebar" class="cart-sidebar">
-    <h3>Your Cart</h3>
-    <div id="cartItemsList"></div>
-    <div id="cartSidebarTotal" style="font-weight:bold; margin:1rem 0;">Total: ₹0</div>
-    <button id="checkoutSidebarBtn" style="background:var(--primary); color:white; border:none; padding:12px; border-radius:40px; width:100%;">Checkout</button>
+<!-- Location Popup Modal (appears after login) -->
+<div id="locationModal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <h3>📍 Select Your Delivery Location</h3>
+        <input type="text" id="modalAddressInput" placeholder="Search any location!" value="Wipro Circle, Gachibowli">
+        <button id="modalConfirmBtn">Confirm Address</button>
+        <div id="locationMapModal" class="map-container"></div>
+        <p style="font-size:0.8rem; margin-top:0.5rem;">We deliver within 3km Green Zone around Gachibowli.</p>
+    </div>
 </div>
 
 <!-- Theme Switcher -->
@@ -283,7 +283,9 @@
         if (otp === "123456") {
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('appContainer').style.display = 'block';
-            initAddressMap();
+            // Show location modal
+            document.getElementById('locationModal').style.display = 'flex';
+            initLocationModalMap();
             loadRestaurants();
             showToast(`Welcome ${userMobile}!`);
         } else { alert("Wrong OTP. Use 123456"); }
@@ -298,19 +300,18 @@
     }
 
     // ---------- Global state ----------
-    let currentStep = 1;
     let customerCoords = null;
     let selectedRestaurantId = null;
     let selectedRestaurantName = null;
-    let selectedItems = [];   // { name, price, qty }
+    let selectedItems = [];
     let currentOrderId = null;
     let deliveryPinCode = "";
+    let trackMap = null, droneMarker = null;
+    let acceptPollInterval = null;
+    let modalMap = null;
     const kitchenCoords = [17.4416, 78.3489];
     const ZONE_CENTER = [17.4300, 78.3450];
     const ZONE_RADIUS_KM = 3.0;
-    let addressMap = null, trackMap = null, droneMarker = null;
-    let acceptPollInterval = null;
-
     const MAPBOX_TOKEN = "pk.eyJ1IjoibWFub2oyNTgwOCIsImEiOiJjbXBsZ3B3NmoxYzJmMnFzbHV6Zmt1NnNwIn0.hzkSfnkPO_KRL3urJbFtxA";
 
     // Restaurants data
@@ -430,18 +431,17 @@
         updateCartUI();
     };
 
-    // Step navigation
-    function setStep(step) {
-        currentStep = step;
-        document.querySelectorAll('.step').forEach((el,i) => {
-            if (i+1 === step) el.classList.add('active');
-            else el.classList.remove('active');
-        });
-        document.getElementById('step1Panel').style.display = step===1 ? 'block' : 'none';
-        document.getElementById('step2Panel').style.display = step===2 ? 'block' : 'none';
-        document.getElementById('step3Panel').style.display = step===3 ? 'block' : 'none';
-        document.getElementById('step4Panel').style.display = step===4 ? 'block' : 'none';
-        if (step === 3) renderCheckout();
+    function showCheckout() {
+        document.getElementById('menuContainer').style.display = 'none';
+        document.getElementById('checkoutPanel').style.display = 'block';
+        document.getElementById('trackingPanel').style.display = 'none';
+        renderCheckout();
+    }
+
+    function showMenu() {
+        document.getElementById('menuContainer').style.display = 'block';
+        document.getElementById('checkoutPanel').style.display = 'none';
+        document.getElementById('trackingPanel').style.display = 'none';
     }
 
     function renderCheckout() {
@@ -459,7 +459,7 @@
         document.getElementById('checkoutTotal').innerHTML = `Total: ₹${total.toFixed(2)}`;
     }
 
-    // Address geocoding
+    // Geocoding
     async function geocodeAddress(addr) {
         const bbox = "78.25,17.35,78.45,17.50";
         const proximity = "78.3450,17.4300";
@@ -480,46 +480,56 @@
         return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
     }
 
-    function initAddressMap() {
-        if (addressMap) addressMap.remove();
-        addressMap = L.map('addressMap').setView(ZONE_CENTER, 13);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(addressMap);
-        L.circle(ZONE_CENTER, {color: '#f97316', fillColor: '#f97316', fillOpacity:0.1, radius: ZONE_RADIUS_KM*1000}).addTo(addressMap);
-        L.marker(kitchenCoords).addTo(addressMap).bindPopup('Base Kitchen');
+    // Modal map for location popup
+    function initLocationModalMap() {
+        if (modalMap) modalMap.remove();
+        modalMap = L.map('locationMapModal').setView(ZONE_CENTER, 13);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(modalMap);
+        L.circle(ZONE_CENTER, {color: '#f97316', fillColor: '#f97316', fillOpacity:0.1, radius: ZONE_RADIUS_KM*1000}).addTo(modalMap);
+        L.marker(kitchenCoords).addTo(modalMap).bindPopup('Base Kitchen');
     }
 
-    document.getElementById('confirmAddressBtn').onclick = async () => {
-        const addr = document.getElementById('addressInput').value.trim();
+    document.getElementById('modalConfirmBtn').onclick = async () => {
+        const addr = document.getElementById('modalAddressInput').value.trim();
         if (!addr) { showToast("Enter address", true); return; }
         showToast("Verifying address...");
         try {
             const coords = await geocodeAddress(addr);
             const dist = haversine(coords[0], coords[1], ZONE_CENTER[0], ZONE_CENTER[1]);
-            if (dist > ZONE_RADIUS_KM) { showToast("Outside Green Zone", true); return; }
+            if (dist > ZONE_RADIUS_KM) {
+                showToast("Outside Green Zone", true);
+                return;
+            }
             customerCoords = coords;
-            if (window.destMarker) addressMap.removeLayer(window.destMarker);
-            window.destMarker = L.marker(customerCoords).addTo(addressMap).bindPopup("Your location").openPopup();
-            addressMap.setView(customerCoords, 15);
-            showToast("Address verified!");
-            setStep(2);
+            // Close modal
+            document.getElementById('locationModal').style.display = 'none';
+            showToast("Address saved! Now order food.");
         } catch(e) { showToast("Address not found", true); }
     };
 
-    document.getElementById('proceedCheckoutBtn').onclick = () => {
-        if (selectedItems.length === 0) { showToast("Add items to cart", true); return; }
-        setStep(3);
+    // Cart sidebar handlers
+    document.getElementById('cartIcon').onclick = () => document.getElementById('cartSidebar').classList.add('open');
+    document.getElementById('checkoutSidebarBtn').onclick = () => {
+        if (selectedItems.length === 0) { showToast("Cart empty", true); return; }
+        document.getElementById('cartSidebar').classList.remove('open');
+        showCheckout();
+    };
+    document.getElementById('backToMenuBtn').onclick = () => showMenu();
+    window.onclick = (e) => {
+        if (e.target === document.getElementById('cartSidebar')) document.getElementById('cartSidebar').classList.remove('open');
     };
 
+    // Place order
     document.getElementById('placeOrderBtn').onclick = async () => {
         const pin = document.getElementById('pinInput').value;
         if (!pin || pin.length !== 4 || isNaN(pin)) { showToast("Enter 4-digit PIN", true); return; }
-        if (!customerCoords) { showToast("Confirm address first", true); return; }
+        if (!customerCoords) { showToast("Location not set. Please refresh and set address.", true); return; }
         const subtotal = selectedItems.reduce((s,i)=>s+(i.price*i.qty),0);
         const total = subtotal + 15;
         const orderData = {
             customer_name: userMobile || "Demo User",
             customer_phone: userMobile,
-            customer_address: document.getElementById('addressInput').value,
+            customer_address: document.getElementById('modalAddressInput').value,
             restaurant_id: selectedRestaurantId,
             items: selectedItems.map(i=>({name:i.name, quantity:i.qty, price:i.price})),
             total_amount: total,
@@ -535,9 +545,12 @@
             const data = await res.json();
             currentOrderId = data.order_id;
             deliveryPinCode = pin;
-            setStep(4);
+            // Switch to tracking panel
+            document.getElementById('menuContainer').style.display = 'none';
+            document.getElementById('checkoutPanel').style.display = 'none';
+            document.getElementById('trackingPanel').style.display = 'block';
             initTrackMap();
-            document.getElementById('trackStatus').innerText = "⏳ Waiting for restaurant to accept...";
+            document.getElementById('trackStatus').innerText = "⏳ Waiting for restaurant acceptance...";
             if (acceptPollInterval) clearInterval(acceptPollInterval);
             acceptPollInterval = setInterval(async () => {
                 try {
@@ -556,7 +569,7 @@
                     } else if (ord.status === 'declined') {
                         clearInterval(acceptPollInterval);
                         showToast("Restaurant declined your order", true);
-                        setStep(2);
+                        showMenu();
                     }
                 } catch(e) { console.warn(e); }
             }, 3000);
@@ -610,15 +623,19 @@
         } else { showToast("Wrong PIN", true); }
     };
 
-    // Cart sidebar handlers
-    document.getElementById('cartIcon').onclick = () => document.getElementById('cartSidebar').classList.add('open');
-    document.getElementById('checkoutSidebarBtn').onclick = () => {
-        if (selectedItems.length === 0) { showToast("Cart empty", true); return; }
-        document.getElementById('cartSidebar').classList.remove('open');
-        setStep(3);
-    };
-    window.onclick = (e) => {
-        if (e.target === document.getElementById('cartSidebar')) document.getElementById('cartSidebar').classList.remove('open');
+    document.getElementById('newOrderBtn').onclick = () => {
+        // Reset for new order
+        selectedItems = [];
+        selectedRestaurantId = null;
+        updateCartUI();
+        showMenu();
+        document.getElementById('trackingPanel').style.display = 'none';
+        document.getElementById('menuContainer').style.display = 'block';
+        document.getElementById('unlockBox').style.display = 'none';
+        document.getElementById('trackStatus').innerText = "⏳ Waiting for restaurant acceptance...";
+        document.getElementById('deliveryPin').value = '';
+        document.getElementById('pinInput').value = '';
+        // Optionally ask location again? Keep existing customerCoords.
     };
 </script>
 </body>
