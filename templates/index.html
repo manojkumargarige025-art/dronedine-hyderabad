@@ -158,7 +158,7 @@
         .checkout-btn { background: var(--primary); color: white; border: none; }
         .empty-cart-btn { background: transparent; border: 1px solid var(--danger); color: var(--danger); }
         /* Checkout panel */
-        .checkout-panel, .tracking-panel, .order-history-panel {
+        .checkout-panel, .order-history-panel {
             display: none; background: white; border-radius: 24px;
             padding: 1.5rem; margin-top: 1rem;
         }
@@ -167,7 +167,73 @@
             padding: 0.8rem; margin-bottom: 0.5rem; cursor: pointer;
         }
         .address-card.selected, .payment-card.selected { border-color: var(--primary); background: #fff7ed; }
-        /* Map */
+        /* Tracking panel with timeline */
+        .tracking-panel {
+            display: none; background: white; border-radius: 24px;
+            padding: 1.5rem; margin-top: 1rem;
+        }
+        .timeline {
+            display: flex;
+            justify-content: space-between;
+            margin: 2rem 0;
+            position: relative;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 24px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #e5e7eb;
+            z-index: 0;
+        }
+        .timeline-step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+            background: white;
+        }
+        .step-icon {
+            width: 48px;
+            height: 48px;
+            background: #f3f4f6;
+            border: 2px solid #e5e7eb;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 8px;
+            font-size: 1.2rem;
+            color: #9ca3af;
+            transition: all 0.3s;
+        }
+        .timeline-step.completed .step-icon {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+        .timeline-step.active .step-icon {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(249,115,22,0); }
+        }
+        .step-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #6b7280;
+        }
+        .timeline-step.completed .step-label,
+        .timeline-step.active .step-label {
+            color: var(--primary-dark);
+            font-weight: 700;
+        }
         .map-container { height: 280px; border-radius: 20px; overflow: hidden; margin: 1rem 0; }
         .toast {
             position: fixed; bottom: 20px; left: 20px;
@@ -210,6 +276,9 @@
         #locationMapModal { height: 200px; border-radius: 20px; margin: 1rem 0; }
         @media (max-width: 640px) {
             .cart-sidebar, .profile-sidebar { width: 100%; }
+            .timeline { flex-wrap: wrap; gap: 0.5rem; }
+            .timeline-step { flex: 0 0 33%; margin-bottom: 1rem; }
+            .timeline::before { display: none; }
         }
     </style>
 </head>
@@ -316,12 +385,33 @@
         <button class="empty-cart-btn" onclick="showHome()">Back to Menu</button>
     </div>
 
-    <!-- Tracking Panel -->
+    <!-- Tracking Panel (with visual timeline) -->
     <div id="trackingPanel" class="tracking-panel">
-        <h3>Your Drone is Flying</h3>
+        <h3>Order Tracking</h3>
+        <div class="timeline" id="trackingTimeline">
+            <div class="timeline-step" data-step="accepted">
+                <div class="step-icon"><i class="fas fa-check-circle"></i></div>
+                <div class="step-label">Accepted</div>
+            </div>
+            <div class="timeline-step" data-step="preparing">
+                <div class="step-icon"><i class="fas fa-utensils"></i></div>
+                <div class="step-label">Preparing</div>
+            </div>
+            <div class="timeline-step" data-step="launching">
+                <div class="step-icon"><i class="fas fa-rocket"></i></div>
+                <div class="step-label">Launching</div>
+            </div>
+            <div class="timeline-step" data-step="in_transit">
+                <div class="step-icon"><i class="fas fa-drone"></i></div>
+                <div class="step-label">In Transit</div>
+            </div>
+            <div class="timeline-step" data-step="delivered">
+                <div class="step-icon"><i class="fas fa-home"></i></div>
+                <div class="step-label">Delivered</div>
+            </div>
+        </div>
         <div id="trackMap" class="map-container"></div>
-        <div id="trackStatus" style="text-align:center;">⏳ Waiting for restaurant acceptance...</div>
-        <button id="refreshStatusBtn" class="btn-add" style="margin-top:0.5rem;">⟳ Refresh Status</button>
+        <div id="trackStatus" style="text-align:center; margin: 0.5rem 0; font-size: 0.9rem; color: var(--text-light);"></div>
         <div id="unlockBox" style="display:none; margin-top:1rem;">
             <p>🔐 Drone landed. Enter your 4-digit PIN:</p>
             <input type="password" id="deliveryPin" maxlength="4" style="width:100%; padding:8px; border-radius:40px;">
@@ -338,7 +428,7 @@
             </div>
             <button class="btn-add" id="submitRatingBtn">Submit Rating</button>
         </div>
-        <button class="empty-cart-btn" onclick="showHome()">Order Again</button>
+        <button class="empty-cart-btn" id="placeAnotherOrderBtn" style="margin-top: 1rem;">Place Another Order</button>
     </div>
 
     <!-- Order History Panel -->
@@ -348,7 +438,7 @@
         <button class="empty-cart-btn" onclick="showHome()">Back to Menu</button>
     </div>
 
-    <!-- Location Modal (hidden by default) -->
+    <!-- Location Modal -->
     <div id="locationModal" class="modal" style="display:none;">
         <div class="modal-content">
             <h3>📍 Select Your Delivery Location</h3>
@@ -400,7 +490,7 @@
     let userMobile = "";
     let customerCoords = null;
     let selectedRestaurantId = null;
-    let selectedItems = []; // { name, price, qty }
+    let selectedItems = [];
     let currentOrderId = null;
     let deliveryPinCode = "";
     let statusPollInterval = null;
@@ -570,7 +660,7 @@
         rest.items.forEach(item => {
             html += `<div style="display:flex; justify-content:space-between; margin-bottom:0.8rem;">
                         <span>${item.name} - ₹${item.price}</span>
-                        <button class="menu-add-btn" data-name="${item.name}" data-price="${item.price}" data-veg="${item.veg}" style="background:var(--primary); border:none; padding:4px 12px; border-radius:40px; color:white;">Add</button>
+                        <button class="menu-add-btn" data-name="${item.name}" data-price="${item.price}" style="background:var(--primary); border:none; padding:4px 12px; border-radius:40px; color:white;">Add</button>
                      </div>`;
         });
         html += `<button id="closeModal" style="margin-top:1rem; background:#ccc; border:none; padding:8px; border-radius:40px; width:100%;">Close</button>`;
@@ -613,13 +703,11 @@
         return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
     }
 
-    // Location modal (replaces prompt)
+    // Location modal
     function askLocation() {
         return new Promise((resolve) => {
             const modal = document.getElementById('locationModal');
             modal.style.display = 'flex';
-            
-            // Initialize map inside modal if not already
             if (!window.modalMap) {
                 window.modalMap = L.map('locationMapModal').setView(ZONE_CENTER, 13);
                 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(window.modalMap);
@@ -627,34 +715,23 @@
                 L.marker(kitchenCoords).addTo(window.modalMap).bindPopup('Base Kitchen');
             }
             if (window.modalMarker) window.modalMap.removeLayer(window.modalMarker);
-            
             const confirmBtn = document.getElementById('modalConfirmBtn');
             const addressInput = document.getElementById('modalAddressInput');
-            
             const onConfirm = async () => {
                 const addr = addressInput.value.trim();
-                if (!addr) {
-                    showToast("Please enter an address", true);
-                    return;
-                }
+                if (!addr) { showToast("Please enter an address", true); return; }
                 try {
                     const coords = await geocodeAddress(addr);
                     const dist = haversine(coords[0], coords[1], ZONE_CENTER[0], ZONE_CENTER[1]);
-                    if (dist > ZONE_RADIUS_KM) {
-                        showToast("Address outside Green Zone", true);
-                        return;
-                    }
+                    if (dist > ZONE_RADIUS_KM) { showToast("Address outside Green Zone", true); return; }
                     customerCoords = coords;
                     window.modalMarker = L.marker(customerCoords).addTo(window.modalMap).bindPopup("Your location").openPopup();
                     window.modalMap.setView(customerCoords, 15);
                     modal.style.display = 'none';
                     confirmBtn.removeEventListener('click', onConfirm);
                     resolve(true);
-                } catch(e) {
-                    showToast("Address not found. Try 'Wipro Circle, Gachibowli'", true);
-                }
+                } catch(e) { showToast("Address not found. Try 'Wipro Circle, Gachibowli'", true); }
             };
-            
             confirmBtn.removeEventListener('click', onConfirm);
             confirmBtn.addEventListener('click', onConfirm);
         });
@@ -689,10 +766,9 @@
             const data = await res.json();
             currentOrderId = data.order_id;
             deliveryPinCode = pin;
-            // Save to order history (local)
             orderHistory.unshift({ id: currentOrderId, date: new Date(), items: [...selectedItems], total, status: 'pending' });
             localStorage.setItem('orderHistory', JSON.stringify(orderHistory));
-            // Switch to tracking panel and hide search/offers
+            // Switch to tracking panel
             document.getElementById('menuContainer').style.display = 'none';
             document.getElementById('checkoutPanel').style.display = 'none';
             document.getElementById('trackingPanel').style.display = 'block';
@@ -715,6 +791,37 @@
         droneMarker = L.marker(kitchenCoords, {icon: droneIcon}).addTo(trackMap);
     }
 
+    // Update timeline based on backend status
+    function updateTimeline(status) {
+        const steps = ['accepted', 'preparing', 'launching', 'in_transit', 'delivered'];
+        let currentIndex = steps.indexOf(status);
+        if (currentIndex === -1) currentIndex = -1;
+        steps.forEach((step, idx) => {
+            const stepDiv = document.querySelector(`.timeline-step[data-step="${step}"]`);
+            if (stepDiv) {
+                if (idx < currentIndex) stepDiv.classList.add('completed');
+                else if (idx === currentIndex) stepDiv.classList.add('active');
+                else stepDiv.classList.remove('completed', 'active');
+            }
+        });
+        // If status is delivered, also show rating section after landing
+        if (status === 'delivered') {
+            document.getElementById('trackStatus').innerText = "✅ Your order has arrived!";
+            document.getElementById('unlockBox').style.display = 'none';
+            document.getElementById('ratingSection').style.display = 'block';
+        } else if (status === 'out_for_delivery') {
+            document.getElementById('trackStatus').innerText = "🚁 Drone is on the way!";
+        } else if (status === 'preparing') {
+            document.getElementById('trackStatus').innerText = "🍳 Kitchen is preparing your meal...";
+        } else if (status === 'accepted') {
+            document.getElementById('trackStatus').innerText = "✅ Order accepted! Preparing food...";
+        } else if (status === 'declined') {
+            document.getElementById('trackStatus').innerText = "❌ Restaurant declined your order.";
+        } else {
+            document.getElementById('trackStatus').innerText = "⏳ Waiting for restaurant acceptance...";
+        }
+    }
+
     function startDroneAnimation() {
         const start = kitchenCoords, end = customerCoords;
         const duration = 8000;
@@ -726,7 +833,7 @@
             droneMarker.setLatLng([lat,lng]);
             if (t < 1) requestAnimationFrame(animate);
             else {
-                document.getElementById('trackStatus').innerText = "✅ Drone landed! Enter your PIN.";
+                document.getElementById('trackStatus').innerHTML = "✅ Drone landed! Enter your PIN.";
                 document.getElementById('unlockBox').style.display = 'block';
             }
         }
@@ -742,36 +849,38 @@
                 if (!res.ok) { if (res.status === 404) document.getElementById('trackStatus').innerText = "Order not found"; return; }
                 const order = await res.json();
                 const status = order.status;
-                const statusElem = document.getElementById('trackStatus');
+                // Map backend status to timeline steps
+                let mappedStatus = status;
+                if (status === 'out_for_delivery') mappedStatus = 'in_transit';
+                if (status === 'delivered') mappedStatus = 'delivered';
+                if (status === 'accepted') mappedStatus = 'accepted';
+                if (status === 'preparing') mappedStatus = 'preparing';
+                // Launching is triggered manually after accepted? We'll treat 'accepted' as first step.
+                // If status is 'out_for_delivery', we animate drone if not already done.
+                updateTimeline(mappedStatus);
                 if (status === 'accepted') {
-                    statusElem.innerText = "✅ Order accepted! Preparing food...";
                     setTimeout(() => {
-                        statusElem.innerText = "🍳 Kitchen preparing...";
+                        updateTimeline('preparing');
                         setTimeout(() => {
-                            statusElem.innerText = "🛫 Drone launching...";
+                            updateTimeline('launching');
                             startDroneAnimation();
+                            updateTimeline('in_transit');
                         }, 3000);
                     }, 2000);
                     clearInterval(statusPollInterval);
-                } else if (status === 'preparing') {
-                    statusElem.innerText = "🍳 Kitchen is preparing your meal...";
                 } else if (status === 'out_for_delivery') {
-                    statusElem.innerText = "🛫 Drone is on the way!";
                     startDroneAnimation();
                     clearInterval(statusPollInterval);
                 } else if (status === 'delivered') {
-                    statusElem.innerText = "✅ Delivery completed!";
-                    document.getElementById('unlockBox').style.display = 'block';
-                    document.getElementById('unlockBox').innerHTML = '<p style="color:green;">🎉 Already delivered! Rate your experience.</p>';
+                    updateTimeline('delivered');
+                    document.getElementById('unlockBox').style.display = 'none';
                     document.getElementById('ratingSection').style.display = 'block';
                     clearInterval(statusPollInterval);
                 } else if (status === 'declined') {
-                    statusElem.innerText = "❌ Restaurant declined your order.";
+                    updateTimeline('declined');
                     clearInterval(statusPollInterval);
-                } else {
-                    statusElem.innerText = "⏳ Waiting for restaurant acceptance...";
                 }
-            } catch(e) { console.warn(e); document.getElementById('trackStatus').innerText = "⚠️ Error fetching status"; }
+            } catch(e) { console.warn(e); }
         };
         poll();
         statusPollInterval = setInterval(poll, 5000);
@@ -796,7 +905,6 @@
         } else { showToast("Wrong PIN", true); }
     };
 
-    // UI navigation with correct hiding/showing of search & offers
     function showHome() {
         document.getElementById('menuContainer').style.display = 'block';
         document.getElementById('checkoutPanel').style.display = 'none';
@@ -806,8 +914,6 @@
         document.querySelector('.offers-banner').style.display = 'block';
         loadRestaurants();
     }
-
-    function showMenuView() { showHome(); }
 
     function showOrderHistory() {
         document.getElementById('menuContainer').style.display = 'none';
@@ -844,10 +950,7 @@
     function addNewAddress() { showToast("Add address feature"); }
     function closeCart() { document.getElementById('cartSidebar').classList.remove('open'); }
     function closeProfile() { document.getElementById('profileSidebar').classList.remove('open'); }
-    function logout() {
-        localStorage.clear();
-        window.location.reload();
-    }
+    function logout() { localStorage.clear(); window.location.reload(); }
 
     document.getElementById('cartIcon').onclick = () => document.getElementById('cartSidebar').classList.add('open');
     document.getElementById('profileIcon').onclick = () => {
@@ -876,8 +979,8 @@
         }
     };
     document.getElementById('confirmCheckoutBtn').onclick = placeOrder;
-    document.getElementById('refreshStatusBtn').onclick = () => { if (currentOrderId) startPolling(); else showToast("No active order"); };
     document.getElementById('offersBanner').onclick = () => showToast("Use code WELCOME50 for 50% off!");
+    document.getElementById('placeAnotherOrderBtn').onclick = showHome;
 
     // Rating stars
     let selectedRating = 0;
