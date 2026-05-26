@@ -4,13 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>DroneDine – Food Delivery by Drone</title>
-    <!-- Leaflet CSS + JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* ---------- CSS Variables (default orange) ---------- */
         :root {
             --primary: #f97316;
             --primary-dark: #c2410c;
@@ -19,54 +16,35 @@
             --text-dark: #1f2937;
             --text-light: #6b7280;
             --border: #e5e7eb;
-            --glow: rgba(249,115,22,0.3);
         }
-        [data-theme="green"] { --primary: #22c55e; --primary-dark: #16a34a; --primary-light: #bbf7d0; --glow: rgba(34,197,94,0.3); }
-        [data-theme="blue"] { --primary: #3b82f6; --primary-dark: #1d4ed8; --primary-light: #bfdbfe; --glow: rgba(59,130,246,0.3); }
-        [data-theme="purple"] { --primary: #a855f7; --primary-dark: #7e22ce; --primary-light: #e9d5ff; --glow: rgba(168,85,247,0.3); }
-        [data-theme="pink"] { --primary: #ec4899; --primary-dark: #be185d; --primary-light: #fbcfe8; --glow: rgba(236,72,153,0.3); }
-        [data-theme="cyan"] { --primary: #06b6d4; --primary-dark: #0891b2; --primary-light: #cffafe; --glow: rgba(6,182,212,0.3); }
+        [data-theme="green"] { --primary: #22c55e; --primary-dark: #16a34a; }
+        [data-theme="blue"] { --primary: #3b82f6; --primary-dark: #1d4ed8; }
+        [data-theme="purple"] { --primary: #a855f7; --primary-dark: #7e22ce; }
+        [data-theme="pink"] { --primary: #ec4899; --primary-dark: #be185d; }
+        [data-theme="cyan"] { --primary: #06b6d4; --primary-dark: #0891b2; }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', system-ui, sans-serif;
             background: #f8fafc;
             color: var(--text-dark);
-            transition: background 0.2s;
         }
-        /* Login overlay */
         .login-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
+            position: fixed; top:0; left:0; width:100%; height:100%;
             background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
+            display: flex; align-items: center; justify-content: center; z-index:2000;
         }
         .login-card {
-            background: white;
-            border-radius: 32px;
-            padding: 2rem;
-            width: 90%;
-            max-width: 400px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-            text-align: center;
+            background: white; border-radius: 32px; padding: 2rem;
+            width: 90%; max-width: 400px; text-align: center;
         }
-        .login-card h2 { color: var(--primary); margin-bottom: 1rem; }
-        .login-card input {
-            width: 100%; padding: 12px; margin: 8px 0;
-            border-radius: 40px; border: 1px solid var(--border);
+        .login-card input, .login-card button {
+            width: 100%; padding: 12px; margin: 8px 0; border-radius: 40px;
+            border: 1px solid var(--border);
         }
-        .login-card button {
-            background: var(--primary); color: white; border: none;
-            padding: 12px; border-radius: 40px; width: 100%; font-weight: bold;
-            cursor: pointer; margin-top: 8px;
-        }
+        .login-card button { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; }
         .otp-group { display: none; margin-top: 1rem; }
-        /* Main app */
         .app-container { display: none; max-width: 1200px; margin: 0 auto; padding: 1rem; }
-        /* Navbar */
         .navbar {
             display: flex; justify-content: space-between; align-items: center;
             background: white; padding: 0.8rem 1.5rem; border-radius: 60px;
@@ -80,89 +58,58 @@
             width: 18px; height: 18px; font-size: 0.7rem; display: flex;
             align-items: center; justify-content: center;
         }
-        /* Theme switcher */
         .theme-picker {
             position: fixed; bottom: 20px; right: 20px;
             background: white; border-radius: 40px; padding: 6px 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 1000;
-            display: flex; gap: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; gap: 8px; z-index: 1000;
         }
-        .theme-btn {
-            width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
-            border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-        }
+        .theme-btn { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 2px solid white; }
         .theme-orange { background: #f97316; }
         .theme-green { background: #22c55e; }
         .theme-blue { background: #3b82f6; }
         .theme-purple { background: #a855f7; }
         .theme-pink { background: #ec4899; }
         .theme-cyan { background: #06b6d4; }
-        /* Restaurant grid */
         .restaurant-grid {
             display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 1.5rem; margin: 1.5rem 0;
         }
         .food-card {
             background: white; border-radius: 20px; overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: 0.2s;
-            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: 0.2s; cursor: pointer;
         }
         .food-card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px rgba(0,0,0,0.1); }
-        .food-img {
-            height: 160px; background: #f1f5f9; display: flex;
-            align-items: center; justify-content: center; font-size: 3rem;
-        }
+        .food-img { height: 160px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 3rem; }
         .food-info { padding: 1rem; }
         .food-title { font-weight: 700; font-size: 1.1rem; }
-        .food-desc { color: var(--text-light); font-size: 0.85rem; margin: 0.25rem 0; }
-        .rating { color: #f59e0b; font-size: 0.85rem; }
-        .price { font-weight: bold; margin: 0.5rem 0; }
         .btn-add {
             background: var(--primary); border: none; padding: 8px 12px;
             border-radius: 40px; color: white; cursor: pointer; width: 100%;
         }
-        /* Cart sidebar */
         .cart-sidebar {
-            position: fixed; right: -380px; top: 0; width: 380px;
-            height: 100%; background: white; box-shadow: -2px 0 15px rgba(0,0,0,0.1);
+            position: fixed; right: -380px; top: 0; width: 380px; height: 100%;
+            background: white; box-shadow: -2px 0 15px rgba(0,0,0,0.1);
             transition: 0.3s; z-index: 1100; padding: 1.5rem; overflow-y: auto;
         }
         .cart-sidebar.open { right: 0; }
-        .cart-item {
-            display: flex; justify-content: space-between;
-            margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border);
-        }
-        /* Map container for tracking */
+        .cart-item { display: flex; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
         .map-container { height: 280px; border-radius: 20px; overflow: hidden; margin: 1rem 0; }
-        /* Modal (location popup) */
         .modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            position: fixed; top:0; left:0; width:100%; height:100%;
             background: rgba(0,0,0,0.8); display: flex; align-items: center;
             justify-content: center; z-index: 1500;
         }
         .modal-content {
-            background: white; border-radius: 32px; width: 90%; max-width: 500px;
-            padding: 1.5rem; text-align: center;
+            background: white; border-radius: 32px; width: 90%; max-width: 500px; padding: 1.5rem; text-align: center;
         }
-        .modal-content input {
-            width: 100%; padding: 12px; margin: 1rem 0; border-radius: 40px;
-            border: 1px solid var(--border);
-        }
-        .modal-content button {
-            background: var(--primary); color: white; border: none;
-            padding: 12px; border-radius: 40px; width: 100%; font-weight: bold;
-            cursor: pointer;
-        }
-        #locationMapModal { height: 200px; border-radius: 20px; margin: 1rem 0; }
         .toast {
             position: fixed; bottom: 20px; left: 20px;
             background: #1f2937; color: white; padding: 10px 20px;
-            border-radius: 40px; z-index: 1200; transform: translateX(-120%);
-            transition: 0.3s;
+            border-radius: 40px; z-index: 1200; transform: translateX(-120%); transition: 0.3s;
         }
         .toast.show { transform: translateX(0); }
-        @media (max-width: 640px) {
-            .cart-sidebar { width: 100%; }
+        .refresh-status-btn {
+            background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 40px; margin-top: 8px; cursor: pointer;
         }
     </style>
 </head>
@@ -172,7 +119,7 @@
 <div id="loginOverlay" class="login-overlay">
     <div class="login-card">
         <h2><i class="fas fa-drone"></i> DroneDine</h2>
-        <p style="margin-bottom:1rem;">Login with mobile number</p>
+        <p>Login with mobile number</p>
         <input type="tel" id="mobileNumber" placeholder="10-digit mobile" maxlength="10">
         <button id="requestOtpBtn">Request OTP</button>
         <div id="otpGroup" class="otp-group">
@@ -193,12 +140,10 @@
         </div>
     </div>
 
-    <!-- Restaurant grid (menu) -->
     <div id="menuContainer">
         <div id="restaurantsGrid" class="restaurant-grid"></div>
     </div>
 
-    <!-- Cart Sidebar -->
     <div id="cartSidebar" class="cart-sidebar">
         <h3>Your Cart</h3>
         <div id="cartItemsList"></div>
@@ -206,7 +151,6 @@
         <button id="checkoutSidebarBtn" style="background:var(--primary); color:white; border:none; padding:12px; border-radius:40px; width:100%;">Checkout</button>
     </div>
 
-    <!-- Checkout Panel (hidden initially) -->
     <div id="checkoutPanel" style="display:none; background:white; border-radius:24px; padding:1.5rem; margin-top:1rem;">
         <h3>Order Summary</h3>
         <div id="checkoutItems"></div>
@@ -216,11 +160,11 @@
         <button id="backToMenuBtn" style="margin-top:0.5rem; background:transparent; border:1px solid var(--primary); color:var(--primary); padding:8px; border-radius:40px;">Back to Menu</button>
     </div>
 
-    <!-- Tracking Panel (hidden initially) -->
     <div id="trackingPanel" style="display:none;">
         <div style="background:white; border-radius:24px; padding:1rem;">
             <div id="trackMap" class="map-container"></div>
             <div id="trackStatus" style="text-align:center; margin:1rem 0;">⏳ Waiting for restaurant acceptance...</div>
+            <button id="refreshStatusBtn" class="refresh-status-btn">⟳ Refresh Status</button>
             <div id="unlockBox" style="display:none;">
                 <p>🔐 Drone landed. Enter your 4-digit PIN:</p>
                 <input type="password" id="deliveryPin" maxlength="4" style="width:100%; padding:10px; border-radius:40px;">
@@ -231,18 +175,17 @@
     </div>
 </div>
 
-<!-- Location Popup Modal (appears after login) -->
+<!-- Location Modal -->
 <div id="locationModal" class="modal" style="display:none;">
     <div class="modal-content">
         <h3>📍 Select Your Delivery Location</h3>
         <input type="text" id="modalAddressInput" placeholder="Search any location!" value="Wipro Circle, Gachibowli">
         <button id="modalConfirmBtn">Confirm Address</button>
         <div id="locationMapModal" class="map-container"></div>
-        <p style="font-size:0.8rem; margin-top:0.5rem;">We deliver within 3km Green Zone around Gachibowli.</p>
+        <p>We deliver within 3km Green Zone around Gachibowli.</p>
     </div>
 </div>
 
-<!-- Theme Switcher -->
 <div class="theme-picker">
     <div class="theme-btn theme-orange" data-theme="orange"></div>
     <div class="theme-btn theme-green" data-theme="green"></div>
@@ -251,44 +194,31 @@
     <div class="theme-btn theme-pink" data-theme="pink"></div>
     <div class="theme-btn theme-cyan" data-theme="cyan"></div>
 </div>
-
 <div id="toastMsg" class="toast"></div>
 
 <script>
-    // ---------- Theme Switcher ----------
-    function setTheme(theme) {
-        document.body.setAttribute('data-theme', theme);
-        localStorage.setItem('drone_theme', theme);
-    }
-    document.querySelectorAll('.theme-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const theme = btn.getAttribute('data-theme');
-            setTheme(theme);
-        });
-    });
-    const savedTheme = localStorage.getItem('drone_theme');
-    if (savedTheme) setTheme(savedTheme);
+    // Theme
+    function setTheme(theme) { document.body.setAttribute('data-theme', theme); localStorage.setItem('drone_theme', theme); }
+    document.querySelectorAll('.theme-btn').forEach(btn => btn.addEventListener('click', () => setTheme(btn.getAttribute('data-theme'))));
+    if (localStorage.getItem('drone_theme')) setTheme(localStorage.getItem('drone_theme'));
 
-    // ---------- OTP Login ----------
     let userMobile = "";
     document.getElementById('requestOtpBtn').onclick = () => {
         const mobile = document.getElementById('mobileNumber').value.trim();
-        if (!mobile || mobile.length !== 10) { alert("Enter 10-digit mobile number"); return; }
+        if (!mobile || mobile.length !== 10) { alert("Enter 10-digit number"); return; }
         userMobile = mobile;
         document.getElementById('otpGroup').style.display = 'block';
-        alert("OTP sent: 123456 (demo)");
+        alert("OTP sent: 123456");
     };
     document.getElementById('verifyOtpBtn').onclick = () => {
-        const otp = document.getElementById('otpInput').value;
-        if (otp === "123456") {
+        if (document.getElementById('otpInput').value === "123456") {
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('appContainer').style.display = 'block';
-            // Show location modal
             document.getElementById('locationModal').style.display = 'flex';
             initLocationModalMap();
             loadRestaurants();
             showToast(`Welcome ${userMobile}!`);
-        } else { alert("Wrong OTP. Use 123456"); }
+        } else alert("Wrong OTP");
     };
 
     function showToast(msg, isErr=false) {
@@ -299,22 +229,20 @@
         setTimeout(() => toast.classList.remove('show'), 3000);
     }
 
-    // ---------- Global state ----------
+    // State
     let customerCoords = null;
     let selectedRestaurantId = null;
-    let selectedRestaurantName = null;
     let selectedItems = [];
     let currentOrderId = null;
     let deliveryPinCode = "";
     let trackMap = null, droneMarker = null;
-    let acceptPollInterval = null;
+    let statusPollInterval = null;
     let modalMap = null;
     const kitchenCoords = [17.4416, 78.3489];
     const ZONE_CENTER = [17.4300, 78.3450];
     const ZONE_RADIUS_KM = 3.0;
     const MAPBOX_TOKEN = "pk.eyJ1IjoibWFub2oyNTgwOCIsImEiOiJjbXBsZ3B3NmoxYzJmMnFzbHV6Zmt1NnNwIn0.hzkSfnkPO_KRL3urJbFtxA";
 
-    // Restaurants data
     const restaurants = [
         { id: "bawarchi", name: "Bawarchi", cuisine: "Biryani, Kebabs", rating: 4.5, delivery: "15-20 min", image: "🍗", items: [
             { name: "Chicken Biryani (Full)", price: 280 },
@@ -343,46 +271,42 @@
                 <div class="food-img">${rest.image}</div>
                 <div class="food-info">
                     <div class="food-title">${rest.name}</div>
-                    <div class="food-desc">${rest.cuisine}</div>
-                    <div class="rating"><i class="fas fa-star"></i> ${rest.rating} • ${rest.delivery}</div>
+                    <div class="food-desc">${rest.cuisine} • ${rest.delivery}</div>
+                    <div class="rating"><i class="fas fa-star"></i> ${rest.rating}</div>
                     <button class="btn-add" data-id="${rest.id}" data-name="${rest.name}">View Menu</button>
                 </div>
             `;
-            card.querySelector('.btn-add').onclick = (e) => {
-                e.stopPropagation();
-                showMenuModal(rest);
-            };
+            card.querySelector('.btn-add').onclick = () => showMenuModal(rest);
             grid.appendChild(card);
         });
     }
 
     function showMenuModal(rest) {
-        const modal = document.createElement('div');
-        modal.style.position = 'fixed'; modal.style.top=0; modal.style.left=0;
-        modal.style.width='100%'; modal.style.height='100%'; modal.style.background='rgba(0,0,0,0.7)';
-        modal.style.display='flex'; modal.style.alignItems='center'; modal.style.justifyContent='center';
-        modal.style.zIndex=2000;
+        const modalDiv = document.createElement('div');
+        modalDiv.style.position = 'fixed'; modalDiv.style.top=0; modalDiv.style.left=0;
+        modalDiv.style.width='100%'; modalDiv.style.height='100%'; modalDiv.style.background='rgba(0,0,0,0.7)';
+        modalDiv.style.display='flex'; modalDiv.style.alignItems='center'; modalDiv.style.justifyContent='center'; modalDiv.style.zIndex=2000;
         const content = document.createElement('div');
         content.style.background='white'; content.style.borderRadius='24px'; content.style.padding='1.5rem';
         content.style.minWidth='280px'; content.style.maxWidth='90%';
-        let html = `<h3 style="margin-bottom:1rem;">${rest.name}</h3>`;
+        let html = `<h3>${rest.name}</h3>`;
         rest.items.forEach(item => {
             html += `<div style="display:flex; justify-content:space-between; margin-bottom:0.8rem;">
                         <span>${item.name} - ₹${item.price}</span>
                         <button class="menu-add-btn" data-name="${item.name}" data-price="${item.price}" style="background:var(--primary); border:none; padding:4px 12px; border-radius:40px; color:white;">Add</button>
                      </div>`;
         });
-        html += `<button id="closeModal" style="margin-top:1rem; background:#ccc; border:none; padding:8px; border-radius:40px; width:100%;">Close</button>`;
+        html += `<button id="closeMenuModal" style="margin-top:1rem; background:#ccc; border:none; padding:8px; border-radius:40px; width:100%;">Close</button>`;
         content.innerHTML = html;
-        modal.appendChild(content);
-        document.body.appendChild(modal);
-        document.getElementById('closeModal').onclick = () => modal.remove();
+        modalDiv.appendChild(content);
+        document.body.appendChild(modalDiv);
+        document.getElementById('closeMenuModal').onclick = () => modalDiv.remove();
         content.querySelectorAll('.menu-add-btn').forEach(btn => {
             btn.onclick = () => {
                 const name = btn.getAttribute('data-name');
                 const price = parseInt(btn.getAttribute('data-price'));
                 addToCart(name, price, rest.id, rest.name);
-                modal.remove();
+                modalDiv.remove();
                 showToast(`${name} added to cart!`);
             };
         });
@@ -390,11 +314,10 @@
 
     function addToCart(name, price, restId, restName) {
         if (selectedRestaurantId && selectedRestaurantId !== restId) {
-            showToast("You can only order from one restaurant at a time. Clear cart first.", true);
+            showToast("Order from one restaurant at a time", true);
             return;
         }
         selectedRestaurantId = restId;
-        selectedRestaurantName = restName;
         const existing = selectedItems.find(i => i.name === name);
         if (existing) existing.qty++;
         else selectedItems.push({ name, price, qty: 1 });
@@ -424,7 +347,6 @@
         cartDiv.innerHTML = html;
         document.getElementById('cartSidebarTotal').innerText = `Total: ₹${total}`;
     }
-
     window.removeCartItem = (idx) => {
         selectedItems.splice(idx, 1);
         if (selectedItems.length === 0) selectedRestaurantId = null;
@@ -435,52 +357,35 @@
         document.getElementById('menuContainer').style.display = 'none';
         document.getElementById('checkoutPanel').style.display = 'block';
         document.getElementById('trackingPanel').style.display = 'none';
-        renderCheckout();
+        const subtotal = selectedItems.reduce((s,i)=>s+(i.price*i.qty),0);
+        const total = subtotal + 15;
+        let itemsHtml = '';
+        selectedItems.forEach(i => itemsHtml += `<div>${i.name} x${i.qty} - ₹${i.price*i.qty}</div>`);
+        document.getElementById('checkoutItems').innerHTML = itemsHtml;
+        document.getElementById('checkoutTotal').innerHTML = `Total: ₹${total.toFixed(2)}`;
     }
-
     function showMenu() {
         document.getElementById('menuContainer').style.display = 'block';
         document.getElementById('checkoutPanel').style.display = 'none';
         document.getElementById('trackingPanel').style.display = 'none';
     }
 
-    function renderCheckout() {
-        const subtotal = selectedItems.reduce((s,i)=>s+(i.price*i.qty),0);
-        const commission = subtotal * 0.05;
-        const foodGst = subtotal * 0.05;
-        const delivery = 15;
-        const delGst = 2.70;
-        const total = subtotal + commission + foodGst + delivery + delGst;
-        let itemsHtml = '';
-        selectedItems.forEach(i => {
-            itemsHtml += `<div>${i.name} x${i.qty} - ₹${i.price*i.qty}</div>`;
-        });
-        document.getElementById('checkoutItems').innerHTML = itemsHtml;
-        document.getElementById('checkoutTotal').innerHTML = `Total: ₹${total.toFixed(2)}`;
-    }
-
     // Geocoding
     async function geocodeAddress(addr) {
-        const bbox = "78.25,17.35,78.45,17.50";
-        const proximity = "78.3450,17.4300";
-        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(addr)}.json?access_token=${MAPBOX_TOKEN}&bbox=${bbox}&proximity=${proximity}&limit=1`;
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(addr)}.json?access_token=${MAPBOX_TOKEN}&bbox=78.25,17.35,78.45,17.50&proximity=78.3450,17.4300&limit=1`;
         const res = await fetch(url);
         const data = await res.json();
-        if (!data.features || data.features.length===0) throw new Error();
+        if (!data.features || !data.features.length) throw new Error();
         const [lng, lat] = data.features[0].geometry.coordinates;
         return [lat, lng];
     }
-
     function haversine(lat1,lng1,lat2,lng2) {
-        const R=6371;
-        const toRad=x=>x*Math.PI/180;
-        const dLat=toRad(lat2-lat1);
-        const dLng=toRad(lng2-lng1);
+        const R=6371; const toRad=x=>x*Math.PI/180;
+        const dLat=toRad(lat2-lat1); const dLng=toRad(lng2-lng1);
         const a=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
         return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
     }
 
-    // Modal map for location popup
     function initLocationModalMap() {
         if (modalMap) modalMap.remove();
         modalMap = L.map('locationMapModal').setView(ZONE_CENTER, 13);
@@ -488,46 +393,37 @@
         L.circle(ZONE_CENTER, {color: '#f97316', fillColor: '#f97316', fillOpacity:0.1, radius: ZONE_RADIUS_KM*1000}).addTo(modalMap);
         L.marker(kitchenCoords).addTo(modalMap).bindPopup('Base Kitchen');
     }
-
     document.getElementById('modalConfirmBtn').onclick = async () => {
         const addr = document.getElementById('modalAddressInput').value.trim();
         if (!addr) { showToast("Enter address", true); return; }
-        showToast("Verifying address...");
         try {
             const coords = await geocodeAddress(addr);
             const dist = haversine(coords[0], coords[1], ZONE_CENTER[0], ZONE_CENTER[1]);
-            if (dist > ZONE_RADIUS_KM) {
-                showToast("Outside Green Zone", true);
-                return;
-            }
+            if (dist > ZONE_RADIUS_KM) { showToast("Outside Green Zone", true); return; }
             customerCoords = coords;
-            // Close modal
             document.getElementById('locationModal').style.display = 'none';
-            showToast("Address saved! Now order food.");
+            showToast("Address saved!");
         } catch(e) { showToast("Address not found", true); }
     };
 
-    // Cart sidebar handlers
+    // Cart sidebar
     document.getElementById('cartIcon').onclick = () => document.getElementById('cartSidebar').classList.add('open');
     document.getElementById('checkoutSidebarBtn').onclick = () => {
         if (selectedItems.length === 0) { showToast("Cart empty", true); return; }
         document.getElementById('cartSidebar').classList.remove('open');
         showCheckout();
     };
-    document.getElementById('backToMenuBtn').onclick = () => showMenu();
-    window.onclick = (e) => {
-        if (e.target === document.getElementById('cartSidebar')) document.getElementById('cartSidebar').classList.remove('open');
-    };
+    document.getElementById('backToMenuBtn').onclick = showMenu;
 
     // Place order
     document.getElementById('placeOrderBtn').onclick = async () => {
         const pin = document.getElementById('pinInput').value;
         if (!pin || pin.length !== 4 || isNaN(pin)) { showToast("Enter 4-digit PIN", true); return; }
-        if (!customerCoords) { showToast("Location not set. Please refresh and set address.", true); return; }
+        if (!customerCoords) { showToast("Location not set", true); return; }
         const subtotal = selectedItems.reduce((s,i)=>s+(i.price*i.qty),0);
         const total = subtotal + 15;
         const orderData = {
-            customer_name: userMobile || "Demo User",
+            customer_name: userMobile,
             customer_phone: userMobile,
             customer_address: document.getElementById('modalAddressInput').value,
             restaurant_id: selectedRestaurantId,
@@ -536,11 +432,7 @@
             password: pin
         };
         try {
-            const res = await fetch('/api/orders', {
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body:JSON.stringify(orderData)
-            });
+            const res = await fetch('/api/orders', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(orderData) });
             if (!res.ok) throw new Error(await res.text());
             const data = await res.json();
             currentOrderId = data.order_id;
@@ -550,30 +442,72 @@
             document.getElementById('checkoutPanel').style.display = 'none';
             document.getElementById('trackingPanel').style.display = 'block';
             initTrackMap();
-            document.getElementById('trackStatus').innerText = "⏳ Waiting for restaurant acceptance...";
-            if (acceptPollInterval) clearInterval(acceptPollInterval);
-            acceptPollInterval = setInterval(async () => {
+            // Start polling for status
+            if (statusPollInterval) clearInterval(statusPollInterval);
+            const pollStatus = async () => {
                 try {
                     const ordRes = await fetch(`/api/orders/${currentOrderId}`);
-                    const ord = await ordRes.json();
-                    if (ord.status === 'accepted') {
-                        clearInterval(acceptPollInterval);
-                        document.getElementById('trackStatus').innerText = "✅ Order accepted! Preparing food...";
+                    const order = await ordRes.json();
+                    const status = order.status;
+                    const statusElem = document.getElementById('trackStatus');
+                    if (status === 'accepted') {
+                        statusElem.innerText = "✅ Order accepted! Preparing food...";
                         setTimeout(() => {
-                            document.getElementById('trackStatus').innerText = "🍳 Kitchen preparing your meal...";
+                            statusElem.innerText = "🍳 Kitchen preparing your meal...";
                             setTimeout(() => {
-                                document.getElementById('trackStatus').innerText = "🛫 Drone launching...";
+                                statusElem.innerText = "🛫 Drone launching...";
                                 startDroneAnimation();
                             }, 3000);
                         }, 2000);
-                    } else if (ord.status === 'declined') {
-                        clearInterval(acceptPollInterval);
-                        showToast("Restaurant declined your order", true);
-                        showMenu();
+                        clearInterval(statusPollInterval);
+                    } else if (status === 'preparing') {
+                        statusElem.innerText = "🍳 Kitchen is preparing your meal...";
+                    } else if (status === 'out_for_delivery') {
+                        statusElem.innerText = "🛫 Drone is on the way!";
+                        startDroneAnimation();
+                        clearInterval(statusPollInterval);
+                    } else if (status === 'delivered') {
+                        statusElem.innerText = "✅ Delivery completed! Enjoy your meal!";
+                        document.getElementById('unlockBox').style.display = 'block';
+                        document.getElementById('unlockBox').innerHTML = '<p style="color:green;">🎉 Already delivered!</p>';
+                        clearInterval(statusPollInterval);
+                    } else if (status === 'declined') {
+                        statusElem.innerText = "❌ Restaurant declined your order.";
+                        clearInterval(statusPollInterval);
+                    } else {
+                        statusElem.innerText = "⏳ Waiting for restaurant acceptance...";
                     }
                 } catch(e) { console.warn(e); }
-            }, 3000);
+            };
+            await pollStatus(); // immediate first check
+            statusPollInterval = setInterval(pollStatus, 5000);
         } catch(err) { showToast("Order failed: "+err.message, true); }
+    };
+
+    document.getElementById('refreshStatusBtn').onclick = async () => {
+        if (!currentOrderId) return;
+        try {
+            const res = await fetch(`/api/orders/${currentOrderId}`);
+            const order = await res.json();
+            const status = order.status;
+            const statusElem = document.getElementById('trackStatus');
+            if (status === 'accepted') {
+                statusElem.innerText = "✅ Order accepted! Preparing food...";
+            } else if (status === 'preparing') {
+                statusElem.innerText = "🍳 Kitchen preparing...";
+            } else if (status === 'out_for_delivery') {
+                statusElem.innerText = "🛫 Drone en route!";
+                startDroneAnimation();
+            } else if (status === 'delivered') {
+                statusElem.innerText = "✅ Already delivered!";
+                document.getElementById('unlockBox').style.display = 'block';
+                document.getElementById('unlockBox').innerHTML = '<p>🎉 Delivered</p>';
+            } else if (status === 'declined') {
+                statusElem.innerText = "❌ Declined.";
+            } else {
+                statusElem.innerText = "⏳ Still waiting for restaurant...";
+            }
+        } catch(e) { showToast("Error fetching status", true); }
     };
 
     function initTrackMap() {
@@ -589,8 +523,8 @@
     }
 
     function startDroneAnimation() {
-        const start = kitchenCoords;
-        const end = customerCoords;
+        if (!droneMarker) return;
+        const start = kitchenCoords, end = customerCoords;
         const duration = 8000;
         const startTime = performance.now();
         function animate(now) {
@@ -612,30 +546,24 @@
         if (entered === deliveryPinCode) {
             showToast("✅ Box unlocked! Enjoy your meal.");
             document.getElementById('unlockBox').innerHTML = '<p style="color:green;">🎉 Delivery complete!</p>';
-            document.getElementById('trackStatus').innerText = "Delivery completed!";
+            document.getElementById('trackStatus').innerText = "Delivered!";
             if (currentOrderId) {
-                await fetch(`/api/orders/${currentOrderId}`, {
-                    method:'PATCH',
-                    headers:{'Content-Type':'application/json'},
-                    body:JSON.stringify({action:'delivered'})
-                });
+                await fetch(`/api/orders/${currentOrderId}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'delivered'}) });
             }
         } else { showToast("Wrong PIN", true); }
     };
 
     document.getElementById('newOrderBtn').onclick = () => {
-        // Reset for new order
         selectedItems = [];
         selectedRestaurantId = null;
         updateCartUI();
         showMenu();
         document.getElementById('trackingPanel').style.display = 'none';
-        document.getElementById('menuContainer').style.display = 'block';
         document.getElementById('unlockBox').style.display = 'none';
         document.getElementById('trackStatus').innerText = "⏳ Waiting for restaurant acceptance...";
         document.getElementById('deliveryPin').value = '';
         document.getElementById('pinInput').value = '';
-        // Optionally ask location again? Keep existing customerCoords.
+        if (statusPollInterval) clearInterval(statusPollInterval);
     };
 </script>
 </body>
