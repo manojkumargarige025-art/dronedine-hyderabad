@@ -822,57 +822,64 @@
     }
 
     function startPolling() {
-        if (statusPollInterval) clearInterval(statusPollInterval);
-        const poll = async () => {
-            if (!currentOrderId) return;
-            try {
-                const res = await fetch(`/api/orders/${currentOrderId}`);
-                if (!res.ok) { if (res.status === 404) document.getElementById('trackStatus').innerText = "Order not found"; return; }
-                const order = await res.json();
-                const status = order.status;
-                console.log("Polling status:", status);
-                let mappedStatus = status;
-                if (status === 'out_for_delivery') mappedStatus = 'in_transit';
-                updateTimeline(mappedStatus);
-                if (status === 'accepted') {
-                    document.getElementById('trackStatus').innerText = "✅ Order accepted! Preparing food...";
-                    setTimeout(() => {
-                        updateTimeline('preparing');
-                        document.getElementById('trackStatus').innerText = "🍳 Kitchen preparing your meal...";
-                        setTimeout(() => {
-                            updateTimeline('launching');
-                            document.getElementById('trackStatus').innerText = "🛫 Drone launching...";
-                            startDroneAnimation();
-                            updateTimeline('in_transit');
-                        }, 3000);
-                    }, 2000);
-                    clearInterval(statusPollInterval);
-                } else if (status === 'preparing') {
+    if (statusPollInterval) clearInterval(statusPollInterval);
+    const poll = async () => {
+        if (!currentOrderId) {
+            console.log("No currentOrderId, stopping poll");
+            return;
+        }
+        console.log("Polling order:", currentOrderId);
+        try {
+            const res = await fetch(`/api/orders/${currentOrderId}`);
+            if (!res.ok) {
+                if (res.status === 404) document.getElementById('trackStatus').innerText = "Order not found";
+                return;
+            }
+            const order = await res.json();
+            const status = order.status;
+            console.log("Polling status:", status);
+            let mappedStatus = status;
+            if (status === 'out_for_delivery') mappedStatus = 'in_transit';
+            updateTimeline(mappedStatus);
+            if (status === 'accepted') {
+                document.getElementById('trackStatus').innerText = "✅ Order accepted! Preparing food...";
+                // Do NOT clear interval here – let it continue polling
+                setTimeout(() => {
                     updateTimeline('preparing');
-                    document.getElementById('trackStatus').innerText = "🍳 Kitchen is preparing your meal...";
-                } else if (status === 'out_for_delivery') {
-                    updateTimeline('in_transit');
-                    document.getElementById('trackStatus').innerText = "🛫 Drone is on the way!";
-                    startDroneAnimation();
-                    clearInterval(statusPollInterval);
-                } else if (status === 'delivered') {
-                    updateTimeline('delivered');
-                    document.getElementById('trackStatus').innerText = "✅ Delivery completed!";
-                    document.getElementById('unlockBox').style.display = 'none';
-                    document.getElementById('ratingSection').style.display = 'block';
-                    clearInterval(statusPollInterval);
-                } else if (status === 'declined') {
-                    document.getElementById('trackStatus').innerText = "❌ Restaurant declined your order.";
-                    clearInterval(statusPollInterval);
-                } else {
-                    document.getElementById('trackStatus').innerText = "⏳ Waiting for restaurant acceptance...";
-                }
-            } catch(e) { console.warn(e); }
-        };
-        poll();
-        statusPollInterval = setInterval(poll, 5000);
-    }
-
+                    document.getElementById('trackStatus').innerText = "🍳 Kitchen preparing your meal...";
+                    setTimeout(() => {
+                        updateTimeline('launching');
+                        document.getElementById('trackStatus').innerText = "🛫 Drone launching...";
+                        startDroneAnimation();
+                        updateTimeline('in_transit');
+                    }, 3000);
+                }, 2000);
+                // Continue polling – restaurant may still change status
+            } else if (status === 'preparing') {
+                updateTimeline('preparing');
+                document.getElementById('trackStatus').innerText = "🍳 Kitchen is preparing your meal...";
+            } else if (status === 'out_for_delivery') {
+                updateTimeline('in_transit');
+                document.getElementById('trackStatus').innerText = "🛫 Drone is on the way!";
+                startDroneAnimation();
+                // Do not clear interval; wait for delivered
+            } else if (status === 'delivered') {
+                updateTimeline('delivered');
+                document.getElementById('trackStatus').innerText = "✅ Delivery completed!";
+                document.getElementById('unlockBox').style.display = 'none';
+                document.getElementById('ratingSection').style.display = 'block';
+                clearInterval(statusPollInterval); // Stop polling after delivery
+            } else if (status === 'declined') {
+                document.getElementById('trackStatus').innerText = "❌ Restaurant declined your order.";
+                clearInterval(statusPollInterval);
+            } else {
+                document.getElementById('trackStatus').innerText = "⏳ Waiting for restaurant acceptance...";
+            }
+        } catch(e) { console.warn(e); }
+    };
+    poll();
+    statusPollInterval = setInterval(poll, 5000);
+}
     document.getElementById('unlockBtn').onclick = async () => {
         const entered = document.getElementById('deliveryPin').value;
         if (entered === deliveryPinCode) {
