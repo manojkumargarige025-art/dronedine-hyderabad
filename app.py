@@ -2,9 +2,11 @@
 DroneDine - Complete Backend with User Auth, Orders, Drone Tracking,
 Admin/Restaurant Dashboards, Profile Updates, and Saved Addresses
 """
+import os
+if os.path.exists('dronedine.db'):
+    os.remove('dronedine.db')
 
 import json
-import os
 import random
 from datetime import datetime
 from functools import wraps
