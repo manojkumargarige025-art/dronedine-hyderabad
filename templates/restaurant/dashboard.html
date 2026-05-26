@@ -1,1 +1,98 @@
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant Dashboard - DroneDine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; }
+        .navbar { background: #1e293b; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: 700; color: #f97316; }
+        .logout-btn { background: #dc2626; border: none; padding: 0.5rem 1rem; border-radius: 40px; color: white; cursor: pointer; }
+        .container { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+        .stat-card { background: #1e293b; border-radius: 20px; padding: 1rem; text-align: center; }
+        .stat-value { font-size: 2rem; font-weight: 700; color: #f97316; }
+        .orders-list { background: #1e293b; border-radius: 24px; padding: 1.5rem; }
+        .order-card { background: #334155; border-radius: 16px; padding: 1rem; margin-bottom: 1rem; }
+        .order-header { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
+        .order-status { background: #f59e0b; padding: 0.2rem 0.8rem; border-radius: 20px; font-size: 0.7rem; color: #0f172a; }
+        .action-buttons { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+        .action-btn { background: #f97316; border: none; padding: 0.3rem 0.8rem; border-radius: 40px; cursor: pointer; font-size: 0.8rem; }
+        .action-btn.decline { background: #dc2626; color: white; }
+        .toast { position: fixed; bottom: 20px; left: 20px; background: #1e293b; color: white; padding: 0.8rem 1.5rem; border-radius: 40px; z-index: 2000; transform: translateX(-120%); transition: 0.3s; }
+        .toast.show { transform: translateX(0); }
+    </style>
+</head>
+<body>
+<div class="navbar">
+    <div class="logo"><i class="fas fa-store"></i> {{ restaurant.name }} Dashboard</div>
+    <button class="logout-btn" onclick="window.location.href='/logout'">Logout</button>
+</div>
+<div class="container">
+    <div class="stats">
+        <div class="stat-card"><div class="stat-value" id="totalOrders">0</div><div>Total Orders</div></div>
+        <div class="stat-card"><div class="stat-value" id="activeOrders">0</div><div>Active Orders</div></div>
+    </div>
+    <div class="orders-list">
+        <h2>📋 Orders</h2>
+        <div id="ordersContainer">
+            {% for order in orders %}
+            <div class="order-card" data-id="{{ order.id }}">
+                <div class="order-header"><strong>Order #{{ order.id }}</strong><span class="order-status">{{ order.status }}</span></div>
+                <div>Customer: {{ order.user.phone }}</div>
+                <div>Amount: ₹{{ order.total_amount }}</div>
+                <div>Address: {{ order.delivery_address[:60] }}</div>
+                <div>Unlock Code: <strong>{{ order.unlock_code }}</strong></div>
+                <div class="action-buttons">
+                    {% if order.status == 'placed' %}
+                        <button class="action-btn" onclick="updateOrderStatus({{ order.id }}, 'accept')">Accept</button>
+                        <button class="action-btn decline" onclick="updateOrderStatus({{ order.id }}, 'decline')">Decline</button>
+                    {% elif order.status == 'accepted' %}
+                        <button class="action-btn" onclick="updateOrderStatus({{ order.id }}, 'prepare')">Mark Preparing</button>
+                    {% elif order.status == 'preparing' %}
+                        <button class="action-btn" onclick="updateOrderStatus({{ order.id }}, 'dispatch')">Dispatch Drone</button>
+                    {% elif order.status == 'out_for_delivery' %}
+                        <button class="action-btn" onclick="updateOrderStatus({{ order.id }}, 'deliver')">Mark Delivered</button>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}<p>No orders yet.</p>{% endfor %}
+        </div>
+    </div>
+</div>
+<div id="toast" class="toast"></div>
+<script>
+    function showToast(msg, isError = false) {
+        const toast = document.getElementById('toast');
+        toast.innerText = msg;
+        toast.style.background = isError ? '#dc2626' : '#1e293b';
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+    async function updateOrderStatus(orderId, action) {
+        try {
+            const res = await fetch(`/api/restaurant/update-order/${orderId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(`Order #${orderId} updated to ${action}`);
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                showToast(data.error || 'Update failed', true);
+            }
+        } catch(e) { showToast('Network error', true); }
+    }
+    const total = document.querySelectorAll('.order-card').length;
+    const active = document.querySelectorAll('.order-card:has(.order-status:not(:contains("delivered")))').length;
+    document.getElementById('totalOrders').innerText = total;
+    document.getElementById('activeOrders').innerText = active;
+</script>
+</body>
+</html>
