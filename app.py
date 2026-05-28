@@ -36,7 +36,6 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 # Mapbox token
 MAPBOX_TOKEN = "pk.eyJ1IjoibWFub2oyNTgwOCIsImEiOiJjbXBsZ3B3NmoxYzJmMnFzbHV6Zmt1NnNwIn0.hzkSfnkPO_KRL3urJbFtxA"
 
-
 # ==================== MODELS ====================
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -76,7 +75,7 @@ class Order(db.Model):
     items = db.Column(db.Text, nullable=False)
     total_amount = db.Column(db.Float, nullable=False)
     unlock_code = db.Column(db.String(4), nullable=False)
-    status = db.Column(db.String(50), default='placed')
+    status = db.Column(db.String(50), default='pending')   # ✅ pending, not placed
     delivery_lat = db.Column(db.Float, default=17.4116)
     delivery_lng = db.Column(db.Float, default=78.3400)
     delivery_address = db.Column(db.String(200), default='Gachibowli, Hyderabad')
@@ -95,7 +94,6 @@ class DroneTracking(db.Model):
     battery = db.Column(db.Integer, default=100)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
-
 # ==================== HELPER FUNCTIONS ====================
 def generate_unlock_code():
     return str(random.randint(1000, 9999))
@@ -104,6 +102,9 @@ def calculate_co2_saved(orders):
     delivered = [o for o in orders if o.status == 'delivered']
     return len(delivered) * 0.065
 
+def row_to_dict(row):
+    """Convert sqlite3.Row to dict (if using raw SQL). Not needed for SQLAlchemy."""
+    return {k: row[k] for k in row.keys()}
 
 # ==================== ROUTES: AUTH ====================
 @app.route('/login', methods=['GET', 'POST'])
@@ -124,10 +125,8 @@ def verify_otp():
         entered_otp = request.form.get('otp')
         expected_otp = session.get('login_otp')
         phone = session.get('login_phone')
-        
         if not phone:
             return render_template('verify_otp.html', error="Session expired. Please login again.")
-        
         if str(entered_otp) == str(expected_otp) or str(entered_otp) == "123456":
             user = User.query.filter_by(phone=phone).first()
             if not user:
@@ -146,7 +145,6 @@ def verify_otp():
 def logout():
     session.clear()
     return redirect(url_for('home'))
-
 
 # ==================== ROUTES: PAGES ====================
 @app.route('/')
@@ -196,37 +194,6 @@ def cart():
         return redirect(url_for('login'))
     return render_template('cart.html')
 
-@app.route('/api/orders')
-def list_orders():
-    """All orders for admin — supports status, payment, and search filters."""
-    status = request.args.get('status', '').strip()
-    payment = request.args.get('payment', '').strip()
-    search = request.args.get('q', '').strip()
-
-    conn = db.get_connection()
-    cursor = conn.cursor()
-
-    query = "SELECT * FROM orders WHERE 1=1"
-    params = []
-
-    if status:
-        query += " AND status = ?"
-        params.append(status)
-
-    if payment:
-        query += " AND payment_status = ?"
-        params.append(payment)
-
-    if search:
-        query += " AND (customer_name LIKE ? OR customer_phone LIKE ? OR CAST(id AS TEXT) = ?)"
-        like = f"%{search}%"
-        params.extend([like, like, search])
-
-    query += " ORDER BY created_at DESC"
-    cursor.execute(query, params)
-    orders = [row_to_dict(row) for row in cursor.fetchall()]
-    conn.close()
-    return jsonify(orders)
 # ==================== ROUTES: API ====================
 @app.route('/api/place-order', methods=['POST'])
 def place_order():
@@ -243,7 +210,7 @@ def place_order():
         items=json.dumps(data['items']),
         total_amount=data['total'],
         unlock_code=data['unlock_code'],
-        status='placed',
+        status='pending',              # ✅ important!
         delivery_lat=data['latitude'],
         delivery_lng=data['longitude'],
         delivery_address=data['delivery_address']
@@ -330,6 +297,25 @@ def update_order_status(order_id):
     db.session.commit()
     return jsonify({'success': True, 'status': new_status})
 
+# ========== API: ALL ORDERS (for admin) ==========
+@app.route('/api/orders')
+def list_orders():
+    orders = Order.query.order_by(Order.created_at.desc()).all()
+    result = []
+    for o in orders:
+        result.append({
+            'id': o.id,
+            'customer_name': o.user.name if o.user else 'Guest',
+            'customer_phone': o.user.phone if o.user else 'N/A',
+            'restaurant_id': o.restaurant_id,
+            'items': o.items,
+            'total_amount': o.total_amount,
+            'status': o.status,
+            'unlock_code': o.unlock_code,
+            'created_at': o.created_at.isoformat()
+        })
+    return jsonify(result)
+
 # ========== API: RESTAURANT STATS ==========
 @app.route('/api/restaurant/stats')
 def restaurant_stats():
@@ -339,7 +325,6 @@ def restaurant_stats():
     restaurant = Restaurant.query.filter_by(name=rid.capitalize()).first()
     if not restaurant:
         return jsonify({'today_orders': 0, 'today_revenue': 0, 'active_orders': 0, 'drone_status': 'Ready', 'completed_orders': 0, 'rating': 4.5})
-    
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     orders_today = Order.query.filter(
         Order.restaurant_id == restaurant.id,
@@ -352,7 +337,6 @@ def restaurant_stats():
         Order.status.in_(['pending', 'accepted', 'preparing', 'out_for_delivery'])
     ).count()
     completed_orders = Order.query.filter_by(restaurant_id=restaurant.id, status='delivered').count()
-    
     return jsonify({
         'today_orders': today_orders,
         'today_revenue': float(today_revenue),
@@ -388,7 +372,6 @@ def pending_orders():
             'password': o.unlock_code
         })
     return jsonify(result)
-
 
 # ==================== ROUTES: RESTAURANT DASHBOARD ====================
 RESTAURANT_PINS = {
@@ -447,7 +430,6 @@ def restaurant_update_order(order_id):
         return jsonify({'success': True, 'status': order.status})
     return jsonify({'error': 'Invalid action'}), 400
 
-
 # ==================== ROUTES: ADMIN DASHBOARD ====================
 @app.route('/admin/dashboard')
 def admin_dashboard():
@@ -462,7 +444,6 @@ def admin_dashboard():
                          delivered_orders=delivered_orders,
                          total_revenue=total_revenue,
                          orders=orders)
-
 
 # ==================== INITIAL DATA SEED ====================
 def init_db():
@@ -487,8 +468,6 @@ def init_db():
         db.session.add_all(menu_items)
         db.session.commit()
 
-
-# ==================== RUN ====================
 with app.app_context():
     init_db()
 
