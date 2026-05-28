@@ -111,11 +111,11 @@ def login():
     if request.method == 'POST':
         phone = request.form.get('phone')
         if not phone or len(phone) != 10:
-            return render_template('login.html', error="Invalid phone number")
-        otp = "123456"
-        session['login_otp'] = otp
+            return render_template('login.html', error="Invalid phone number (10 digits required)")
+        # Store in session
         session['login_phone'] = phone
-        print(f"[DEMO] OTP for {phone}: {otp}")
+        session['login_otp'] = "123456"  # static OTP for demo
+        print(f"[DEMO] OTP for {phone}: 123456")
         return redirect(url_for('verify_otp'))
     return render_template('login.html')
 
@@ -123,20 +123,27 @@ def login():
 def verify_otp():
     if request.method == 'POST':
         entered_otp = request.form.get('otp')
-        if str(entered_otp) == str(session.get('login_otp')) or str(entered_otp) == "123456":
-            phone = session.get('login_phone')
+        expected_otp = session.get('login_otp')
+        phone = session.get('login_phone')
+        
+        if not phone:
+            return render_template('verify_otp.html', error="Session expired. Please login again.")
+        
+        if str(entered_otp) == str(expected_otp) or str(entered_otp) == "123456":
+            # Get or create user
             user = User.query.filter_by(phone=phone).first()
             if not user:
                 user = User(phone=phone)
                 db.session.add(user)
                 db.session.commit()
             session['user_id'] = user.id
+            # Clear login session vars
             session.pop('login_otp', None)
             session.pop('login_phone', None)
             return redirect(url_for('home'))
         else:
             return render_template('verify_otp.html', error="Wrong OTP")
-    return render_template('verify_otp.html')
+    return render_template('verify_otp.html') where should i paste this
 
 @app.route('/logout')
 def logout():
