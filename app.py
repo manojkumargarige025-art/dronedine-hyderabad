@@ -453,6 +453,65 @@ def init_db():
 # ==================== RUN ====================
 with app.app_context():
     init_db()
+# ========== API: RESTAURANT STATS ==========
+@app.route('/api/restaurant/stats')
+def restaurant_stats():
+    if 'restaurant_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    rid = session['restaurant_id']
+    restaurant = Restaurant.query.filter_by(name=rid.capitalize()).first()
+    if not restaurant:
+        return jsonify({'today_orders': 0, 'today_revenue': 0, 'active_orders': 0, 'drone_status': 'Ready', 'completed_orders': 0, 'rating': 4.5})
+    
+    # Today's orders
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    orders_today = Order.query.filter(
+        Order.restaurant_id == restaurant.id,
+        Order.created_at >= today_start
+    ).all()
+    today_orders = len(orders_today)
+    today_revenue = sum(o.total_amount for o in orders_today if o.status == 'delivered')
+    # Active orders
+    active_orders = Order.query.filter(
+        Order.restaurant_id == restaurant.id,
+        Order.status.in_(['pending', 'accepted', 'preparing', 'out_for_delivery'])
+    ).count()
+    completed_orders = Order.query.filter_by(restaurant_id=restaurant.id, status='delivered').count()
+    
+    return jsonify({
+        'today_orders': today_orders,
+        'today_revenue': float(today_revenue),
+        'active_orders': active_orders,
+        'drone_status': 'Ready',
+        'completed_orders': completed_orders,
+        'rating': 4.5
+    })
 
+# ========== API: PENDING ORDERS FOR RESTAURANT ==========
+@app.route('/api/orders/pending')
+def pending_orders():
+    if 'restaurant_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    rid = session['restaurant_id']
+    restaurant = Restaurant.query.filter_by(name=rid.capitalize()).first()
+    if not restaurant:
+        return jsonify([])
+    orders = Order.query.filter(
+        Order.restaurant_id == restaurant.id,
+        Order.status.in_(['pending', 'accepted', 'preparing', 'out_for_delivery'])
+    ).order_by(Order.created_at.desc()).all()
+    result = []
+    for o in orders:
+        result.append({
+            'id': o.id,
+            'customer_name': o.user.name if o.user else 'Guest',
+            'customer_phone': o.user.phone if o.user else 'N/A',
+            'items': o.items,
+            'total_amount': o.total_amount,
+            'status': o.status,
+            'delivery_address': o.delivery_address,
+            'password': o.unlock_code
+        })
+    return jsonify(result)
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
