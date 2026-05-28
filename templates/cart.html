@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Cart - DroneDine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #f97316;
+            --primary-dark: #ea580c;
+            --white: #ffffff;
+            --bg: #f8fafc;
+            --text: #0f172a;
+            --muted: #64748b;
+            --border: #e2e8f0;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #fafafa;
+            color: var(--text);
+        }
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.2rem 5%;
+            background: white;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .logo {
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #f97316, #fb923c);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .nav-links a {
+            text-decoration: none;
+            color: #334155;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+        .logout-btn {
+            background: #dc2626;
+            color: white !important;
+            padding: 0.7rem 1.2rem;
+            border-radius: 40px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            padding: 2rem;
+        }
+        .cart-grid {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 2rem;
+        }
+        .cart-items {
+            background: white;
+            border-radius: 30px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        }
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .item-info h4 {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        .item-price {
+            font-weight: 800;
+            color: var(--primary);
+        }
+        .item-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .qty-btn {
+            background: var(--bg);
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .remove-btn {
+            background: none;
+            border: none;
+            color: #dc2626;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+        .cart-summary {
+            background: white;
+            border-radius: 30px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 100px;
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.8rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .total-row {
+            font-weight: 800;
+            font-size: 1.2rem;
+            color: var(--primary);
+        }
+        input, textarea {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid var(--border);
+            border-radius: 50px;
+            margin-bottom: 1rem;
+            font-family: 'Inter', sans-serif;
+        }
+        .btn-place-order {
+            background: linear-gradient(135deg, #f97316, #fb923c);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 50px;
+            font-weight: 800;
+            width: 100%;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .btn-place-order:hover {
+            transform: scale(1.02);
+            box-shadow: 0 10px 20px rgba(249,115,22,0.3);
+        }
+        .footer {
+            margin-top: 3rem;
+            background: white;
+            padding: 2rem;
+            border-radius: 25px;
+            text-align: center;
+            color: #94a3b8;
+        }
+        @media (max-width: 768px) {
+            .cart-grid { grid-template-columns: 1fr; }
+            .navbar { flex-direction: column; gap: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="logo">🚁 DroneDine</div>
+    <div class="nav-links">
+        <a href="/">Home</a>
+        <a href="/track">Track Order</a>
+        <a href="/profile">My Profile</a>
+        <a href="/cart"><i class="fas fa-cart-shopping"></i> Cart</a>
+        <a href="/logout" class="logout-btn">Logout</a>
+    </div>
+</nav>
+
+<div class="container">
+    <h1 style="margin-bottom: 2rem;">Your Cart 🛒</h1>
+    <div class="cart-grid">
+        <div class="cart-items" id="cartItemsContainer">
+            <!-- dynamic cart items -->
+        </div>
+        <div class="cart-summary">
+            <h3>Order Summary</h3>
+            <div class="summary-row">
+                <span>Subtotal</span>
+                <span id="subtotal">₹0</span>
+            </div>
+            <div class="summary-row">
+                <span>Delivery Fee</span>
+                <span>₹20</span>
+            </div>
+            <div class="summary-row total-row">
+                <span>Total</span>
+                <span id="total">₹0</span>
+            </div>
+            <hr>
+            <label>Delivery Address</label>
+            <input type="text" id="deliveryAddress" placeholder="e.g., Gachibowli, Hyderabad" value="Gachibowli, Hyderabad">
+            <label>4-digit Unlock Code</label>
+            <input type="password" id="unlockCode" maxlength="4" placeholder="Create a code (e.g., 1234)">
+            <button class="btn-place-order" id="placeOrderBtn">Place Order 🚁</button>
+        </div>
+    </div>
+</div>
+
+<div class="footer">
+    © 2026 DroneDine Hyderabad | Fast Drone Delivery | Zero GST Burden
+</div>
+
+<script>
+    let cart = JSON.parse(localStorage.getItem("dronedine_cart")) || [];
+
+    function renderCart() {
+        const container = document.getElementById('cartItemsContainer');
+        if (!cart.length) {
+            container.innerHTML = '<p style="text-align:center;">Your cart is empty. <a href="/">Order now</a></p>';
+            document.getElementById('subtotal').innerText = '₹0';
+            document.getElementById('total').innerText = '₹0';
+            return;
+        }
+        let html = '';
+        let subtotal = 0;
+        cart.forEach((item, idx) => {
+            const price = parseFloat(item.price);
+            const qty = item.quantity || 1;
+            const itemTotal = price * qty;
+            subtotal += itemTotal;
+            html += `
+                <div class="cart-item">
+                    <div class="item-info">
+                        <h4>${item.name}</h4>
+                        <div class="item-price">₹${price}</div>
+                    </div>
+                    <div class="item-actions">
+                        <button class="qty-btn" data-index="${idx}" data-delta="-1">-</button>
+                        <span>${qty}</span>
+                        <button class="qty-btn" data-index="${idx}" data-delta="1">+</button>
+                        <button class="remove-btn" data-index="${idx}"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                    <div>₹${itemTotal}</div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+        const delivery = 20;
+        const total = subtotal + delivery;
+        document.getElementById('subtotal').innerText = `₹${subtotal}`;
+        document.getElementById('total').innerText = `₹${total}`;
+    }
+
+    function updateCartStorage() {
+        localStorage.setItem("dronedine_cart", JSON.stringify(cart));
+        renderCart();
+    }
+
+    // Quantity change
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('qty-btn')) {
+            const idx = e.target.dataset.index;
+            const delta = parseInt(e.target.dataset.delta);
+            if (cart[idx]) {
+                cart[idx].quantity = (cart[idx].quantity || 1) + delta;
+                if (cart[idx].quantity <= 0) {
+                    cart.splice(idx, 1);
+                }
+                updateCartStorage();
+            }
+        }
+        if (e.target.classList.contains('remove-btn') || e.target.closest('.remove-btn')) {
+            const btn = e.target.closest('.remove-btn');
+            const idx = btn.dataset.index;
+            cart.splice(idx, 1);
+            updateCartStorage();
+        }
+    });
+
+    // Place order
+    document.getElementById('placeOrderBtn').addEventListener('click', async () => {
+        if (!cart.length) {
+            alert("Cart is empty");
+            return;
+        }
+        const unlockCode = document.getElementById('unlockCode').value;
+        if (!unlockCode || unlockCode.length !== 4) {
+            alert("Please set a 4-digit unlock code");
+            return;
+        }
+        const deliveryAddress = document.getElementById('deliveryAddress').value;
+        if (!deliveryAddress) {
+            alert("Please enter delivery address");
+            return;
+        }
+        const items = cart.map(item => ({ name: item.name, quantity: item.quantity || 1, price: parseFloat(item.price) }));
+        const subtotal = items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+        const total = subtotal + 20; // delivery fee
+        const orderData = {
+            restaurant_id: 1, // default, can be taken from last restaurant? we'll use 1
+            items: items,
+            total: total,
+            unlock_code: unlockCode,
+            delivery_address: deliveryAddress,
+            latitude: 17.4116,
+            longitude: 78.3400
+        };
+        try {
+            const response = await fetch('/api/place-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(orderData)
+            });
+            const result = await response.json();
+            if (response.ok) {
+                alert(`Order placed! Order ID: ${result.order_id}. Unlock code: ${unlockCode}`);
+                localStorage.removeItem("dronedine_cart");
+                window.location.href = `/track/${result.order_id}`;
+            } else {
+                alert(`Error: ${result.error}`);
+            }
+        } catch (err) {
+            alert("Network error. Please try again.");
+        }
+    });
+
+    renderCart();
+</script>
+</body>
+</html>
