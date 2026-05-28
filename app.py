@@ -426,7 +426,7 @@ def admin_dashboard():
     delivered_orders = Order.query.filter_by(status='delivered').count()
     total_revenue = db.session.query(db.func.sum(Order.total_amount)).filter_by(status='delivered').scalar() or 0
     orders = Order.query.order_by(Order.created_at.desc()).all()
-    return render_template('admin_dashboard.html', 
+    return render_template('admin/dashboard.html', 
                          total_orders=total_orders,
                          active_orders=active_orders,
                          delivered_orders=delivered_orders,
