@@ -186,6 +186,11 @@ def track_order(order_id):
         return "Unauthorized", 403
     return render_template('track.html', order=order)
 
+@app.route('/cart')
+def cart():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    return render_template('cart.html')
 
 # ==================== ROUTES: API ====================
 @app.route('/api/place-order', methods=['POST'])
