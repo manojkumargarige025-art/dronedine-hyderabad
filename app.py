@@ -28,6 +28,11 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 CORS(app, supports_credentials=True)
 db = SQLAlchemy(app)
 
+app.config['SECRET_KEY'] = 'a-very-secret-key-change-this-in-production'
+app.config['SESSION_COOKIE_SECURE'] = False   # for HTTP (Render uses HTTPS, but keep false for now)
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
 # Mapbox token (your existing one)
 MAPBOX_TOKEN = "pk.eyJ1IjoibWFub2oyNTgwOCIsImEiOiJjbXBsZ3B3NmoxYzJmMnFzbHV6Zmt1NnNwIn0.hzkSfnkPO_KRL3urJbFtxA"
 
