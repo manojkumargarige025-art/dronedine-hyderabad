@@ -1,246 +1,411 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>DroneDine – Food Delivered by Drones</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <style>
-        /* Keep existing styles (unchanged) */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; }
-        .navbar { display: flex; justify-content: space-between; align-items: center; background: white; padding: 1rem 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100; }
-        .logo { font-size: 1.6rem; font-weight: 700; color: #f97316; cursor: pointer; }
-        .nav-links a { margin-left: 1.5rem; text-decoration: none; color: #475569; font-weight: 500; }
-        .hero { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 4rem 2rem; text-align: center; position: relative; overflow: hidden; }
-        .hero-content { max-width: 800px; margin: 0 auto; }
-        .hero h1 { font-size: 3rem; font-weight: 800; color: white; margin-bottom: 1rem; }
-        .hero p { font-size: 1.2rem; color: #cbd5e1; margin-bottom: 2rem; }
-        .search-bar { display: flex; gap: 0.5rem; max-width: 600px; margin: 0 auto 1.5rem; background: white; border-radius: 60px; padding: 0.5rem; }
-        .search-bar input { flex: 1; border: none; padding: 0.8rem 1.2rem; border-radius: 60px; font-size: 1rem; outline: none; }
-        .search-bar button { background: #f97316; border: none; padding: 0.8rem 2rem; border-radius: 60px; color: white; font-weight: bold; cursor: pointer; }
-        .live-stats { display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; color: white; }
-        .stat-badge { background: rgba(255,255,255,0.1); backdrop-filter: blur(4px); padding: 0.5rem 1.2rem; border-radius: 40px; font-size: 0.9rem; }
-        .drone-animation { position: absolute; right: 5%; top: 20%; width: 120px; animation: float 3s ease-in-out infinite; opacity: 0.5; }
-        @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
-        .filters { display: flex; gap: 1rem; flex-wrap: wrap; padding: 2rem 2rem 0 2rem; max-width: 1200px; margin: 0 auto; }
-        .filter-chip { padding: 0.5rem 1.2rem; background: white; border-radius: 40px; cursor: pointer; font-size: 0.85rem; font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: 0.2s; }
-        .filter-chip.active { background: #f97316; color: white; }
-        .restaurant-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; max-width: 1200px; margin: 2rem auto; padding: 0 2rem; }
-        .restaurant-card { background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: all 0.3s; cursor: pointer; }
-        .restaurant-card:hover { transform: translateY(-6px); box-shadow: 0 20px 30px rgba(0,0,0,0.1); }
-        .restaurant-img { height: 160px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 3rem; position: relative; }
-        .drone-tag { position: absolute; top: 12px; left: 12px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); padding: 4px 8px; border-radius: 20px; font-size: 0.7rem; color: white; }
-        .restaurant-info { padding: 1rem; }
-        .restaurant-name { font-weight: 700; font-size: 1.2rem; margin-bottom: 0.25rem; }
-        .restaurant-cuisine { color: #64748b; font-size: 0.85rem; margin-bottom: 0.5rem; }
-        .rating { display: flex; align-items: center; gap: 0.25rem; color: #f59e0b; font-size: 0.9rem; }
-        .btn-order { display: block; background: #f97316; color: white; text-align: center; padding: 0.6rem; border-radius: 40px; text-decoration: none; font-weight: 600; margin-top: 1rem; transition: 0.2s; }
-        .btn-order:hover { background: #ea580c; }
-        .footer { text-align: center; padding: 2rem; background: white; border-top: 1px solid #e2e8f0; margin-top: 2rem; color: #64748b; }
-        /* Location Modal Styles */
-        .modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 2000; }
-        .modal-content { background: white; border-radius: 32px; width: 90%; max-width: 500px; padding: 1.5rem; text-align: center; }
-        .modal-content input { width: 100%; padding: 12px; margin: 1rem 0; border-radius: 40px; border: 1px solid #e2e8f0; }
-        .modal-content button { background: #f97316; color: white; border: none; padding: 12px; border-radius: 40px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 0.5rem; }
-        #locationMapModal { height: 200px; border-radius: 20px; margin: 1rem 0; }
-        @media (max-width: 640px) {
-            .hero h1 { font-size: 2rem; }
-            .search-bar { flex-direction: column; }
-            .navbar { flex-direction: column; gap: 0.5rem; }
-        }
-    </style>
-</head>
-<body>
+{% extends "base.html" %}
 
-<div class="navbar">
-    <div class="logo" onclick="window.location.href='/'"><i class="fas fa-drone"></i> DroneDine</div>
-    <div class="nav-links">
-        <a href="/">Home</a>
-        <a href="/profile">Profile</a>
-        {% if session.user_id %}
-            <a href="/logout">Logout</a>
-        {% else %}
-            <a href="/login">Login</a>
-        {% endif %}
+{% block title %}DroneDine – Food Delivered by Drones{% endblock %}
+
+{% block content %}
+<style>
+    /* ========== GLOBAL STYLES (LIGHT THEME) ========== */
+    body {
+        background: #f8fafc;
+        color: #1e293b;
+    }
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 1rem;
+    }
+
+    /* ========== HERO SECTION ========== */
+    .hero {
+        text-align: center;
+        padding: 4rem 1rem;
+        background: linear-gradient(135deg, #ffffff 0%, #fff7ed 100%);
+        border-radius: 32px;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    }
+    .hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: radial-gradient(circle at 20% 30%, rgba(249,115,22,0.05) 0%, transparent 50%),
+                          radial-gradient(circle at 80% 70%, rgba(249,115,22,0.08) 0%, transparent 50%);
+        pointer-events: none;
+    }
+    .drone-animation {
+        position: absolute;
+        top: 20px;
+        left: -100px;
+        width: 80px;
+        animation: flyDrone 8s linear infinite;
+        opacity: 0.8;
+        filter: drop-shadow(0 2px 5px rgba(0,0,0,0.1));
+        z-index: 1;
+    }
+    @keyframes flyDrone {
+        0% { left: -100px; top: 20px; }
+        50% { left: 110%; top: 60px; }
+        100% { left: 110%; top: 60px; }
+    }
+    .hero h1 {
+        font-size: 3rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+        color: #1e293b;
+        position: relative;
+        z-index: 2;
+    }
+    .hero-sub {
+        font-size: 1.2rem;
+        color: #475569;
+        margin-bottom: 2rem;
+        position: relative;
+        z-index: 2;
+    }
+    .btn-group {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        position: relative;
+        z-index: 2;
+    }
+    .btn-primary {
+        background: #f97316;
+        color: white;
+        padding: 0.8rem 2rem;
+        border-radius: 40px;
+        text-decoration: none;
+        font-weight: bold;
+        transition: transform 0.2s, box-shadow 0.2s;
+        display: inline-block;
+    }
+    .btn-primary:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(249,115,22,0.4);
+    }
+    .btn-outline {
+        border: 2px solid #f97316;
+        color: #f97316;
+        background: transparent;
+        padding: 0.8rem 2rem;
+        border-radius: 40px;
+        text-decoration: none;
+        font-weight: bold;
+        transition: all 0.2s;
+    }
+    .btn-outline:hover {
+        background: #f97316;
+        color: white;
+    }
+
+    /* ========== STATS BAR ========== */
+    .stats-bar {
+        display: flex;
+        justify-content: space-around;
+        flex-wrap: wrap;
+        gap: 1rem;
+        background: white;
+        border-radius: 40px;
+        padding: 1.5rem;
+        margin: 2rem 0;
+        text-align: center;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        border: 1px solid #e2e8f0;
+    }
+    .stat-item { flex: 1; min-width: 120px; }
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #f97316;
+    }
+    .demo-note { font-size: 0.7rem; color: #94a3b8; margin-top: 0.5rem; }
+
+    /* ========== DEMO BANNER ========== */
+    .demo-banner {
+        background: #f97316;
+        color: white;
+        text-align: center;
+        padding: 0.8rem;
+        border-radius: 40px;
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    .demo-banner button {
+        background: white;
+        color: #f97316;
+        border: none;
+        padding: 0.3rem 1rem;
+        border-radius: 20px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    /* ========== RESTAURANT CARDS ========== */
+    .section-title {
+        text-align: center;
+        font-size: 2rem;
+        margin: 3rem 0 1.5rem;
+        color: #1e293b;
+    }
+    .restaurant-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 2rem;
+        margin: 2rem 0;
+    }
+    .restaurant-card {
+        background: white;
+        border-radius: 24px;
+        overflow: hidden;
+        transition: transform 0.3s, box-shadow 0.3s;
+        cursor: pointer;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        border: 1px solid #e2e8f0;
+    }
+    .restaurant-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 25px -12px rgba(0,0,0,0.1);
+    }
+    .card-img {
+        height: 180px;
+        background-size: cover;
+        background-position: center;
+    }
+    .card-content {
+        padding: 1.2rem;
+    }
+    .restaurant-name {
+        font-size: 1.3rem;
+        font-weight: bold;
+        display: flex;
+        justify-content: space-between;
+        color: #1e293b;
+    }
+    .rating {
+        color: #fbbf24;
+    }
+    .badge-drone {
+        display: inline-block;
+        background: #f97316;
+        color: white;
+        padding: 0.2rem 0.6rem;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        margin-top: 0.5rem;
+    }
+
+    /* ========== HOW IT WORKS & WHY DRONEDINE ========== */
+    .steps-grid, .benefits-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 2rem;
+        text-align: center;
+        margin: 2rem 0;
+    }
+    .step-card, .benefit-card {
+        background: white;
+        border-radius: 20px;
+        padding: 1.5rem;
+        transition: transform 0.2s;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        border: 1px solid #e2e8f0;
+    }
+    .step-card:hover, .benefit-card:hover {
+        transform: translateY(-5px);
+    }
+    .step-icon, .benefit-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    /* ========== COMPARISON TABLE ========== */
+    .comparison-table {
+        background: white;
+        border-radius: 24px;
+        padding: 1.5rem;
+        margin: 2rem 0;
+        border: 1px solid #e2e8f0;
+    }
+    .comparison-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 1rem 0;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .comparison-label { font-weight: bold; width: 40%; color: #1e293b; }
+    .comparison-traditional { width: 30%; color: #64748b; }
+    .comparison-dronedine { width: 30%; color: #f97316; font-weight: bold; }
+
+    /* ========== FOOTER ========== */
+    .footer {
+        background: white;
+        border-radius: 24px;
+        padding: 2rem;
+        margin-top: 3rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 2rem;
+        border-top: 1px solid #e2e8f0;
+    }
+    .footer a {
+        color: #64748b;
+        text-decoration: none;
+        display: block;
+        margin: 0.5rem 0;
+        transition: color 0.2s;
+    }
+    .footer a:hover {
+        color: #f97316;
+    }
+    .social-icons a {
+        display: inline-block;
+        margin-right: 1rem;
+        font-size: 1.3rem;
+        color: #64748b;
+    }
+    .social-icons a:hover {
+        color: #f97316;
+    }
+
+    /* ========== RESPONSIVE ========== */
+    @media (max-width: 768px) {
+        .hero h1 { font-size: 2rem; }
+        .btn-group { flex-direction: column; align-items: center; }
+        .comparison-row { flex-direction: column; gap: 0.5rem; }
+        .comparison-label, .comparison-traditional, .comparison-dronedine { width: 100%; }
+        .drone-animation { width: 60px; }
+    }
+</style>
+
+<!-- ========== DEMO BANNER ========== -->
+<div class="demo-banner">
+    <span>🎮 DEMO MODE - You're viewing a simulation. Join waitlist for launch!</span>
+    <button onclick="this.parentElement.style.display='none'">✖</button>
+</div>
+
+<!-- ========== HERO SECTION ========== -->
+<div class="hero">
+    <img src="https://cdn-icons-png.flaticon.com/512/6612/6612252.png" alt="drone" class="drone-animation">
+    <h1>Food Delivered by Drones,<br>Not Delays</h1>
+    <div class="hero-sub">15-minute delivery | Zero emissions | Live tracking</div>
+    <div class="btn-group">
+        <a href="#restaurants" class="btn-primary">Order Now 🚁</a>
+        <a href="#" class="btn-outline" onclick="alert('Demo video will be shown here'); return false;">Watch Demo ▶</a>
     </div>
 </div>
 
-<!-- Location Popup Modal (shown after login if no address saved) -->
-<div id="locationModal" class="modal" style="display:none;">
-    <div class="modal-content">
-        <h3><i class="fas fa-map-marker-alt"></i> Select Your Delivery Location</h3>
-        <input type="text" id="addressInput" placeholder="Search any location!" value="Gachibowli, Hyderabad">
-        <button id="searchLocationBtn"><i class="fas fa-search"></i> Search</button>
-        <div id="locationMapModal" class="map-container"></div>
-        <button id="useCurrentLocationBtn"><i class="fas fa-location-dot"></i> Use Current Location</button>
-        <button id="confirmLocationBtn">Continue</button>
-    </div>
+<!-- ========== LIVE STATS BAR ========== -->
+<div class="stats-bar" id="stats">
+    <div class="stat-item"><div class="stat-number" data-target="8">0</div><div>🚁 Drones Active</div></div>
+    <div class="stat-item"><div class="stat-number" data-target="47">0</div><div>📦 Deliveries Today</div></div>
+    <div class="stat-item"><div class="stat-number" data-target="4.8">0</div><div>⭐ Rating</div></div>
+    <div class="stat-item"><div class="stat-number" data-target="2.4">0</div><div>🌍 Tons CO₂ Saved</div></div>
 </div>
+<div class="demo-note" style="text-align:center; margin-top:-1rem;">Demo Mode - Simulated Data</div>
 
-<section class="hero">
-    <div class="drone-animation"><i class="fas fa-drone" style="font-size: 5rem; color: #f97316;"></i></div>
-    <div class="hero-content">
-        <h1>What are you craving?</h1>
-        <p>Fresh food delivered by drone – faster, greener, smarter.</p>
-        <div class="search-bar">
-            <input type="text" id="heroSearchInput" placeholder="Search for biryani, pizza, dosa...">
-            <button id="heroSearchBtn"><i class="fas fa-search"></i> Search</button>
-        </div>
-        <div class="live-stats">
-            <div class="stat-badge"><i class="fas fa-drone"></i> 12 drones active</div>
-            <div class="stat-badge"><i class="fas fa-bolt"></i> Avg delivery: 15 mins</div>
-            <div class="stat-badge"><i class="fas fa-check-circle"></i> 1,247 deliveries today</div>
-        </div>
-    </div>
-</section>
-
-<div class="filters" id="filterRow">
-    <div class="filter-chip active" data-filter="all">All</div>
-    <div class="filter-chip" data-filter="veg">Veg</div>
-    <div class="filter-chip" data-filter="nonveg">Non-Veg</div>
-    <div class="filter-chip" data-filter="fast">Fastest Drone Route</div>
-    <div class="filter-chip" data-filter="rating">Top Rated</div>
-</div>
-
-<div class="restaurant-grid" id="restaurantGrid">
+<!-- ========== RESTAURANT CARDS ========== -->
+<h2 class="section-title" id="restaurants">🔥 Popular Restaurants Near You</h2>
+<div class="restaurant-grid">
     {% for restaurant in restaurants %}
-    <div class="restaurant-card" data-id="{{ restaurant.id }}" data-veg="{% if restaurant.menu and restaurant.menu[0].is_veg %}veg{% else %}nonveg{% endif %}" data-rating="{{ restaurant.rating }}" data-time="{{ restaurant.delivery_time }}">
-        <div class="restaurant-img"><i class="fas fa-utensils" style="font-size: 3rem;"></i><div class="drone-tag"><i class="fas fa-drone"></i> {{ restaurant.delivery_time }} mins</div></div>
-        <div class="restaurant-info">
-            <div class="restaurant-name">{{ restaurant.name }}</div>
+    <div class="restaurant-card" onclick="window.location.href='{{ url_for('restaurant_menu', restaurant_id=restaurant.id) }}'">
+        <div class="card-img" style="background-image: url('https://source.unsplash.com/400x300/?food,biryani');"></div>
+        <div class="card-content">
+            <div class="restaurant-name">
+                {{ restaurant.name }}
+                <span class="rating">⭐ {{ restaurant.rating }}</span>
+            </div>
             <div class="restaurant-cuisine">{{ restaurant.cuisine }}</div>
-            <div class="rating"><i class="fas fa-star"></i> {{ restaurant.rating }} (4.5 🚁)</div>
-            <a href="/restaurant/{{ restaurant.id }}" class="btn-order">Order Now</a>
+            <span class="badge-drone">🚁 Drone Ready • {{ restaurant.delivery_time }} min</span>
         </div>
     </div>
     {% endfor %}
 </div>
 
-<div class="footer"><p>© 2026 DroneDine – Food delivered by drones. Zero emissions, zero delays.</p></div>
+<!-- ========== HOW IT WORKS ========== -->
+<h2 class="section-title">How DroneDine Works</h2>
+<div class="steps-grid">
+    <div class="step-card"><div class="step-icon">📱</div><h3>1. Order Food</h3><p>Browse & order your favourite meals in seconds</p></div>
+    <div class="step-card"><div class="step-icon">🍳</div><h3>2. Prepared Fresh</h3><p>Restaurant prepares your food with care</p></div>
+    <div class="step-card"><div class="step-icon">🚁</div><h3>3. Drone Flies</h3><p>Autonomous flight to your location (3km zone)</p></div>
+    <div class="step-card"><div class="step-icon">🔓</div><h3>4. Unlock & Enjoy</h3><p>Use your 4-digit code to open the box</p></div>
+</div>
+
+<!-- ========== WHY DRONEDINE ========== -->
+<h2 class="section-title">Why Choose DroneDine?</h2>
+<div class="benefits-grid">
+    <div class="benefit-card"><div class="benefit-icon">⚡</div><h3>Lightning Fast</h3><p>15-minute guaranteed delivery</p></div>
+    <div class="benefit-card"><div class="benefit-icon">🌱</div><h3>Zero Emissions</h3><p>100% electric drones</p></div>
+    <div class="benefit-card"><div class="benefit-icon">📍</div><h3>Live Tracking</h3><p>Watch your food fly in real time</p></div>
+    <div class="benefit-card"><div class="benefit-icon">🔒</div><h3>Safe & Secure</h3><p>PIN-protected delivery box</p></div>
+</div>
+
+<!-- ========== COMPARISON TABLE ========== -->
+<h2 class="section-title">Traditional vs DroneDine</h2>
+<div class="comparison-table">
+    <div class="comparison-row"><div class="comparison-label"></div><div class="comparison-traditional">🚗 Traditional</div><div class="comparison-dronedine">🚁 DroneDine</div></div>
+    <div class="comparison-row"><div class="comparison-label">Delivery Time</div><div class="comparison-traditional">30-45 minutes</div><div class="comparison-dronedine">15 minutes</div></div>
+    <div class="comparison-row"><div class="comparison-label">Traffic Delays</div><div class="comparison-traditional">Yes</div><div class="comparison-dronedine">No - flies direct</div></div>
+    <div class="comparison-row"><div class="comparison-label">Emissions</div><div class="comparison-traditional">Carbon heavy</div><div class="comparison-dronedine">Zero emissions</div></div>
+    <div class="comparison-row"><div class="comparison-label">Food Temperature</div><div class="comparison-traditional">Often cold</div><div class="comparison-dronedine">Always hot</div></div>
+</div>
+
+<!-- ========== FOOTER ========== -->
+<div class="footer">
+    <div>
+        <h3>DroneDine</h3>
+        <p>Revolutionising food delivery in Hyderabad with drone technology.</p>
+    </div>
+    <div>
+        <h4>Quick Links</h4>
+        <a href="#">How It Works</a>
+        <a href="#">For Restaurants</a>
+        <a href="#">Track Order</a>
+        <a href="#">Safety & Compliance</a>
+    </div>
+    <div>
+        <h4>Contact</h4>
+        <a href="mailto:hello@dronedine.in">📧 hello@dronedine.in</a>
+        <a href="tel:+919876543210">📱 +91 98765 43210</a>
+        <p>📍 Hyderabad, Telangana</p>
+    </div>
+    <div class="social-icons">
+        <h4>Follow Us</h4>
+        <a href="#"><i class="fab fa-linkedin"></i></a>
+        <a href="#"><i class="fab fa-instagram"></i></a>
+        <a href="#"><i class="fab fa-twitter"></i></a>
+        <a href="#"><i class="fab fa-youtube"></i></a>
+    </div>
+</div>
 
 <script>
-    const MAPBOX_TOKEN = "pk.eyJ1IjoibWFub2oyNTgwOCIsImEiOiJjbXBsZ3B3NmoxYzJmMnFzbHV6Zmt1NnNwIn0.hzkSfnkPO_KRL3urJbFtxA";
-    let modalMap = null;
-    let selectedCoords = null;
-    let customerAddress = null;
-
-    // Show location modal on page load if user is logged in and no address saved yet
-    {% if session.user_id %}
-        // Check localStorage for address
-        if (!localStorage.getItem('deliveryAddress')) {
-            document.getElementById('locationModal').style.display = 'flex';
-            initLocationMap();
-        } else {
-            customerAddress = localStorage.getItem('deliveryAddress');
-            document.getElementById('addressInput').value = customerAddress;
-        }
-    {% endif %}
-
-    function initLocationMap() {
-        if (modalMap) modalMap.remove();
-        modalMap = L.map('locationMapModal').setView([17.4300, 78.3450], 13);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: 'CartoDB' }).addTo(modalMap);
-        modalMap.on('click', async (e) => {
-            selectedCoords = e.latlng;
-            try {
-                const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${e.latlng.lng},${e.latlng.lat}.json?access_token=${MAPBOX_TOKEN}`);
-                const data = await res.json();
-                if (data.features && data.features[0]) {
-                    document.getElementById('addressInput').value = data.features[0].place_name;
+    function animateNumbers() {
+        const counters = document.querySelectorAll('.stat-number');
+        counters.forEach(counter => {
+            const target = parseFloat(counter.getAttribute('data-target'));
+            let current = 0;
+            const increment = target / 50;
+            function updateCounter() {
+                current += increment;
+                if (current < target) {
+                    counter.innerText = Math.floor(current);
+                    requestAnimationFrame(updateCounter);
+                } else {
+                    counter.innerText = target;
                 }
-            } catch(err) { console.warn(err); }
-            L.marker(selectedCoords).addTo(modalMap).bindPopup('Selected').openPopup();
+            }
+            updateCounter();
         });
     }
-
-    document.getElementById('searchLocationBtn').onclick = async () => {
-        const query = document.getElementById('addressInput').value;
-        if (!query) return;
-        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&limit=1`;
-        const res = await fetch(url);
-        const data = await res.json();
-        if (data.features && data.features[0]) {
-            const [lng, lat] = data.features[0].geometry.coordinates;
-            selectedCoords = { lat, lng };
-            modalMap.setView([lat, lng], 15);
-            L.marker([lat, lng]).addTo(modalMap).bindPopup(data.features[0].place_name).openPopup();
-            document.getElementById('addressInput').value = data.features[0].place_name;
-        } else {
-            alert('Location not found');
-        }
-    };
-
-    document.getElementById('useCurrentLocationBtn').onclick = () => {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(async (position) => {
-                const lat = position.coords.latitude;
-                const lng = position.coords.longitude;
-                selectedCoords = { lat, lng };
-                const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${MAPBOX_TOKEN}`);
-                const data = await res.json();
-                if (data.features && data.features[0]) {
-                    document.getElementById('addressInput').value = data.features[0].place_name;
-                    modalMap.setView([lat, lng], 15);
-                    L.marker([lat, lng]).addTo(modalMap).bindPopup('Your location').openPopup();
-                }
-            }, () => alert('Could not get location'));
-        } else {
-            alert('Geolocation not supported');
-        }
-    };
-
-    document.getElementById('confirmLocationBtn').onclick = () => {
-        const address = document.getElementById('addressInput').value;
-        if (!address) {
-            alert('Please select a location');
-            return;
-        }
-        localStorage.setItem('deliveryAddress', address);
-        if (selectedCoords) {
-            localStorage.setItem('deliveryLat', selectedCoords.lat);
-            localStorage.setItem('deliveryLng', selectedCoords.lng);
-        }
-        document.getElementById('locationModal').style.display = 'none';
-        // Optionally reload restaurants (no change needed)
-    };
-
-    // Existing filter and search logic (unchanged)
-    const filterChips = document.querySelectorAll('.filter-chip');
-    const cards = document.querySelectorAll('.restaurant-card');
-    function filterRestaurants(filter) {
-        cards.forEach(card => {
-            let show = true;
-            const isVeg = card.getAttribute('data-veg');
-            const rating = parseFloat(card.getAttribute('data-rating'));
-            const time = parseInt(card.getAttribute('data-time'));
-            if (filter === 'veg' && isVeg !== 'veg') show = false;
-            if (filter === 'nonveg' && isVeg !== 'nonveg') show = false;
-            if (filter === 'fast' && time > 15) show = false;
-            if (filter === 'rating' && rating < 4.5) show = false;
-            card.style.display = show ? 'block' : 'none';
-        });
-    }
-    filterChips.forEach(chip => {
-        chip.addEventListener('click', () => {
-            filterChips.forEach(c => c.classList.remove('active'));
-            chip.classList.add('active');
-            const filter = chip.getAttribute('data-filter');
-            if (filter === 'all') cards.forEach(c => c.style.display = 'block');
-            else filterRestaurants(filter);
-        });
-    });
-    document.getElementById('heroSearchBtn').onclick = () => {
-        const query = document.getElementById('heroSearchInput').value.toLowerCase();
-        cards.forEach(card => {
-            const name = card.querySelector('.restaurant-name').innerText.toLowerCase();
-            const cuisine = card.querySelector('.restaurant-cuisine').innerText.toLowerCase();
-            card.style.display = (name.includes(query) || cuisine.includes(query)) ? 'block' : 'none';
-        });
-    };
+    window.addEventListener('load', animateNumbers);
 </script>
-</body>
-</html>
+{% endblock %}
