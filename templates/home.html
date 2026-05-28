@@ -7,17 +7,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Inter', sans-serif;
             background: #ffffff;
             color: #1e293b;
         }
-        /* Navbar – customer only */
         .navbar {
             display: flex;
             justify-content: space-between;
@@ -48,9 +43,7 @@
             font-weight: 500;
             transition: color 0.2s;
         }
-        .nav-links a:hover, .nav-links a.active {
-            color: #f97316;
-        }
+        .nav-links a:hover, .nav-links a.active { color: #f97316; }
         .btn-login {
             background: #f97316;
             color: white;
@@ -59,15 +52,11 @@
             text-decoration: none;
             font-weight: 600;
         }
-        .btn-login:hover {
-            background: #ea580c;
-        }
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 0 1.5rem;
         }
-        /* Hero */
         .hero {
             text-align: center;
             padding: 4rem 1rem;
@@ -94,9 +83,7 @@
             max-width: 800px;
             margin: 0 auto 1rem;
         }
-        .hero h1 span {
-            color: #f97316;
-        }
+        .hero h1 span { color: #f97316; }
         .hero-sub {
             font-size: 1.2rem;
             color: #475569;
@@ -115,11 +102,6 @@
             border-radius: 40px;
             text-decoration: none;
             font-weight: 600;
-            transition: transform 0.2s;
-        }
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            background: #ea580c;
         }
         .btn-outline {
             border: 1.5px solid #f97316;
@@ -130,7 +112,6 @@
             font-weight: 600;
             background: transparent;
         }
-        /* Stats bar */
         .stats-bar {
             display: flex;
             justify-content: space-between;
@@ -141,38 +122,17 @@
             padding: 1.5rem 2rem;
             margin: 2rem 0;
         }
-        .stat-item {
-            text-align: center;
-            flex: 1;
-            min-width: 100px;
-        }
-        .stat-number {
-            font-size: 1.8rem;
-            font-weight: 800;
-            color: #f97316;
-        }
-        .stat-label {
-            font-size: 0.85rem;
-            color: #475569;
-        }
-        /* Search */
-        .search-section {
-            margin: 2rem 0;
-        }
+        .stat-item { text-align: center; flex: 1; min-width: 100px; }
+        .stat-number { font-size: 1.8rem; font-weight: 800; color: #f97316; }
+        .stat-label { font-size: 0.85rem; color: #475569; }
+        .search-section { margin: 2rem 0; }
         .search-box {
             width: 100%;
             padding: 1rem 1.5rem;
             border-radius: 60px;
             border: 1px solid #e2e8f0;
             font-size: 1rem;
-            transition: box-shadow 0.2s;
         }
-        .search-box:focus {
-            outline: none;
-            border-color: #f97316;
-            box-shadow: 0 0 0 3px rgba(249,115,22,0.1);
-        }
-        /* Restaurant grid */
         .section-title {
             font-size: 1.8rem;
             font-weight: 700;
@@ -187,33 +147,27 @@
             background: white;
             border-radius: 24px;
             overflow: hidden;
-            transition: transform 0.2s, box-shadow 0.2s;
             cursor: pointer;
-            border: 1px solid #f1f5f9;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+            border: 1px solid #e2e8f0;
+            transition: transform 0.2s;
         }
         .restaurant-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 25px -12px rgba(0,0,0,0.1);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -10px rgba(0,0,0,0.1);
         }
         .card-img {
             height: 180px;
             background-size: cover;
             background-position: center;
         }
-        .card-content {
-            padding: 1.2rem;
-        }
+        .card-content { padding: 1rem; }
         .restaurant-name {
             font-size: 1.2rem;
             font-weight: 700;
             display: flex;
             justify-content: space-between;
         }
-        .rating {
-            color: #fbbf24;
-            font-size: 0.9rem;
-        }
+        .rating { color: #fbbf24; font-size: 0.9rem; }
         .restaurant-cuisine {
             color: #64748b;
             font-size: 0.85rem;
@@ -229,77 +183,58 @@
             font-weight: 600;
             margin-top: 0.5rem;
         }
-        /* How it works / benefits */
         .grid-4 {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 2rem;
+            gap: 1.5rem;
             margin: 2rem 0;
         }
         .card-step, .card-benefit {
             text-align: center;
             padding: 1.5rem;
             background: #f8fafc;
-            border-radius: 24px;
+            border-radius: 20px;
         }
-        .icon-large {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-        }
-        /* Comparison table */
+        .icon-large { font-size: 2rem; margin-bottom: 0.5rem; }
         .comparison-table {
             background: #f8fafc;
-            border-radius: 28px;
-            padding: 1.5rem;
+            border-radius: 24px;
+            padding: 1rem;
             margin: 2rem 0;
         }
         .comparison-row {
             display: flex;
             justify-content: space-between;
-            padding: 1rem 0;
+            padding: 0.8rem 0;
             border-bottom: 1px solid #e2e8f0;
         }
-        .comparison-dronedine {
-            color: #f97316;
-            font-weight: 700;
-        }
-        /* Footer */
+        .comparison-dronedine { color: #f97316; font-weight: 600; }
         .footer {
             background: #f8fafc;
-            border-radius: 32px;
+            border-radius: 24px;
             padding: 2rem;
-            margin-top: 4rem;
+            margin-top: 3rem;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1.5rem;
         }
         .footer a {
             color: #64748b;
             text-decoration: none;
             display: block;
-            margin: 0.5rem 0;
+            margin: 0.3rem 0;
         }
-        .footer a:hover {
-            color: #f97316;
-        }
+        .footer a:hover { color: #f97316; }
         .copyright {
             text-align: center;
-            padding: 1.5rem 0;
-            font-size: 0.8rem;
+            padding: 1rem;
+            font-size: 0.75rem;
             color: #94a3b8;
         }
         @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 2.2rem;
-            }
-            .navbar {
-                flex-direction: column;
-                text-align: center;
-            }
-            .stats-bar {
-                flex-direction: column;
-                align-items: center;
-            }
+            .hero h1 { font-size: 2rem; }
+            .navbar { flex-direction: column; text-align: center; }
+            .stats-bar { flex-direction: column; align-items: center; }
         }
     </style>
 </head>
@@ -314,7 +249,6 @@
     </nav>
 
     <div class="container">
-        <!-- Hero -->
         <div class="hero">
             <img src="https://cdn-icons-png.flaticon.com/512/6612/6612252.png" alt="drone" class="drone-animation">
             <h1>Food Delivered by <span>Drones</span><br>Not Delays</h1>
@@ -325,7 +259,6 @@
             </div>
         </div>
 
-        <!-- Stats -->
         <div class="stats-bar">
             <div class="stat-item"><div class="stat-number" id="dronesCount">8</div><div class="stat-label">Drones Active</div></div>
             <div class="stat-item"><div class="stat-number" id="deliveriesCount">47</div><div class="stat-label">Deliveries Today</div></div>
@@ -333,44 +266,25 @@
             <div class="stat-item"><div class="stat-number">2.4</div><div class="stat-label">Tons CO₂ Saved</div></div>
         </div>
 
-        <!-- Search -->
         <div class="search-section">
             <input type="text" id="searchInput" class="search-box" placeholder="Search for restaurants or dishes...">
         </div>
 
-        <!-- Restaurant grid -->
         <h2 class="section-title" id="restaurants">🔥 Popular Restaurants Near You</h2>
         <div class="restaurant-grid" id="restaurantGrid">
-            <!-- Bawarchi -->
-            <div class="restaurant-card" data-name="bawarchi" data-cuisine="biryani kebabs" onclick="window.location.href='{{ url_for('restaurant_menu', restaurant_id=1) }}'">
-                <div class="card-img" style="background-image: url('https://images.unsplash.com/photo-1563379091339-03b21d4f5b5b?w=400&h=300&fit=crop');"></div>
+            {% for restaurant in restaurants %}
+            <div class="restaurant-card" data-name="{{ restaurant.name|lower }}" data-cuisine="{{ restaurant.cuisine|lower }}" onclick="window.location.href='{{ url_for('restaurant_menu', restaurant_id=restaurant.id) }}'">
+                <!-- Fixed image URLs per restaurant name -->
+                <div class="card-img" style="background-image: url('{% if restaurant.name == 'Bawarchi' %}https://images.pexels.com/photos/1624487/pexels-photo-1624487.jpeg?w=400&h=300&fit=crop{% elif restaurant.name == 'Paradise' %}https://images.pexels.com/photos/1624487/pexels-photo-1624487.jpeg?w=400&h=300&fit=crop{% else %}https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?w=400&h=300&fit=crop{% endif %}');"></div>
                 <div class="card-content">
-                    <div class="restaurant-name">Bawarchi <span class="rating">⭐ 4.5</span></div>
-                    <div class="restaurant-cuisine">Biryani, Kebabs</div>
-                    <div class="drone-badge">🚁 Drone Ready • 15 min</div>
+                    <div class="restaurant-name">{{ restaurant.name }} <span class="rating">⭐ {{ restaurant.rating }}</span></div>
+                    <div class="restaurant-cuisine">{{ restaurant.cuisine }}</div>
+                    <div class="drone-badge">🚁 Drone Ready • {{ restaurant.delivery_time }} min</div>
                 </div>
             </div>
-            <!-- Paradise -->
-            <div class="restaurant-card" data-name="paradise" data-cuisine="biryani kebab" onclick="window.location.href='{{ url_for('restaurant_menu', restaurant_id=2) }}'">
-                <div class="card-img" style="background-image: url('https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=400&h=300&fit=crop');"></div>
-                <div class="card-content">
-                    <div class="restaurant-name">Paradise <span class="rating">⭐ 4.7</span></div>
-                    <div class="restaurant-cuisine">Biryani, Kebab</div>
-                    <div class="drone-badge">🚁 Drone Ready • 20 min</div>
-                </div>
-            </div>
-            <!-- Chutneys -->
-            <div class="restaurant-card" data-name="chutneys" data-cuisine="south indian" onclick="window.location.href='{{ url_for('restaurant_menu', restaurant_id=3) }}'">
-                <div class="card-img" style="background-image: url('https://images.unsplash.com/photo-1630384060421-cf20f0e7fece?w=400&h=300&fit=crop');"></div>
-                <div class="card-content">
-                    <div class="restaurant-name">Chutneys <span class="rating">⭐ 4.3</span></div>
-                    <div class="restaurant-cuisine">South Indian</div>
-                    <div class="drone-badge">🚁 Drone Ready • 12 min</div>
-                </div>
-            </div>
+            {% endfor %}
         </div>
 
-        <!-- How DroneDine Works -->
         <h2 class="section-title">How DroneDine Works</h2>
         <div class="grid-4">
             <div class="card-step"><div class="icon-large">📱</div><h3>1. Order Food</h3><p>Browse & order in seconds</p></div>
@@ -379,7 +293,6 @@
             <div class="card-step"><div class="icon-large">🔓</div><h3>4. Unlock & Enjoy</h3><p>4‑digit code opens the box</p></div>
         </div>
 
-        <!-- Why DroneDine -->
         <h2 class="section-title">Why Choose DroneDine?</h2>
         <div class="grid-4">
             <div class="card-benefit"><div class="icon-large">⚡</div><h3>Lightning Fast</h3><p>15‑min guaranteed</p></div>
@@ -388,27 +301,23 @@
             <div class="card-benefit"><div class="icon-large">🔒</div><h3>Safe & Secure</h3><p>PIN‑protected box</p></div>
         </div>
 
-        <!-- Comparison Table -->
-        <h2 class="section-title">Traditional vs DroneDine</h2>
         <div class="comparison-table">
-            <div class="comparison-row"><div style="font-weight:700; width:40%">Delivery Time</div><div>30-45 minutes</div><div class="comparison-dronedine">15 minutes</div></div>
-            <div class="comparison-row"><div style="font-weight:700; width:40%">Traffic Delays</div><div>Yes</div><div class="comparison-dronedine">No – flies direct</div></div>
-            <div class="comparison-row"><div style="font-weight:700; width:40%">Emissions</div><div>Carbon heavy</div><div class="comparison-dronedine">Zero emissions</div></div>
-            <div class="comparison-row"><div style="font-weight:700; width:40%">Food Temperature</div><div>Often cold</div><div class="comparison-dronedine">Always hot</div></div>
+            <div class="comparison-row"><div style="font-weight:600; width:40%">Delivery Time</div><div>30-45 min</div><div class="comparison-dronedine">15 min</div></div>
+            <div class="comparison-row"><div style="font-weight:600; width:40%">Traffic Delays</div><div>Yes</div><div class="comparison-dronedine">No – flies direct</div></div>
+            <div class="comparison-row"><div style="font-weight:600; width:40%">Emissions</div><div>Carbon heavy</div><div class="comparison-dronedine">Zero emissions</div></div>
+            <div class="comparison-row"><div style="font-weight:600; width:40%">Food Temperature</div><div>Often cold</div><div class="comparison-dronedine">Always hot</div></div>
         </div>
     </div>
 
-    <!-- Footer -->
     <div class="footer container">
         <div><h3>DroneDine</h3><p>Revolutionising food delivery in Hyderabad.</p></div>
-        <div><h4>Quick Links</h4><a href="#">How It Works</a><a href="#">For Restaurants</a><a href="/track">Track Order</a><a href="#">Safety</a></div>
+        <div><h4>Quick Links</h4><a href="#">How It Works</a><a href="#">For Restaurants</a><a href="/track">Track Order</a></div>
         <div><h4>Contact</h4><a href="mailto:hello@dronedine.in">📧 hello@dronedine.in</a><a href="tel:+919876543210">📱 +91 98765 43210</a><p>📍 Hyderabad, TS</p></div>
         <div><h4>Follow Us</h4><a href="#"><i class="fab fa-linkedin"></i> LinkedIn</a><a href="#"><i class="fab fa-instagram"></i> Instagram</a><a href="#"><i class="fab fa-twitter"></i> Twitter</a></div>
     </div>
     <div class="copyright">© 2026 DroneDine – Demo Mode. Launching soon with T‑Hub support.</div>
 
     <script>
-        // Search filter
         const searchInput = document.getElementById('searchInput');
         const cards = document.querySelectorAll('.restaurant-card');
         searchInput.addEventListener('input', function() {
@@ -423,20 +332,18 @@
                 }
             });
         });
-
-        // Animated counters
-        function animateCounter(elementId, target) {
-            const el = document.getElementById(elementId);
+        function animateCounter(elId, target) {
+            const el = document.getElementById(elId);
             if (!el) return;
-            let current = 0;
+            let curr = 0;
             const step = target / 50;
             const timer = setInterval(() => {
-                current += step;
-                if (current >= target) {
+                curr += step;
+                if (curr >= target) {
                     el.innerText = target;
                     clearInterval(timer);
                 } else {
-                    el.innerText = Math.floor(current);
+                    el.innerText = Math.floor(curr);
                 }
             }, 30);
         }
