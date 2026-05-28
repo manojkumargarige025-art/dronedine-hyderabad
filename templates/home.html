@@ -44,13 +44,16 @@
             transition: color 0.2s;
         }
         .nav-links a:hover, .nav-links a.active { color: #f97316; }
-        .btn-login {
+        .btn-login, .btn-logout {
             background: #f97316;
             color: white;
             padding: 0.5rem 1.2rem;
             border-radius: 40px;
             text-decoration: none;
             font-weight: 600;
+        }
+        .btn-logout {
+            background: #dc2626;
         }
         .container {
             max-width: 1200px;
@@ -223,7 +226,13 @@
         <div class="nav-links">
             <a href="/" class="active">Home</a>
             <a href="/track">Track Order</a>
-            <a href="/login">Login / Sign up</a>
+            {% if user %}
+                <span style="color:#f97316;">Hi, {{ user.name or user.phone }}</span>
+                <a href="/profile" style="color:#f97316;">My Profile</a>
+                <a href="/logout" class="btn-logout">Logout</a>
+            {% else %}
+                <a href="/login" class="btn-login">Login / Sign up</a>
+            {% endif %}
         </div>
     </nav>
 
@@ -253,7 +262,6 @@
         <div class="restaurant-grid" id="restaurantGrid">
             {% for restaurant in restaurants %}
             <div class="restaurant-card" data-name="{{ restaurant.name|lower }}" data-cuisine="{{ restaurant.cuisine|lower }}" onclick="window.location.href='{{ url_for('restaurant_menu', restaurant_id=restaurant.id) }}'">
-                <!-- Image per restaurant -->
                 <div class="card-img" style="background-image: url('
                     {%- if restaurant.name == 'Bawarchi' -%}
                         https://images.pexels.com/photos/1624487/pexels-photo-1624487.jpeg?w=400&h=300&fit=crop
@@ -272,14 +280,12 @@
             {% endfor %}
         </div>
 
-        <!-- Simplified footer -->
         <div class="footer">
             <p>© 2026 DroneDine Hyderabad | 5% Commission | Zero GST Burden</p>
         </div>
     </div>
 
     <script>
-        // Search filter
         const searchInput = document.getElementById('searchInput');
         const cards = document.querySelectorAll('.restaurant-card');
         if (searchInput) {
@@ -296,7 +302,6 @@
                 });
             });
         }
-        // Animated counters
         function animateCounter(elId, target) {
             const el = document.getElementById(elId);
             if (!el) return;
