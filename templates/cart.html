@@ -287,6 +287,13 @@
         }
     });
 
+    const restaurantId = cart[0]?.restaurant_id || 1;
+const orderData = {
+    restaurant_id: restaurantId,   // ✅ use dynamic value
+    items: cart.map(item => ({ name: item.name, quantity: item.quantity, price: parseFloat(item.price) })),
+    // ... rest of the order data
+};
+
     // Place order
     document.getElementById('placeOrderBtn').addEventListener('click', async () => {
         if (!cart.length) {
