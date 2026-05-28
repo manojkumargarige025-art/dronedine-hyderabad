@@ -179,13 +179,13 @@ def checkout():
         return redirect(url_for('login'))
     return render_template('checkout.html')
 
-@app.route('/track/<order_id>')
+@app.route('/track/<int:order_id>')
 def track_order(order_id):
-    try:
-        order_id = int(order_id)
-    except ValueError:
-        return "Invalid order ID", 400
-    # rest of the code unchanged
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    order = Order.query.get_or_404(order_id)
+    if order.user_id != session['user_id']:
+        return "Unauthorized", 403
     return render_template('track.html', order=order)
 
 @app.route('/cart')
