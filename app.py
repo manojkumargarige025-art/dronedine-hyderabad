@@ -159,6 +159,19 @@ def restaurant_menu(restaurant_id):
     menu_items = MenuItem.query.filter_by(restaurant_id=restaurant_id).all()
     return render_template('menu.html', restaurant=restaurant, items=menu_items)
 
+@app.route('/profile')
+def profile():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    user = User.query.get(session['user_id'])
+    if not user:
+        # Session user_id is invalid – clear session and redirect to login
+        session.clear()
+        return redirect(url_for('login'))
+    orders = Order.query.filter_by(user_id=user.id).order_by(Order.created_at.desc()).all()
+    co2_saved = calculate_co2_saved(orders)
+    return render_template('profile.html', user=user, orders=orders, co2_saved=co2_saved)
+
 @app.route('/checkout')
 def checkout():
     if 'user_id' not in session:
