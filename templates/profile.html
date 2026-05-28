@@ -1,682 +1,456 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>DroneDine Profile</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
-
-<style>
-
-:root{
-    --primary:#ff7a00;
-    --primary-dark:#ea580c;
-    --white:#ffffff;
-    --bg:#f8fafc;
-    --text:#0f172a;
-    --muted:#64748b;
-    --border:#e2e8f0;
-    --light:#fff7ed;
-    --shadow:0 4px 20px rgba(0,0,0,0.06);
-}
-
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-}
-
-body{
-    font-family:'Inter',sans-serif;
-    background:var(--bg);
-    color:var(--text);
-}
-
-/* NAVBAR */
-
-.navbar{
-    width:100%;
-    background:white;
-    padding:16px 40px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    position:sticky;
-    top:0;
-    z-index:1000;
-    box-shadow:0 2px 10px rgba(0,0,0,0.05);
-}
-
-.logo{
-    font-size:28px;
-    font-weight:700;
-    color:var(--primary);
-}
-
-.nav-links{
-    display:flex;
-    gap:30px;
-}
-
-.nav-links a{
-    text-decoration:none;
-    color:var(--text);
-    font-weight:600;
-    transition:0.3s;
-}
-
-.nav-links a:hover{
-    color:var(--primary);
-}
-
-/* MAIN */
-
-.profile-wrapper{
-    width:100%;
-    max-width:1300px;
-    margin:30px auto;
-    padding:0 20px;
-
-    display:grid;
-    grid-template-columns:320px 1fr;
-    gap:24px;
-}
-
-/* SIDEBAR */
-
-.sidebar{
-    background:white;
-    border-radius:24px;
-    padding:30px 20px;
-    box-shadow:var(--shadow);
-    height:fit-content;
-}
-
-.profile-top{
-    text-align:center;
-    padding-bottom:25px;
-    border-bottom:1px solid var(--border);
-}
-
-.profile-image{
-    width:110px;
-    height:110px;
-    border-radius:50%;
-    overflow:hidden;
-    margin:auto;
-    border:5px solid var(--light);
-}
-
-.profile-image img{
-    width:100%;
-    height:100%;
-    object-fit:cover;
-}
-
-.profile-top h2{
-    margin-top:15px;
-    font-size:24px;
-}
-
-.profile-top p{
-    color:var(--muted);
-    margin-top:5px;
-}
-
-.edit-btn{
-    margin-top:18px;
-    border:none;
-    background:var(--primary);
-    color:white;
-    padding:12px 24px;
-    border-radius:50px;
-    font-weight:600;
-    cursor:pointer;
-    transition:0.3s;
-}
-
-.edit-btn:hover{
-    background:var(--primary-dark);
-    transform:translateY(-2px);
-}
-
-.menu{
-    margin-top:30px;
-}
-
-.menu-item{
-    display:flex;
-    align-items:center;
-    gap:14px;
-    padding:15px 18px;
-    border-radius:14px;
-    margin-bottom:10px;
-    cursor:pointer;
-    transition:0.3s;
-    font-weight:600;
-}
-
-.menu-item i{
-    font-size:18px;
-}
-
-.menu-item:hover,
-.menu-item.active{
-    background:var(--light);
-    color:var(--primary);
-}
-
-/* RIGHT */
-
-.content-area{
-    display:flex;
-    flex-direction:column;
-    gap:24px;
-}
-
-/* HEADER CARD */
-
-.hero-card{
-    background:linear-gradient(135deg,#ff7a00,#ff9838);
-    color:white;
-    border-radius:28px;
-    padding:35px;
-    box-shadow:0 10px 25px rgba(255,122,0,0.3);
-}
-
-.hero-card h1{
-    font-size:34px;
-}
-
-.hero-card p{
-    margin-top:10px;
-    opacity:0.95;
-}
-
-.stats{
-    margin-top:30px;
-    display:grid;
-    grid-template-columns:repeat(4,1fr);
-    gap:18px;
-}
-
-.stat-box{
-    background:rgba(255,255,255,0.18);
-    backdrop-filter:blur(8px);
-    border-radius:18px;
-    padding:20px;
-    text-align:center;
-}
-
-.stat-box h2{
-    font-size:28px;
-}
-
-.stat-box span{
-    font-size:14px;
-}
-
-/* SECTION */
-
-.section{
-    background:white;
-    border-radius:24px;
-    padding:28px;
-    box-shadow:var(--shadow);
-}
-
-.section-header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:24px;
-}
-
-.section-header h2{
-    font-size:24px;
-}
-
-.add-btn{
-    background:var(--primary);
-    border:none;
-    color:white;
-    padding:12px 20px;
-    border-radius:50px;
-    cursor:pointer;
-    font-weight:600;
-}
-
-/* ADDRESS */
-
-.address-card{
-    border:2px solid var(--border);
-    border-radius:18px;
-    padding:20px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:16px;
-    transition:0.3s;
-}
-
-.address-card:hover{
-    border-color:var(--primary);
-    transform:translateY(-3px);
-}
-
-.address-left{
-    display:flex;
-    gap:18px;
-    align-items:flex-start;
-}
-
-.address-icon{
-    width:48px;
-    height:48px;
-    border-radius:50%;
-    background:var(--primary);
-    color:white;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:20px;
-}
-
-.address-info h3{
-    margin-bottom:5px;
-}
-
-.address-info p{
-    color:var(--muted);
-}
-
-.delete-btn{
-    border:none;
-    background:#fee2e2;
-    color:#dc2626;
-    padding:10px 18px;
-    border-radius:50px;
-    cursor:pointer;
-    font-weight:600;
-}
-
-/* ORDER */
-
-.order-card{
-    border:2px solid var(--border);
-    border-radius:20px;
-    padding:22px;
-    margin-bottom:18px;
-    transition:0.3s;
-}
-
-.order-card:hover{
-    border-color:var(--primary);
-    transform:translateY(-3px);
-}
-
-.order-top{
-    display:flex;
-    justify-content:space-between;
-    margin-bottom:14px;
-}
-
-.order-id{
-    font-size:20px;
-    font-weight:700;
-}
-
-.order-price{
-    color:var(--primary);
-    font-size:24px;
-    font-weight:700;
-}
-
-.order-details{
-    line-height:1.8;
-    color:var(--muted);
-}
-
-.status{
-    display:inline-block;
-    margin-top:14px;
-    background:#dcfce7;
-    color:#166534;
-    padding:8px 16px;
-    border-radius:50px;
-    font-size:14px;
-    font-weight:600;
-}
-
-/* MOBILE */
-
-@media(max-width:950px){
-
-    .profile-wrapper{
-        grid-template-columns:1fr;
-    }
-
-    .stats{
-        grid-template-columns:repeat(2,1fr);
-    }
-}
-
-@media(max-width:600px){
-
-    .navbar{
-        padding:16px 20px;
-    }
-
-    .nav-links{
-        gap:14px;
-        font-size:14px;
-    }
-
-    .hero-card h1{
-        font-size:26px;
-    }
-
-    .stats{
-        grid-template-columns:1fr;
-    }
-
-    .address-card{
-        flex-direction:column;
-        align-items:flex-start;
-        gap:16px;
-    }
-}
-
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DroneDine - My Profile</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary: #ff7a00;
+            --primary-dark: #ea580c;
+            --white: #ffffff;
+            --bg: #f8fafc;
+            --text: #0f172a;
+            --muted: #64748b;
+            --border: #e2e8f0;
+            --light: #fff7ed;
+            --shadow: 0 4px 20px rgba(0,0,0,0.06);
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+        /* NAVBAR */
+        .navbar {
+            width: 100%;
+            background: white;
+            padding: 16px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .nav-links {
+            display: flex;
+            gap: 30px;
+        }
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text);
+            font-weight: 600;
+            transition: 0.3s;
+        }
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+        /* MAIN */
+        .profile-wrapper {
+            width: 100%;
+            max-width: 1300px;
+            margin: 30px auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 24px;
+        }
+        /* SIDEBAR */
+        .sidebar {
+            background: white;
+            border-radius: 24px;
+            padding: 30px 20px;
+            box-shadow: var(--shadow);
+            height: fit-content;
+        }
+        .profile-top {
+            text-align: center;
+            padding-bottom: 25px;
+            border-bottom: 1px solid var(--border);
+        }
+        .profile-image {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            overflow: hidden;
+            margin: auto;
+            border: 5px solid var(--light);
+        }
+        .profile-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .profile-top h2 {
+            margin-top: 15px;
+            font-size: 24px;
+        }
+        .profile-top p {
+            color: var(--muted);
+            margin-top: 5px;
+        }
+        .edit-btn {
+            margin-top: 18px;
+            border: none;
+            background: var(--primary);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .edit-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+        .menu {
+            margin-top: 30px;
+        }
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 15px 18px;
+            border-radius: 14px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: 0.3s;
+            font-weight: 600;
+        }
+        .menu-item i {
+            font-size: 18px;
+        }
+        .menu-item:hover,
+        .menu-item.active {
+            background: var(--light);
+            color: var(--primary);
+        }
+        /* RIGHT PANEL */
+        .content-area {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+        .hero-card {
+            background: linear-gradient(135deg, #ff7a00, #ff9838);
+            color: white;
+            border-radius: 28px;
+            padding: 35px;
+            box-shadow: 0 10px 25px rgba(255,122,0,0.3);
+        }
+        .hero-card h1 {
+            font-size: 34px;
+        }
+        .hero-card p {
+            margin-top: 10px;
+            opacity: 0.95;
+        }
+        .stats {
+            margin-top: 30px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px;
+        }
+        .stat-box {
+            background: rgba(255,255,255,0.18);
+            backdrop-filter: blur(8px);
+            border-radius: 18px;
+            padding: 20px;
+            text-align: center;
+        }
+        .stat-box h2 {
+            font-size: 28px;
+        }
+        .stat-box span {
+            font-size: 14px;
+        }
+        .section {
+            background: white;
+            border-radius: 24px;
+            padding: 28px;
+            box-shadow: var(--shadow);
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .section-header h2 {
+            font-size: 24px;
+        }
+        .add-btn {
+            background: var(--primary);
+            border: none;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .address-card {
+            border: 2px solid var(--border);
+            border-radius: 18px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            transition: 0.3s;
+        }
+        .address-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-3px);
+        }
+        .address-left {
+            display: flex;
+            gap: 18px;
+            align-items: flex-start;
+        }
+        .address-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        .address-info h3 {
+            margin-bottom: 5px;
+        }
+        .address-info p {
+            color: var(--muted);
+        }
+        .delete-btn {
+            border: none;
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 10px 18px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .order-card {
+            border: 2px solid var(--border);
+            border-radius: 20px;
+            padding: 22px;
+            margin-bottom: 18px;
+            transition: 0.3s;
+        }
+        .order-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-3px);
+        }
+        .order-top {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+        .order-id {
+            font-size: 20px;
+            font-weight: 700;
+        }
+        .order-price {
+            color: var(--primary);
+            font-size: 24px;
+            font-weight: 700;
+        }
+        .order-details {
+            line-height: 1.8;
+            color: var(--muted);
+        }
+        .status {
+            display: inline-block;
+            margin-top: 14px;
+            background: #dcfce7;
+            color: #166534;
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        @media (max-width: 950px) {
+            .profile-wrapper {
+                grid-template-columns: 1fr;
+            }
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (max-width: 600px) {
+            .navbar {
+                padding: 16px 20px;
+            }
+            .nav-links {
+                gap: 14px;
+                font-size: 14px;
+            }
+            .hero-card h1 {
+                font-size: 26px;
+            }
+            .stats {
+                grid-template-columns: 1fr;
+            }
+            .address-card {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+            }
+        }
+    </style>
 </head>
-
 <body>
 
 <!-- NAVBAR -->
-
 <div class="navbar">
-
     <div class="logo">
         <i class="fas fa-drone"></i> DroneDine
     </div>
-
-    <div class="menu-item" onclick="document.getElementById('addresses-section').scrollIntoView({behavior:'smooth'});">
-    <i class="fas fa-location-dot"></i> Saved Addresses
+    <div class="nav-links">
+        <a href="/"><i class="fas fa-home"></i> Home</a>
+        <a href="/profile"><i class="fas fa-user"></i> Profile</a>
+        <a href="/logout"><i class="fas fa-right-from-bracket"></i> Logout</a>
+    </div>
 </div>
 
-</div>
-
-<!-- MAIN -->
-
+<!-- MAIN CONTENT -->
 <div class="profile-wrapper">
 
-    <!-- SIDEBAR -->
-
+    <!-- SIDEBAR (static navigation, can be enhanced later) -->
     <div class="sidebar">
-
         <div class="profile-top">
-
             <div class="profile-image">
-                <img src="https://i.pravatar.cc/200?img=12">
+                <img src="https://i.pravatar.cc/200?img=12" alt="Profile">
             </div>
-
-            <h2>Manoj Kumar</h2>
-
-            <p>manoj@dronedine.com</p>
-
-            <button class="edit-btn">
-                <i class="fas fa-pen"></i>
-                Edit Profile
+            <h2>{{ user.name or user.phone }}</h2>
+            <p>{{ user.email or 'No email set' }}</p>
+            <button class="edit-btn" onclick="alert('Edit profile feature coming soon')">
+                <i class="fas fa-pen"></i> Edit Profile
             </button>
-
         </div>
-
         <div class="menu">
-
             <div class="menu-item active">
-                <i class="fas fa-user"></i>
-                Profile
+                <i class="fas fa-user"></i> Profile
             </div>
-
-            <div class="menu-item">
-                <i class="fas fa-clock-rotate-left"></i>
-                Order History
+            <div class="menu-item" onclick="location.href='#orders'">
+                <i class="fas fa-clock-rotate-left"></i> Order History
             </div>
-
-            <div class="menu-item">
-                <i class="fas fa-location-dot"></i>
-                Saved Addresses
+            <div class="menu-item" onclick="location.href='#addresses'">
+                <i class="fas fa-location-dot"></i> Saved Addresses
             </div>
-
-            <div class="menu-item">
-                <i class="fas fa-heart"></i>
-                Favorites
+            <div class="menu-item" onclick="alert('Favorites coming soon')">
+                <i class="fas fa-heart"></i> Favorites
             </div>
-
-            <div class="menu-item">
-                <i class="fas fa-credit-card"></i>
-                Payments
+            <div class="menu-item" onclick="alert('Payments coming soon')">
+                <i class="fas fa-credit-card"></i> Payments
             </div>
-
-            <div class="menu-item">
-                <i class="fas fa-gear"></i>
-                Settings
+            <div class="menu-item" onclick="alert('Settings coming soon')">
+                <i class="fas fa-gear"></i> Settings
             </div>
-
-            <div class="menu-item">
-                <i class="fas fa-right-from-bracket"></i>
-                Logout
+            <div class="menu-item" onclick="location.href='/logout'">
+                <i class="fas fa-right-from-bracket"></i> Logout
             </div>
-
         </div>
-
     </div>
 
-    <!-- CONTENT -->
-
+    <!-- RIGHT PANEL -->
     <div class="content-area">
-
-        <!-- HERO -->
-
+        <!-- Hero / Stats -->
         <div class="hero-card">
-
             <h1>Welcome Back 👋</h1>
-
-            <p>
-                Track your drone deliveries, manage addresses
-                and view your recent orders.
-            </p>
-
+            <p>Track your drone deliveries, manage addresses and view your recent orders.</p>
             <div class="stats">
-
                 <div class="stat-box">
-                    <h2>28</h2>
+                    <h2>{{ orders|length }}</h2>
                     <span>Total Orders</span>
                 </div>
-
                 <div class="stat-box">
-                    <h2>21</h2>
+                    <h2>{{ orders|selectattr('status', 'equalto', 'delivered')|list|length }}</h2>
                     <span>Drone Deliveries</span>
                 </div>
-
                 <div class="stat-box">
                     <h2>4.9</h2>
                     <span>Ratings</span>
                 </div>
-
                 <div class="stat-box">
-                    <h2>5.2kg</h2>
+                    <h2>{{ co2_saved }}kg</h2>
                     <span>CO₂ Saved</span>
                 </div>
-
             </div>
-
         </div>
 
-        <!-- ADDRESSES -->
-
-        <div class="section">
-
+        <!-- Saved Addresses Section -->
+        <div class="section" id="addresses">
             <div class="section-header">
-
-                <h2>
-                    <i class="fas fa-location-dot"></i>
-                    Saved Addresses
-                </h2>
-
-                <button class="add-btn">
-                    + Add Address
-                </button>
-
+                <h2><i class="fas fa-location-dot"></i> Saved Addresses</h2>
+                <button class="add-btn" onclick="alert('Add address feature coming soon')">+ Add Address</button>
             </div>
-
-            <div class="address-card">
-
-                <div class="address-left">
-
-                    <div class="address-icon">
-                        <i class="fas fa-home"></i>
+            {% if addresses %}
+                {% for addr in addresses %}
+                <div class="address-card">
+                    <div class="address-left">
+                        <div class="address-icon">
+                            <i class="fas fa-{{ 'home' if loop.first else 'briefcase' }}"></i>
+                        </div>
+                        <div class="address-info">
+                            <h3>{{ addr.label or 'Address' }}</h3>
+                            <p>{{ addr.address }}</p>
+                        </div>
                     </div>
-
-                    <div class="address-info">
-                        <h3>Home</h3>
-                        <p>
-                            Flat 301, HITEC City,
-                            Hyderabad - 500081
-                        </p>
-                    </div>
-
+                    <button class="delete-btn" onclick="alert('Delete address feature coming soon')">Delete</button>
                 </div>
-
-                <button class="delete-btn">
-                    Delete
-                </button>
-
-            </div>
-
-            <div class="address-card">
-
-                <div class="address-left">
-
-                    <div class="address-icon">
-                        <i class="fas fa-briefcase"></i>
-                    </div>
-
-                    <div class="address-info">
-                        <h3>Work</h3>
-                        <p>
-                            WeWork, Madhapur,
-                            Hyderabad - 500081
-                        </p>
-                    </div>
-
-                </div>
-
-                <button class="delete-btn">
-                    Delete
-                </button>
-
-            </div>
-
+                {% endfor %}
+            {% else %}
+                <p>No saved addresses. <a href="#" onclick="alert('Add address')">Add one now</a>.</p>
+            {% endif %}
         </div>
 
-        <!-- ORDERS -->
-
-        <div class="section">
-
+        <!-- Recent Orders Section -->
+        <div class="section" id="orders">
             <div class="section-header">
-
-                <h2>
-                    <i class="fas fa-clock-rotate-left"></i>
-                    Recent Orders
-                </h2>
-
+                <h2><i class="fas fa-clock-rotate-left"></i> Recent Orders</h2>
             </div>
-
-            <div class="order-card">
-
-                <div class="order-top">
-
-                    <div class="order-id">
-                        Order #2045
+            {% if orders %}
+                {% for order in orders[:10] %}  <!-- Show last 10 orders -->
+                <div class="order-card">
+                    <div class="order-top">
+                        <div class="order-id">Order #{{ order.id }}</div>
+                        <div class="order-price">₹{{ order.total_amount }}</div>
                     </div>
-
-                    <div class="order-price">
-                        ₹320
+                    <div class="order-details">
+                        <div><i class="fas fa-store"></i> Restaurant #{{ order.restaurant_id }}</div>
+                        <div><i class="fas fa-calendar"></i> {{ order.created_at.strftime('%d %b %Y - %I:%M %p') }}</div>
+                        <div><i class="fas fa-location-dot"></i> {{ order.delivery_address }}</div>
                     </div>
-
+                    <div class="status">{{ order.status|capitalize }}</div>
                 </div>
-
-                <div class="order-details">
-
-                    <div>
-                        <i class="fas fa-store"></i>
-                        Paradise Biryani
-                    </div>
-
-                    <div>
-                        <i class="fas fa-calendar"></i>
-                        28 May 2026 - 02:30 PM
-                    </div>
-
-                    <div>
-                        <i class="fas fa-location-dot"></i>
-                        HITEC City, Hyderabad
-                    </div>
-
-                </div>
-
-                <div class="status">
-                    Delivered
-                </div>
-
-            </div>
-
-            <div class="order-card">
-
-                <div class="order-top">
-
-                    <div class="order-id">
-                        Order #2044
-                    </div>
-
-                    <div class="order-price">
-                        ₹580
-                    </div>
-
-                </div>
-
-                <div class="order-details">
-
-                    <div>
-                        <i class="fas fa-store"></i>
-                        Domino's Pizza
-                    </div>
-
-                    <div>
-                        <i class="fas fa-calendar"></i>
-                        27 May 2026 - 07:10 PM
-                    </div>
-
-                    <div>
-                        <i class="fas fa-location-dot"></i>
-                        Madhapur, Hyderabad
-                    </div>
-
-                </div>
-
-                <div class="status">
-                    Delivered
-                </div>
-
-            </div>
-
+                {% endfor %}
+                {% if orders|length > 10 %}
+                    <p style="text-align:center; margin-top:1rem;"><a href="#" onclick="alert('Load more orders feature coming soon')">Load more...</a></p>
+                {% endif %}
+            {% else %}
+                <p>No orders yet. <a href="/">Start ordering!</a></p>
+            {% endif %}
         </div>
-
     </div>
-
 </div>
 
 </body>
