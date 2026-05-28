@@ -3,48 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>DroneDine – Food Delivered by Drones</title>
+    <title>DroneDine – Food Delivery by Drones</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
             font-family: 'Inter', sans-serif;
-            background: #f8fafc;
+            background: #ffffff;
             color: #1e293b;
         }
+        /* Navbar – customer only */
         .navbar {
-            background: white;
-            padding: 1rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding: 1.2rem 5%;
+            max-width: 1400px;
+            margin: 0 auto;
             flex-wrap: wrap;
             gap: 1rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
         .logo {
-            font-size: 1.5rem;
+            font-size: 1.8rem;
             font-weight: 700;
-            color: #f97316;
+            background: linear-gradient(135deg, #f97316, #fbbf24);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+            flex-wrap: wrap;
         }
         .nav-links a {
-            color: #475569;
             text-decoration: none;
-            margin: 0 0.8rem;
+            color: #334155;
             font-weight: 500;
+            transition: color 0.2s;
         }
-        .nav-links a:hover { color: #f97316; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 1rem; }
-
+        .nav-links a:hover, .nav-links a.active {
+            color: #f97316;
+        }
+        .btn-login {
+            background: #f97316;
+            color: white;
+            padding: 0.5rem 1.2rem;
+            border-radius: 40px;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .btn-login:hover {
+            background: #ea580c;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+        /* Hero */
         .hero {
             text-align: center;
             padding: 4rem 1rem;
-            background: linear-gradient(135deg, #ffffff 0%, #fff7ed 100%);
-            border-radius: 32px;
-            margin-bottom: 2rem;
             position: relative;
-            overflow: hidden;
         }
         .drone-animation {
             position: absolute;
@@ -52,118 +79,179 @@
             left: -100px;
             width: 80px;
             animation: flyDrone 8s linear infinite;
-            opacity: 0.8;
+            opacity: 0.7;
         }
         @keyframes flyDrone {
             0% { left: -100px; top: 20px; }
             50% { left: 110%; top: 60px; }
             100% { left: 110%; top: 60px; }
         }
-        .hero h1 { font-size: 3rem; font-weight: 800; margin-bottom: 1rem; }
-        .hero-sub { font-size: 1.2rem; color: #475569; margin-bottom: 2rem; }
-        .btn-group { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            line-height: 1.2;
+            max-width: 800px;
+            margin: 0 auto 1rem;
+        }
+        .hero h1 span {
+            color: #f97316;
+        }
+        .hero-sub {
+            font-size: 1.2rem;
+            color: #475569;
+            margin-bottom: 2rem;
+        }
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
         .btn-primary {
             background: #f97316;
             color: white;
             padding: 0.8rem 2rem;
             border-radius: 40px;
             text-decoration: none;
-            font-weight: bold;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            background: #ea580c;
         }
         .btn-outline {
-            border: 2px solid #f97316;
+            border: 1.5px solid #f97316;
             color: #f97316;
-            background: transparent;
             padding: 0.8rem 2rem;
             border-radius: 40px;
             text-decoration: none;
-            font-weight: bold;
+            font-weight: 600;
+            background: transparent;
         }
+        /* Stats bar */
         .stats-bar {
             display: flex;
-            justify-content: space-around;
-            flex-wrap: wrap;
-            gap: 1rem;
-            background: white;
-            border-radius: 40px;
-            padding: 1.5rem;
-            margin: 2rem 0;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-            border: 1px solid #e2e8f0;
-        }
-        .stat-item { flex: 1; min-width: 120px; text-align: center; }
-        .stat-number { font-size: 2rem; font-weight: 800; color: #f97316; }
-        .demo-banner {
-            background: #f97316;
-            color: white;
-            text-align: center;
-            padding: 0.8rem;
-            border-radius: 40px;
-            margin-bottom: 2rem;
-            display: flex;
             justify-content: space-between;
-            align-items: center;
             flex-wrap: wrap;
-            gap: 1rem;
+            gap: 1.5rem;
+            background: #f8fafc;
+            border-radius: 60px;
+            padding: 1.5rem 2rem;
+            margin: 2rem 0;
         }
-        .demo-banner button {
-            background: white;
+        .stat-item {
+            text-align: center;
+            flex: 1;
+            min-width: 100px;
+        }
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: 800;
             color: #f97316;
-            border: none;
-            padding: 0.3rem 1rem;
-            border-radius: 20px;
-            cursor: pointer;
         }
-        .section-title { text-align: center; font-size: 2rem; margin: 3rem 0 1.5rem; }
+        .stat-label {
+            font-size: 0.85rem;
+            color: #475569;
+        }
+        /* Search */
+        .search-section {
+            margin: 2rem 0;
+        }
+        .search-box {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            border-radius: 60px;
+            border: 1px solid #e2e8f0;
+            font-size: 1rem;
+            transition: box-shadow 0.2s;
+        }
+        .search-box:focus {
+            outline: none;
+            border-color: #f97316;
+            box-shadow: 0 0 0 3px rgba(249,115,22,0.1);
+        }
+        /* Restaurant grid */
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 2.5rem 0 1.5rem;
+        }
         .restaurant-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 2rem;
-            margin: 2rem 0;
         }
         .restaurant-card {
             background: white;
             border-radius: 24px;
             overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
             cursor: pointer;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-            border: 1px solid #e2e8f0;
-            transition: transform 0.3s;
+            border: 1px solid #f1f5f9;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
         }
-        .restaurant-card:hover { transform: translateY(-8px); }
-        .card-img { height: 180px; background-size: cover; background-position: center; }
-        .card-content { padding: 1.2rem; }
-        .restaurant-name { font-size: 1.3rem; font-weight: bold; display: flex; justify-content: space-between; }
-        .rating { color: #fbbf24; }
-        .badge-drone {
+        .restaurant-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -12px rgba(0,0,0,0.1);
+        }
+        .card-img {
+            height: 180px;
+            background-size: cover;
+            background-position: center;
+        }
+        .card-content {
+            padding: 1.2rem;
+        }
+        .restaurant-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+        }
+        .rating {
+            color: #fbbf24;
+            font-size: 0.9rem;
+        }
+        .restaurant-cuisine {
+            color: #64748b;
+            font-size: 0.85rem;
+            margin: 0.25rem 0;
+        }
+        .drone-badge {
             display: inline-block;
-            background: #f97316;
-            color: white;
+            background: #fef3c7;
+            color: #b45309;
             padding: 0.2rem 0.6rem;
             border-radius: 20px;
             font-size: 0.7rem;
+            font-weight: 600;
             margin-top: 0.5rem;
         }
-        .steps-grid, .benefits-grid {
+        /* How it works / benefits */
+        .grid-4 {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 2rem;
             margin: 2rem 0;
+        }
+        .card-step, .card-benefit {
             text-align: center;
-        }
-        .step-card, .benefit-card {
-            background: white;
-            border-radius: 20px;
             padding: 1.5rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            border: 1px solid #e2e8f0;
-        }
-        .comparison-table {
-            background: white;
+            background: #f8fafc;
             border-radius: 24px;
+        }
+        .icon-large {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        /* Comparison table */
+        .comparison-table {
+            background: #f8fafc;
+            border-radius: 28px;
             padding: 1.5rem;
             margin: 2rem 0;
-            border: 1px solid #e2e8f0;
         }
         .comparison-row {
             display: flex;
@@ -171,135 +259,191 @@
             padding: 1rem 0;
             border-bottom: 1px solid #e2e8f0;
         }
-        .comparison-dronedine { color: #f97316; font-weight: bold; }
-        .footer {
-            background: white;
-            border-radius: 24px;
-            padding: 2rem;
-            margin-top: 3rem;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 2rem;
-            border-top: 1px solid #e2e8f0;
+        .comparison-dronedine {
+            color: #f97316;
+            font-weight: 700;
         }
-        .footer a { color: #64748b; text-decoration: none; display: block; margin: 0.5rem 0; }
-        .footer a:hover { color: #f97316; }
+        /* Footer */
+        .footer {
+            background: #f8fafc;
+            border-radius: 32px;
+            padding: 2rem;
+            margin-top: 4rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 2rem;
+        }
+        .footer a {
+            color: #64748b;
+            text-decoration: none;
+            display: block;
+            margin: 0.5rem 0;
+        }
+        .footer a:hover {
+            color: #f97316;
+        }
+        .copyright {
+            text-align: center;
+            padding: 1.5rem 0;
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
         @media (max-width: 768px) {
-            .hero h1 { font-size: 2rem; }
-            .btn-group { flex-direction: column; align-items: center; }
-            .comparison-row { flex-direction: column; gap: 0.5rem; }
+            .hero h1 {
+                font-size: 2.2rem;
+            }
+            .navbar {
+                flex-direction: column;
+                text-align: center;
+            }
+            .stats-bar {
+                flex-direction: column;
+                align-items: center;
+            }
         }
     </style>
 </head>
 <body>
-<div class="navbar">
-    <div class="logo"><i class="fas fa-drone"></i> DroneDine</div>
-    <div class="nav-links">
-        <a href="/">Home</a>
-        <a href="/restaurant/login">Restaurant</a>
-        <a href="/admin/dashboard">Admin</a>
-        <a href="/track">Track</a>
-    </div>
-</div>
-<div class="container">
-
-    <!-- Demo Banner -->
-    <div class="demo-banner">
-        <span>🎮 DEMO MODE - You're viewing a simulation. Join waitlist for launch!</span>
-        <button onclick="this.parentElement.style.display='none'">✖</button>
-    </div>
-
-    <!-- Hero Section -->
-    <div class="hero">
-        <img src="https://cdn-icons-png.flaticon.com/512/6612/6612252.png" alt="drone" class="drone-animation">
-        <h1>Food Delivered by Drones,<br>Not Delays</h1>
-        <div class="hero-sub">15-minute delivery | Zero emissions | Live tracking</div>
-        <div class="btn-group">
-            <a href="#restaurants" class="btn-primary">Order Now 🚁</a>
-            <a href="#" class="btn-outline" onclick="alert('Demo video placeholder'); return false;">Watch Demo ▶</a>
+    <nav class="navbar">
+        <div class="logo">DroneDine</div>
+        <div class="nav-links">
+            <a href="/" class="active">Home</a>
+            <a href="/track">Track Order</a>
+            <a href="/login">Login / Sign up</a>
         </div>
-    </div>
+    </nav>
 
-    <!-- Stats Bar -->
-    <div class="stats-bar">
-        <div class="stat-item"><div class="stat-number" data-target="8">0</div><div>🚁 Drones Active</div></div>
-        <div class="stat-item"><div class="stat-number" data-target="47">0</div><div>📦 Deliveries Today</div></div>
-        <div class="stat-item"><div class="stat-number" data-target="4.8">0</div><div>⭐ Rating</div></div>
-        <div class="stat-item"><div class="stat-number" data-target="2.4">0</div><div>🌍 Tons CO₂ Saved</div></div>
-    </div>
-    <div style="text-align:center; font-size:0.7rem; margin-top:-1rem;">Demo Mode - Simulated Data</div>
-
-    <!-- Restaurant Grid -->
-    <h2 class="section-title" id="restaurants">🔥 Popular Restaurants Near You</h2>
-    <div class="restaurant-grid">
-        {% for restaurant in restaurants %}
-        <div class="restaurant-card" onclick="window.location.href='{{ url_for('restaurant_menu', restaurant_id=restaurant.id) }}'">
-            <div class="card-img" style="background-image: url('https://source.unsplash.com/400x300/?food,biryani');"></div>
-            <div class="card-content">
-                <div class="restaurant-name">{{ restaurant.name }} <span class="rating">⭐ {{ restaurant.rating }}</span></div>
-                <div class="restaurant-cuisine">{{ restaurant.cuisine }}</div>
-                <span class="badge-drone">🚁 Drone Ready • {{ restaurant.delivery_time }} min</span>
+    <div class="container">
+        <!-- Hero -->
+        <div class="hero">
+            <img src="https://cdn-icons-png.flaticon.com/512/6612/6612252.png" alt="drone" class="drone-animation">
+            <h1>Food Delivered by <span>Drones</span><br>Not Delays</h1>
+            <div class="hero-sub">15-minute delivery | Zero emissions | Live tracking</div>
+            <div class="hero-buttons">
+                <a href="#restaurants" class="btn-primary">Order Now 🚁</a>
+                <a href="#" class="btn-outline" onclick="alert('Demo video coming soon'); return false;">Watch Demo ▶</a>
             </div>
         </div>
-        {% endfor %}
-    </div>
 
-    <!-- How It Works -->
-    <h2 class="section-title">How DroneDine Works</h2>
-    <div class="steps-grid">
-        <div class="step-card"><div class="step-icon">📱</div><h3>1. Order Food</h3><p>Browse & order your favourite meals in seconds</p></div>
-        <div class="step-card"><div class="step-icon">🍳</div><h3>2. Prepared Fresh</h3><p>Restaurant prepares your food with care</p></div>
-        <div class="step-card"><div class="step-icon">🚁</div><h3>3. Drone Flies</h3><p>Autonomous flight to your location (3km zone)</p></div>
-        <div class="step-card"><div class="step-icon">🔓</div><h3>4. Unlock & Enjoy</h3><p>Use your 4-digit code to open the box</p></div>
-    </div>
+        <!-- Stats -->
+        <div class="stats-bar">
+            <div class="stat-item"><div class="stat-number" id="dronesCount">8</div><div class="stat-label">Drones Active</div></div>
+            <div class="stat-item"><div class="stat-number" id="deliveriesCount">47</div><div class="stat-label">Deliveries Today</div></div>
+            <div class="stat-item"><div class="stat-number">4.8</div><div class="stat-label">⭐ Rating</div></div>
+            <div class="stat-item"><div class="stat-number">2.4</div><div class="stat-label">Tons CO₂ Saved</div></div>
+        </div>
 
-    <!-- Why DroneDine -->
-    <h2 class="section-title">Why Choose DroneDine?</h2>
-    <div class="benefits-grid">
-        <div class="benefit-card"><div class="benefit-icon">⚡</div><h3>Lightning Fast</h3><p>15-minute guaranteed delivery</p></div>
-        <div class="benefit-card"><div class="benefit-icon">🌱</div><h3>Zero Emissions</h3><p>100% electric drones</p></div>
-        <div class="benefit-card"><div class="benefit-icon">📍</div><h3>Live Tracking</h3><p>Watch your food fly in real time</p></div>
-        <div class="benefit-card"><div class="benefit-icon">🔒</div><h3>Safe & Secure</h3><p>PIN-protected delivery box</p></div>
-    </div>
+        <!-- Search -->
+        <div class="search-section">
+            <input type="text" id="searchInput" class="search-box" placeholder="Search for restaurants or dishes...">
+        </div>
 
-    <!-- Comparison Table -->
-    <h2 class="section-title">Traditional vs DroneDine</h2>
-    <div class="comparison-table">
-        <div class="comparison-row"><div class="comparison-label"></div><div class="comparison-traditional">🚗 Traditional</div><div class="comparison-dronedine">🚁 DroneDine</div></div>
-        <div class="comparison-row"><div class="comparison-label">Delivery Time</div><div class="comparison-traditional">30-45 minutes</div><div class="comparison-dronedine">15 minutes</div></div>
-        <div class="comparison-row"><div class="comparison-label">Traffic Delays</div><div class="comparison-traditional">Yes</div><div class="comparison-dronedine">No - flies direct</div></div>
-        <div class="comparison-row"><div class="comparison-label">Emissions</div><div class="comparison-traditional">Carbon heavy</div><div class="comparison-dronedine">Zero emissions</div></div>
-        <div class="comparison-row"><div class="comparison-label">Food Temperature</div><div class="comparison-traditional">Often cold</div><div class="comparison-dronedine">Always hot</div></div>
+        <!-- Restaurant grid -->
+        <h2 class="section-title" id="restaurants">🔥 Popular Restaurants Near You</h2>
+        <div class="restaurant-grid" id="restaurantGrid">
+            <!-- Bawarchi -->
+            <div class="restaurant-card" data-name="bawarchi" data-cuisine="biryani kebabs" onclick="window.location.href='{{ url_for('restaurant_menu', restaurant_id=1) }}'">
+                <div class="card-img" style="background-image: url('https://images.unsplash.com/photo-1563379091339-03b21d4f5b5b?w=400&h=300&fit=crop');"></div>
+                <div class="card-content">
+                    <div class="restaurant-name">Bawarchi <span class="rating">⭐ 4.5</span></div>
+                    <div class="restaurant-cuisine">Biryani, Kebabs</div>
+                    <div class="drone-badge">🚁 Drone Ready • 15 min</div>
+                </div>
+            </div>
+            <!-- Paradise -->
+            <div class="restaurant-card" data-name="paradise" data-cuisine="biryani kebab" onclick="window.location.href='{{ url_for('restaurant_menu', restaurant_id=2) }}'">
+                <div class="card-img" style="background-image: url('https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=400&h=300&fit=crop');"></div>
+                <div class="card-content">
+                    <div class="restaurant-name">Paradise <span class="rating">⭐ 4.7</span></div>
+                    <div class="restaurant-cuisine">Biryani, Kebab</div>
+                    <div class="drone-badge">🚁 Drone Ready • 20 min</div>
+                </div>
+            </div>
+            <!-- Chutneys -->
+            <div class="restaurant-card" data-name="chutneys" data-cuisine="south indian" onclick="window.location.href='{{ url_for('restaurant_menu', restaurant_id=3) }}'">
+                <div class="card-img" style="background-image: url('https://images.unsplash.com/photo-1630384060421-cf20f0e7fece?w=400&h=300&fit=crop');"></div>
+                <div class="card-content">
+                    <div class="restaurant-name">Chutneys <span class="rating">⭐ 4.3</span></div>
+                    <div class="restaurant-cuisine">South Indian</div>
+                    <div class="drone-badge">🚁 Drone Ready • 12 min</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- How DroneDine Works -->
+        <h2 class="section-title">How DroneDine Works</h2>
+        <div class="grid-4">
+            <div class="card-step"><div class="icon-large">📱</div><h3>1. Order Food</h3><p>Browse & order in seconds</p></div>
+            <div class="card-step"><div class="icon-large">🍳</div><h3>2. Prepared Fresh</h3><p>Restaurant cooks with care</p></div>
+            <div class="card-step"><div class="icon-large">🚁</div><h3>3. Drone Flies</h3><p>Autonomous flight (3km zone)</p></div>
+            <div class="card-step"><div class="icon-large">🔓</div><h3>4. Unlock & Enjoy</h3><p>4‑digit code opens the box</p></div>
+        </div>
+
+        <!-- Why DroneDine -->
+        <h2 class="section-title">Why Choose DroneDine?</h2>
+        <div class="grid-4">
+            <div class="card-benefit"><div class="icon-large">⚡</div><h3>Lightning Fast</h3><p>15‑min guaranteed</p></div>
+            <div class="card-benefit"><div class="icon-large">🌱</div><h3>Zero Emissions</h3><p>100% electric drones</p></div>
+            <div class="card-benefit"><div class="icon-large">📍</div><h3>Live Tracking</h3><p>Watch your food fly</p></div>
+            <div class="card-benefit"><div class="icon-large">🔒</div><h3>Safe & Secure</h3><p>PIN‑protected box</p></div>
+        </div>
+
+        <!-- Comparison Table -->
+        <h2 class="section-title">Traditional vs DroneDine</h2>
+        <div class="comparison-table">
+            <div class="comparison-row"><div style="font-weight:700; width:40%">Delivery Time</div><div>30-45 minutes</div><div class="comparison-dronedine">15 minutes</div></div>
+            <div class="comparison-row"><div style="font-weight:700; width:40%">Traffic Delays</div><div>Yes</div><div class="comparison-dronedine">No – flies direct</div></div>
+            <div class="comparison-row"><div style="font-weight:700; width:40%">Emissions</div><div>Carbon heavy</div><div class="comparison-dronedine">Zero emissions</div></div>
+            <div class="comparison-row"><div style="font-weight:700; width:40%">Food Temperature</div><div>Often cold</div><div class="comparison-dronedine">Always hot</div></div>
+        </div>
     </div>
 
     <!-- Footer -->
-    <div class="footer">
-        <div><h3>DroneDine</h3><p>Revolutionising food delivery in Hyderabad with drone technology.</p></div>
-        <div><h4>Quick Links</h4><a href="#">How It Works</a><a href="#">For Restaurants</a><a href="#">Track Order</a><a href="#">Safety & Compliance</a></div>
-        <div><h4>Contact</h4><a href="mailto:hello@dronedine.in">📧 hello@dronedine.in</a><a href="tel:+919876543210">📱 +91 98765 43210</a><p>📍 Hyderabad, Telangana</p></div>
-        <div><h4>Follow Us</h4><a href="#"><i class="fab fa-linkedin"></i></a> <a href="#"><i class="fab fa-instagram"></i></a> <a href="#"><i class="fab fa-twitter"></i></a> <a href="#"><i class="fab fa-youtube"></i></a></div>
+    <div class="footer container">
+        <div><h3>DroneDine</h3><p>Revolutionising food delivery in Hyderabad.</p></div>
+        <div><h4>Quick Links</h4><a href="#">How It Works</a><a href="#">For Restaurants</a><a href="/track">Track Order</a><a href="#">Safety</a></div>
+        <div><h4>Contact</h4><a href="mailto:hello@dronedine.in">📧 hello@dronedine.in</a><a href="tel:+919876543210">📱 +91 98765 43210</a><p>📍 Hyderabad, TS</p></div>
+        <div><h4>Follow Us</h4><a href="#"><i class="fab fa-linkedin"></i> LinkedIn</a><a href="#"><i class="fab fa-instagram"></i> Instagram</a><a href="#"><i class="fab fa-twitter"></i> Twitter</a></div>
     </div>
-</div>
+    <div class="copyright">© 2026 DroneDine – Demo Mode. Launching soon with T‑Hub support.</div>
 
-<script>
-    function animateNumbers() {
-        document.querySelectorAll('.stat-number').forEach(counter => {
-            const target = parseFloat(counter.dataset.target);
+    <script>
+        // Search filter
+        const searchInput = document.getElementById('searchInput');
+        const cards = document.querySelectorAll('.restaurant-card');
+        searchInput.addEventListener('input', function() {
+            const term = this.value.toLowerCase();
+            cards.forEach(card => {
+                const name = card.getAttribute('data-name') || '';
+                const cuisine = card.getAttribute('data-cuisine') || '';
+                if (name.includes(term) || cuisine.includes(term)) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+
+        // Animated counters
+        function animateCounter(elementId, target) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
             let current = 0;
             const step = target / 50;
-            const update = () => {
+            const timer = setInterval(() => {
                 current += step;
-                if (current < target) {
-                    counter.innerText = Math.floor(current);
-                    requestAnimationFrame(update);
+                if (current >= target) {
+                    el.innerText = target;
+                    clearInterval(timer);
                 } else {
-                    counter.innerText = target;
+                    el.innerText = Math.floor(current);
                 }
-            };
-            update();
+            }, 30);
+        }
+        window.addEventListener('load', () => {
+            animateCounter('dronesCount', 8);
+            animateCounter('deliveriesCount', 47);
         });
-    }
-    window.addEventListener('load', animateNumbers);
-</script>
+    </script>
 </body>
 </html>
