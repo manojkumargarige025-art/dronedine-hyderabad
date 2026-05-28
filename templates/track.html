@@ -69,6 +69,7 @@
     <div id="map" class="map-container"></div>
 </div>
 <div id="toast" class="toast"></div>
+
 <script>
     const orderId = {{ order.id }};
     let statusPollInterval = null;
@@ -120,7 +121,6 @@
         document.getElementById('battery').innerText = battery + '%';
         if (battery < 30) document.getElementById('battery').style.color = '#ef4444';
         else document.getElementById('battery').style.color = '#f97316';
-        // Update ETA if speed > 0
         if (speed > 0) {
             const etaMinutes = (distanceKm / speed) * 60;
             document.getElementById('eta').innerText = Math.ceil(etaMinutes);
@@ -137,17 +137,17 @@
             updateTimeline(status);
             document.getElementById('unlockCode').innerText = data.unlock_code || '----';
             if (status === 'delivered') {
-                document.getElementById('unlockSection').style.display = 'none';
+                document.getElementById('unlockSection').style.display = 'block';
                 if (statusPollInterval) clearInterval(statusPollInterval);
                 if (metricsInterval) clearInterval(metricsInterval);
                 showToast('Delivery completed! Enjoy your meal!');
+                return;
             }
             if (status === 'out_for_delivery') {
                 if (!droneAnimStarted) {
                     startDroneAnimation();
                     droneAnimStarted = true;
                 }
-                // Simulate progressive metrics if backend returns zeros
                 if (data.altitude === 0 && data.speed === 0) {
                     if (!metricsInterval) {
                         let simAlt = 0, simSpeed = 0, simBatt = 100;
@@ -179,35 +179,37 @@
     }
 
     function startDroneAnimation() {
-    if (!droneMarker) return;
-    const start = kitchenCoords, end = destinationCoords, duration = 8000, startTime = performance.now();
-    function animate(now) {
-        let t = Math.min(1, (now - startTime) / duration);
-        const lat = start[0] + (end[0] - start[0]) * t;
-        const lng = start[1] + (end[1] - start[1]) * t;
-        droneMarker.setLatLng([lat, lng]);
-        if (t < 1) {
-            requestAnimationFrame(animate);
-        } else {
-            droneMarker.setLatLng(end);
-            showToast('Drone has arrived! Enter your unlock code.');
-            // NEW: Send a request to backend to mark order as delivered
-            fetch(`/api/order/update-status/${orderId}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'delivered' })
-            }).then(res => res.json()).then(data => {
-                if (data.success) {
-                    // Force refresh of tracking data to update timeline
-                    fetchTracking();
-                    showToast('Order delivered successfully!');
-                    document.getElementById('unlockSection').style.display = 'block'; // ensure visible
-                }
-            }).catch(err => console.warn('Status update failed', err));
+        if (!droneMarker) return;
+        const start = kitchenCoords, end = destinationCoords, duration = 8000, startTime = performance.now();
+        function animate(now) {
+            let t = Math.min(1, (now - startTime) / duration);
+            const lat = start[0] + (end[0] - start[0]) * t;
+            const lng = start[1] + (end[1] - start[1]) * t;
+            droneMarker.setLatLng([lat, lng]);
+            if (t < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                droneMarker.setLatLng(end);
+                showToast('Drone has arrived! Enter your unlock code.');
+                // --- AUTO-UPDATE STATUS TO DELIVERED ---
+                fetch(`/api/order/update-status/${orderId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'delivered' })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        fetchTracking(); // refresh timeline to show delivered
+                        showToast('Order marked as delivered!');
+                    }
+                })
+                .catch(err => console.warn('Status update failed', err));
+                // --- END OF AUTO-UPDATE ---
+            }
         }
+        requestAnimationFrame(animate);
     }
-    requestAnimationFrame(animate);
-}
 
     document.getElementById('unlockBtn').onclick = async () => {
         const pin = document.getElementById('pinInput').value;
