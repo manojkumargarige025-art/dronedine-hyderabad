@@ -28,8 +28,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 CORS(app, supports_credentials=True)
 db = SQLAlchemy(app)
 
-app.config['SECRET_KEY'] = 'a-very-secret-key-change-this-in-production'
-app.config['SESSION_COOKIE_SECURE'] = False   # for HTTP (Render uses HTTPS, but keep false for now)
+# Session security settings
+app.config['SESSION_COOKIE_SECURE'] = False   # Render uses HTTPS but this is fine for demo
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
@@ -112,7 +112,7 @@ def login():
         phone = request.form.get('phone')
         if not phone or len(phone) != 10:
             return render_template('login.html', error="Invalid phone number")
-        otp = "123456"
+        otp = "123456"  # always 123456 for demo
         session['login_otp'] = otp
         session['login_phone'] = phone
         print(f"[DEMO] OTP for {phone}: {otp}")
@@ -148,7 +148,10 @@ def logout():
 @app.route('/')
 def home():
     restaurants = Restaurant.query.filter_by(is_active=True).all()
-    return render_template('home.html', restaurants=restaurants)
+    user = None
+    if 'user_id' in session:
+        user = User.query.get(session['user_id'])
+    return render_template('home.html', restaurants=restaurants, user=user)
 
 @app.route('/restaurant/<int:restaurant_id>')
 def restaurant_menu(restaurant_id):
