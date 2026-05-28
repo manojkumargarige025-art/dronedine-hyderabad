@@ -28,7 +28,6 @@
             background: var(--bg);
             color: var(--text);
         }
-        /* NAVBAR */
         .navbar {
             background: white;
             padding: 1rem 2rem;
@@ -75,7 +74,6 @@
             margin: 2rem auto;
             padding: 0 1.5rem;
         }
-        /* STATS GRID */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -99,7 +97,6 @@
             color: var(--muted);
             margin-top: 0.5rem;
         }
-        /* ORDERS */
         .section-title {
             font-size: 1.5rem;
             font-weight: 700;
@@ -190,9 +187,6 @@
         .btn-warning {
             background: #f59e0b;
         }
-        .btn-danger {
-            background: #dc2626;
-        }
         .footer {
             text-align: center;
             padding: 1.5rem;
@@ -233,7 +227,6 @@
     <h1><i class="fas fa-store"></i> {{ restaurant.name }} Dashboard</h1>
     <p style="margin-bottom: 1.5rem;">Manage orders and track deliveries in real time.</p>
 
-    <!-- STATS -->
     <div class="stats-grid" id="statsGrid">
         <div class="stat-card">
             <div class="stat-number" id="todayOrders">0</div>
@@ -266,7 +259,6 @@
 </div>
 
 <script>
-    // Helper: show toast (replace with custom if desired)
     function showToast(msg, isError = false) {
         alert(msg);
     }
@@ -295,7 +287,6 @@
             }
             let html = '';
             orders.forEach(order => {
-                // Parse items (JSON string)
                 let itemsText = '';
                 try {
                     const items = JSON.parse(order.items);
@@ -303,7 +294,6 @@
                 } catch(e) {
                     itemsText = order.items;
                 }
-                // Determine next available actions based on status
                 const status = order.status;
                 let actionButtons = '';
                 if (status === 'pending') {
@@ -328,7 +318,7 @@
                             <div class="detail-item"><i class="fas fa-utensils"></i> ${itemsText}</div>
                             <div class="detail-item"><i class="fas fa-rupee-sign"></i> ₹${order.total_amount}</div>
                             <div class="detail-item"><i class="fas fa-map-marker-alt"></i> ${order.delivery_address || 'Not provided'}</div>
-                            <div class="detail-item"><i class="fas fa-key"></i> Unlock Code: <span class="unlock-code">${order.password || 'N/A'}</span></div>
+                            <div class="detail-item"><i class="fas fa-key"></i> Unlock Code: <span class="unlock-code">${order.password || order.unlock_code || 'N/A'}</span></div>
                         </div>
                         <div class="action-buttons">
                             ${actionButtons}
@@ -363,7 +353,6 @@
         }
     }
 
-    // Auto-refresh every 5 seconds
     fetchStats();
     fetchOrders();
     setInterval(() => {
