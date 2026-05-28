@@ -327,8 +327,7 @@ def restaurant_dashboard():
         db.session.add(restaurant)
         db.session.commit()
     orders = Order.query.filter_by(restaurant_id=restaurant.id).order_by(Order.created_at.desc()).all()
-    return render_template('restaurant_dashboard.html', restaurant=restaurant, orders=orders)
-
+    return render_template('restaurant/dashboard.html', restaurant=restaurant, orders=orders)
 @app.route('/api/restaurant/update-order/<int:order_id>', methods=['POST'])
 def restaurant_update_order(order_id):
     if 'restaurant_id' not in session:
