@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
+        /* same styles as before – keep your existing CSS */
         :root {
             --primary: #f97316;
             --primary-dark: #ea580c;
@@ -28,7 +29,6 @@
             background: #fafafa;
             color: var(--text);
         }
-        /* NAVBAR */
         .navbar {
             display: flex;
             justify-content: space-between;
@@ -68,7 +68,6 @@
             padding: 0.7rem 1.2rem;
             border-radius: 40px;
         }
-        /* SPLIT SCREEN LAYOUT */
         .split-container {
             display: flex;
             flex-wrap: wrap;
@@ -88,7 +87,6 @@
             flex-direction: column;
             gap: 1.5rem;
         }
-        /* MAP STYLES */
         .map-card {
             background: white;
             border-radius: 30px;
@@ -100,7 +98,6 @@
             border-radius: 24px;
             overflow: hidden;
         }
-        /* DRONE CAM FEED (SIMULATED) */
         .cam-card {
             background: white;
             border-radius: 30px;
@@ -135,17 +132,6 @@
             padding: 0.2rem 0.5rem;
             border-radius: 8px;
         }
-        .cam-placeholder {
-            color: white;
-            text-align: center;
-            font-size: 0.9rem;
-        }
-        .cam-placeholder i {
-            font-size: 3rem;
-            margin-bottom: 0.5rem;
-            display: block;
-        }
-        /* METRICS & TIMELINE */
         .metrics-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -196,11 +182,6 @@
             0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0.4); }
             50% { box-shadow: 0 0 0 8px rgba(249,115,22,0); }
         }
-        .timeline-step .step-label {
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-        /* UNLOCK SECTION */
         .unlock-card {
             background: white;
             border-radius: 30px;
@@ -255,7 +236,6 @@
 </head>
 <body>
 
-<!-- CUSTOMER NAVBAR -->
 <nav class="navbar">
     <div class="logo">🚁 DroneDine</div>
     <div class="nav-links">
@@ -268,7 +248,6 @@
 </nav>
 
 <div class="split-container">
-    <!-- LEFT PANEL: MAP -->
     <div class="map-panel">
         <div class="map-card">
             <div id="trackingMap" class="map-container"></div>
@@ -277,33 +256,20 @@
             </div>
         </div>
     </div>
-
-    <!-- RIGHT PANEL: INFO -->
     <div class="info-panel">
-        <!-- Drone Camera Feed (Simulated) -->
         <div class="cam-card">
-            <div class="cam-header">
-                <i class="fas fa-video"></i> Live Drone FPV
-                <span style="font-size: 0.7rem; margin-left: auto;">REC <i class="fas fa-circle" style="color: red;"></i></span>
-            </div>
+            <div class="cam-header"><i class="fas fa-video"></i> Live Drone FPV <span style="font-size: 0.7rem; margin-left: auto;">REC <i class="fas fa-circle" style="color: red;"></i></span></div>
             <div class="cam-feed" id="droneCamFeed">
-                <div class="cam-placeholder">
-                    <i class="fas fa-drone"></i>
-                    <div>Live feed will appear once drone is airborne</div>
-                </div>
+                <div class="cam-placeholder"><i class="fas fa-drone"></i><div>Live feed will appear once drone is airborne</div></div>
                 <div class="cam-overlay" id="camOverlay">ALT: 0m | SPD: 0km/h</div>
             </div>
         </div>
-
-        <!-- Metrics -->
         <div class="metrics-grid" id="metricsGrid">
             <div class="metric-card"><div class="metric-label">Altitude</div><div class="metric-value" id="altitude">0 m</div></div>
             <div class="metric-card"><div class="metric-label">Speed</div><div class="metric-value" id="speed">0 km/h</div></div>
             <div class="metric-card"><div class="metric-label">Battery</div><div class="metric-value" id="battery">100%</div></div>
             <div class="metric-card"><div class="metric-label">ETA</div><div class="metric-value" id="eta">-- min</div></div>
         </div>
-
-        <!-- Timeline -->
         <div class="cam-card" style="padding: 1rem;">
             <div class="timeline" id="timeline">
                 <div class="timeline-step completed"><div class="circle"><i class="fas fa-receipt"></i></div><div class="step-label">Order Placed</div></div>
@@ -313,24 +279,19 @@
                 <div class="timeline-step"><div class="circle"><i class="fas fa-home"></i></div><div class="step-label">Delivered</div></div>
             </div>
         </div>
-
-        <!-- Unlock Section (hidden until drone lands) -->
         <div id="unlockSection" class="unlock-card" style="display: none;">
             <div>🔐 Your Unlock Code</div>
             <div class="unlock-code" id="unlockCode">{{ order.unlock_code }}</div>
             <input type="password" id="pinInput" class="pin-input" placeholder="Enter 4-digit code" maxlength="4">
-            <br>
-            <button id="unlockBtn" class="btn-unlock">Unlock Box</button>
+            <br><button id="unlockBtn" class="btn-unlock">Unlock Box</button>
         </div>
     </div>
 </div>
-
 <div class="footer">
     <p>© 2026 DroneDine Hyderabad | 5% Commission | Zero GST Burden</p>
 </div>
 
 <script>
-    // Order data from Flask
     const orderId = {{ order.id }};
     const unlockCode = "{{ order.unlock_code }}";
     const destLat = {{ order.delivery_lat or 17.4116 }};
@@ -352,15 +313,45 @@
     }).addTo(map);
     map.fitBounds([[kitchenLat, kitchenLng], [destLat, destLng]]);
 
-    // Drone icon
-    const droneIcon = L.divIcon({
-        html: '<i class="fas fa-drone" style="font-size:32px; color:#f97316;"></i>',
-        iconSize: [32, 32],
-        className: 'drone-marker'
-    });
+    // --- GREEN ZONE CIRCLE (3km from Gachibowli centre) ---
+    L.circle([17.4300, 78.3450], {
+        color: '#f97316',
+        weight: 1,
+        fillColor: '#f97316',
+        fillOpacity: 0.05,
+        radius: 3000 // meters
+    }).addTo(map).bindPopup("DroneDine Green Zone (3km)");
+
+    // --- CUSTOMER CURRENT LOCATION (blue dot) ---
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const userLat = position.coords.latitude;
+                const userLng = position.coords.longitude;
+                L.circleMarker([userLat, userLng], {
+                    radius: 8,
+                    fillColor: "#3b82f6",
+                    color: "#ffffff",
+                    weight: 2,
+                    fillOpacity: 0.8
+                }).addTo(map).bindPopup("Your current location").openPopup();
+                // Optionally center map to user's location? Uncomment next line if desired.
+                // map.setView([userLat, userLng], 14);
+            },
+            (error) => {
+                console.warn("Geolocation error:", error);
+                // Optionally show a message on the map
+                L.popup().setLatLng([17.4300, 78.3450]).setContent("Location access denied. Cannot show your current position.").openOn(map);
+            }
+        );
+    } else {
+        console.warn("Geolocation not supported");
+    }
+
+    // Drone animation and other logic (same as before)
+    const droneIcon = L.divIcon({ html: '<i class="fas fa-drone" style="font-size:32px; color:#f97316;"></i>', iconSize: [32, 32] });
     let droneMarker = L.marker([kitchenLat, kitchenLng], { icon: droneIcon }).addTo(map);
 
-    // Helper: distance in km
     function haversine(lat1, lng1, lat2, lng2) {
         const R = 6371;
         const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -390,25 +381,14 @@
         batteryElem.innerText = battery + '%';
         const etaMinutes = (remainingSec / 60).toFixed(1);
         etaElem.innerText = etaMinutes + ' min';
-
-        // Update camera overlay
         if (camOverlay) {
             camOverlay.innerHTML = `ALT: ${altitude}m | SPD: ${Math.floor(speed)}km/h`;
         }
-        // Simulate camera feed text change after takeoff
         if (progress > 0.05 && droneCamFeed.querySelector('.cam-placeholder')) {
-            droneCamFeed.innerHTML = `
-                <div class="cam-placeholder">
-                    <i class="fas fa-eye"></i>
-                    <div>Live feed from drone camera</div>
-                    <div style="font-size:0.7rem;">Gachibowli Green Zone</div>
-                </div>
-                <div class="cam-overlay" id="camOverlay">ALT: ${altitude}m | SPD: ${Math.floor(speed)}km/h</div>
-            `;
+            droneCamFeed.innerHTML = `<div class="cam-placeholder"><i class="fas fa-eye"></i><div>Live feed from drone camera</div><div style="font-size:0.7rem;">Gachibowli Green Zone</div></div><div class="cam-overlay" id="camOverlay">ALT: ${altitude}m | SPD: ${Math.floor(speed)}km/h</div>`;
         }
     }
 
-    // Drone animation
     let animationFrameId = null;
     function animateDrone() {
         if (remainingSec <= 0) return;
@@ -426,24 +406,14 @@
             if (t < 1) {
                 animationFrameId = requestAnimationFrame(step);
             } else {
-                // Drone landed
                 const timelineSteps = document.querySelectorAll('.timeline-step');
                 timelineSteps[4].classList.add('active');
                 timelineSteps[3].classList.remove('active');
                 timelineSteps[3].classList.add('completed');
                 unlockSection.style.display = 'block';
-                // Update camera feed to landed
-                const feedDiv = document.getElementById('droneCamFeed');
-                if (feedDiv) {
-                    feedDiv.innerHTML = `
-                        <div class="cam-placeholder">
-                            <i class="fas fa-check-circle"></i>
-                            <div>Drone landed – awaiting PIN</div>
-                        </div>
-                        <div class="cam-overlay">📍 At your location</div>
-                    `;
+                if (droneCamFeed) {
+                    droneCamFeed.innerHTML = `<div class="cam-placeholder"><i class="fas fa-check-circle"></i><div>Drone landed – awaiting PIN</div></div><div class="cam-overlay">📍 At your location</div>`;
                 }
-                // Mark order as delivered in backend
                 fetch('/api/order/update-status/' + orderId, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -456,11 +426,9 @@
 
     setTimeout(() => {
         animateDrone();
-        const timelineSteps = document.querySelectorAll('.timeline-step');
-        timelineSteps[3].classList.add('active');
+        document.querySelectorAll('.timeline-step')[3].classList.add('active');
     }, 1000);
 
-    // PIN unlock
     document.getElementById('unlockBtn').onclick = () => {
         const entered = document.getElementById('pinInput').value;
         if (entered === unlockCode) {
