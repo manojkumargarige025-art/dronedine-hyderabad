@@ -3,9 +3,6 @@ DroneDine - Complete Backend with User Auth, Orders, Drone Tracking,
 Admin/Restaurant Dashboards, Profile Updates, and Saved Addresses
 """
 import os
-if os.path.exists('dronedine.db'):
-    os.remove('dronedine.db')
-
 import json
 import random
 from datetime import datetime
@@ -41,7 +38,7 @@ class User(db.Model):
     phone = db.Column(db.String(10), unique=True, nullable=False)
     name = db.Column(db.String(100))
     email = db.Column(db.String(100))
-    addresses = db.Column(db.Text, default='[]')  # JSON array of address objects
+    addresses = db.Column(db.Text, default='[]')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     orders = db.relationship('Order', backref='user', lazy=True)
 
@@ -50,7 +47,7 @@ class Restaurant(db.Model):
     name = db.Column(db.String(100), nullable=False)
     cuisine = db.Column(db.String(50))
     rating = db.Column(db.Float, default=4.0)
-    delivery_time = db.Column(db.Integer, default=20)  # minutes
+    delivery_time = db.Column(db.Integer, default=20)
     is_active = db.Column(db.Boolean, default=True)
     image_url = db.Column(db.String(200))
     latitude = db.Column(db.Float)
@@ -62,7 +59,7 @@ class MenuItem(db.Model):
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
     name = db.Column(db.String(100), nullable=False)
     price = db.Column(db.Float, nullable=False)
-    description = db.Column(db.String(200))
+    description = db.Column(db.String(200), default='Delicious fresh food')
     category = db.Column(db.String(50))
     image_url = db.Column(db.String(200))
     is_veg = db.Column(db.Boolean, default=True)
@@ -71,13 +68,13 @@ class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
-    items = db.Column(db.Text, nullable=False)  # JSON string
+    items = db.Column(db.Text, nullable=False)
     total_amount = db.Column(db.Float, nullable=False)
     unlock_code = db.Column(db.String(4), nullable=False)
-    status = db.Column(db.String(50), default='placed')  # placed, accepted, preparing, out_for_delivery, delivered, cancelled
-    delivery_lat = db.Column(db.Float)
-    delivery_lng = db.Column(db.Float)
-    delivery_address = db.Column(db.String(200))
+    status = db.Column(db.String(50), default='placed')
+    delivery_lat = db.Column(db.Float, default=17.4116)
+    delivery_lng = db.Column(db.Float, default=78.3400)
+    delivery_address = db.Column(db.String(200), default='Gachibowli, Hyderabad')
     drone_id = db.Column(db.String(20))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -110,7 +107,7 @@ def login():
         phone = request.form.get('phone')
         if not phone or len(phone) != 10:
             return render_template('login.html', error="Invalid phone number")
-        otp = "123456"  # always 123456 for demo
+        otp = "123456"
         session['login_otp'] = otp
         session['login_phone'] = phone
         print(f"[DEMO] OTP for {phone}: {otp}")
@@ -154,6 +151,21 @@ def restaurant_menu(restaurant_id):
     menu_items = MenuItem.query.filter_by(restaurant_id=restaurant_id).all()
     return render_template('menu.html', restaurant=restaurant, items=menu_items)
 
+@app.route('/checkout')
+def checkout():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    return render_template('checkout.html')
+
+@app.route('/track/<int:order_id>')
+def track_order(order_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    order = Order.query.get_or_404(order_id)
+    if order.user_id != session['user_id']:
+        return "Unauthorized", 403
+    return render_template('track.html', order=order)
+
 @app.route('/profile')
 def profile():
     if 'user_id' not in session:
@@ -163,72 +175,23 @@ def profile():
     co2_saved = calculate_co2_saved(orders)
     return render_template('profile.html', user=user, orders=orders, co2_saved=co2_saved)
 
-@app.route('/track-order/<int:order_id>')
-def track_order(order_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    order = Order.query.get_or_404(order_id)
-    if order.user_id != session['user_id']:
-        return "Unauthorized", 403
-    return render_template('track.html', order=order)
 
-
-# ==================== ROUTES: PROFILE API ====================
-@app.route('/api/user/update', methods=['POST'])
-def update_user_profile():
-    if 'user_id' not in session:
-        return jsonify({'error': 'Not logged in'}), 401
-    data = request.get_json()
-    user = User.query.get(session['user_id'])
-    if 'name' in data:
-        user.name = data['name']
-    if 'email' in data:
-        user.email = data['email']
-    db.session.commit()
-    return jsonify({'success': True, 'name': user.name, 'email': user.email})
-
-@app.route('/api/user/addresses', methods=['GET', 'POST', 'DELETE'])
-def user_addresses():
-    if 'user_id' not in session:
-        return jsonify({'error': 'Not logged in'}), 401
-    user = User.query.get(session['user_id'])
-    if request.method == 'GET':
-        addresses = json.loads(user.addresses) if user.addresses else []
-        return jsonify(addresses)
-    elif request.method == 'POST':
-        data = request.get_json()
-        addresses = json.loads(user.addresses) if user.addresses else []
-        addresses.append(data)
-        user.addresses = json.dumps(addresses)
-        db.session.commit()
-        return jsonify({'success': True, 'addresses': addresses})
-    elif request.method == 'DELETE':
-        index = request.args.get('index', type=int)
-        addresses = json.loads(user.addresses) if user.addresses else []
-        if 0 <= index < len(addresses):
-            addresses.pop(index)
-            user.addresses = json.dumps(addresses)
-            db.session.commit()
-        return jsonify({'success': True, 'addresses': addresses})
-
-
-# ==================== ROUTES: ORDER API ====================
+# ==================== ROUTES: API ====================
 @app.route('/api/place-order', methods=['POST'])
 def place_order():
     if 'user_id' not in session:
         return jsonify({'error': 'Not logged in'}), 401
     data = request.get_json()
-    required = ['restaurant_id', 'items', 'total', 'delivery_address', 'latitude', 'longitude']
+    required = ['restaurant_id', 'items', 'total', 'delivery_address', 'latitude', 'longitude', 'unlock_code']
     for field in required:
         if field not in data:
             return jsonify({'error': f'Missing {field}'}), 400
-    unlock_code = generate_unlock_code()
     order = Order(
         user_id=session['user_id'],
         restaurant_id=data['restaurant_id'],
         items=json.dumps(data['items']),
         total_amount=data['total'],
-        unlock_code=unlock_code,
+        unlock_code=data['unlock_code'],
         status='placed',
         delivery_lat=data['latitude'],
         delivery_lng=data['longitude'],
@@ -236,6 +199,7 @@ def place_order():
     )
     db.session.add(order)
     db.session.commit()
+    # Add initial tracking record
     tracking = DroneTracking(
         order_id=order.id,
         latitude=data['latitude'],
@@ -248,7 +212,7 @@ def place_order():
     db.session.commit()
     return jsonify({
         'order_id': order.id,
-        'unlock_code': unlock_code,
+        'unlock_code': order.unlock_code,
         'status': 'success'
     })
 
@@ -266,7 +230,9 @@ def get_order(order_id):
         'total': order.total_amount,
         'created_at': order.created_at.isoformat(),
         'delivery_address': order.delivery_address,
-        'drone_id': order.drone_id
+        'drone_id': order.drone_id,
+        'delivery_lat': order.delivery_lat,
+        'delivery_lng': order.delivery_lng
     })
 
 @app.route('/api/tracking/<int:order_id>')
@@ -296,6 +262,23 @@ def get_tracking(order_id):
         'status': order.status,
         'unlock_code': order.unlock_code
     })
+
+@app.route('/api/order/update-status/<int:order_id>', methods=['POST'])
+def update_order_status(order_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.get_json()
+    new_status = data.get('status')
+    if new_status not in ['delivered', 'cancelled']:
+        return jsonify({'error': 'Invalid status'}), 400
+    order = Order.query.get_or_404(order_id)
+    if order.user_id != session['user_id']:
+        return jsonify({'error': 'Unauthorized'}), 403
+    order.status = new_status
+    if new_status == 'delivered':
+        order.delivered_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify({'success': True, 'status': new_status})
 
 
 # ==================== ROUTES: RESTAURANT DASHBOARD ====================
@@ -329,7 +312,7 @@ def restaurant_dashboard():
         db.session.add(restaurant)
         db.session.commit()
     orders = Order.query.filter_by(restaurant_id=restaurant.id).order_by(Order.created_at.desc()).all()
-    return render_template('restaurant/dashboard.html', restaurant=restaurant, orders=orders)
+    return render_template('restaurant_dashboard.html', restaurant=restaurant, orders=orders)
 
 @app.route('/api/restaurant/update-order/<int:order_id>', methods=['POST'])
 def restaurant_update_order(order_id):
@@ -364,7 +347,7 @@ def admin_dashboard():
     delivered_orders = Order.query.filter_by(status='delivered').count()
     total_revenue = db.session.query(db.func.sum(Order.total_amount)).filter_by(status='delivered').scalar() or 0
     orders = Order.query.order_by(Order.created_at.desc()).all()
-    return render_template('admin/dashboard.html', 
+    return render_template('admin_dashboard.html', 
                          total_orders=total_orders,
                          active_orders=active_orders,
                          delivered_orders=delivered_orders,
@@ -372,7 +355,7 @@ def admin_dashboard():
                          orders=orders)
 
 
-# ==================== INITIAL DATA SEED (run at startup) ====================
+# ==================== INITIAL DATA SEED ====================
 def init_db():
     db.create_all()
     if Restaurant.query.count() == 0:
@@ -396,25 +379,9 @@ def init_db():
         db.session.commit()
 
 
-# ==================== RUN (tables created on app load) ====================
+# ==================== RUN ====================
 with app.app_context():
     init_db()
-@app.route('/api/order/update-status/<int:order_id>', methods=['POST'])
-def update_order_status(order_id):
-    if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    data = request.get_json()
-    new_status = data.get('status')
-    if new_status not in ['delivered', 'cancelled']:
-        return jsonify({'error': 'Invalid status'}), 400
-    order = Order.query.get_or_404(order_id)
-    if order.user_id != session['user_id']:
-        return jsonify({'error': 'Unauthorized'}), 403
-    order.status = new_status
-    if new_status == 'delivered':
-        order.delivered_at = datetime.utcnow()
-    db.session.commit()
-    return jsonify({'success': True, 'status': new_status})
-    
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
