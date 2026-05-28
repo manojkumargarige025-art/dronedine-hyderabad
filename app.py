@@ -112,9 +112,8 @@ def login():
         phone = request.form.get('phone')
         if not phone or len(phone) != 10:
             return render_template('login.html', error="Invalid phone number (10 digits required)")
-        # Store in session
         session['login_phone'] = phone
-        session['login_otp'] = "123456"  # static OTP for demo
+        session['login_otp'] = "123456"
         print(f"[DEMO] OTP for {phone}: 123456")
         return redirect(url_for('verify_otp'))
     return render_template('login.html')
@@ -130,20 +129,18 @@ def verify_otp():
             return render_template('verify_otp.html', error="Session expired. Please login again.")
         
         if str(entered_otp) == str(expected_otp) or str(entered_otp) == "123456":
-            # Get or create user
             user = User.query.filter_by(phone=phone).first()
             if not user:
                 user = User(phone=phone)
                 db.session.add(user)
                 db.session.commit()
             session['user_id'] = user.id
-            # Clear login session vars
             session.pop('login_otp', None)
             session.pop('login_phone', None)
             return redirect(url_for('home'))
         else:
             return render_template('verify_otp.html', error="Wrong OTP")
-    return render_template('verify_otp.html') where should i paste this
+    return render_template('verify_otp.html')
 
 @app.route('/logout')
 def logout():
@@ -198,6 +195,7 @@ def cart():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     return render_template('cart.html')
+
 
 # ==================== ROUTES: API ====================
 @app.route('/api/place-order', methods=['POST'])
@@ -310,8 +308,8 @@ def restaurant_stats():
     rid = session['restaurant_id']
     restaurant = Restaurant.query.filter_by(name=rid.capitalize()).first()
     if not restaurant:
-        return jsonify({'today_orders': 0, 'today_revenue': 0, 'active_orders': 0, 'drone_status': 'Ready'})
-    # Today's orders
+        return jsonify({'today_orders': 0, 'today_revenue': 0, 'active_orders': 0, 'drone_status': 'Ready', 'completed_orders': 0, 'rating': 4.5})
+    
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     orders_today = Order.query.filter(
         Order.restaurant_id == restaurant.id,
@@ -319,17 +317,18 @@ def restaurant_stats():
     ).all()
     today_orders = len(orders_today)
     today_revenue = sum(o.total_amount for o in orders_today if o.status == 'delivered')
-    # Active orders (not delivered or cancelled)
     active_orders = Order.query.filter(
         Order.restaurant_id == restaurant.id,
         Order.status.in_(['pending', 'accepted', 'preparing', 'out_for_delivery'])
     ).count()
+    completed_orders = Order.query.filter_by(restaurant_id=restaurant.id, status='delivered').count()
+    
     return jsonify({
         'today_orders': today_orders,
         'today_revenue': float(today_revenue),
         'active_orders': active_orders,
         'drone_status': 'Ready',
-        'completed_orders': Order.query.filter_by(restaurant_id=restaurant.id, status='delivered').count(),
+        'completed_orders': completed_orders,
         'rating': 4.5
     })
 
@@ -346,7 +345,6 @@ def pending_orders():
         Order.restaurant_id == restaurant.id,
         Order.status.in_(['pending', 'accepted', 'preparing', 'out_for_delivery'])
     ).order_by(Order.created_at.desc()).all()
-    # Convert to list of dicts
     result = []
     for o in orders:
         result.append({
@@ -360,6 +358,8 @@ def pending_orders():
             'password': o.unlock_code
         })
     return jsonify(result)
+
+
 # ==================== ROUTES: RESTAURANT DASHBOARD ====================
 RESTAURANT_PINS = {
     'bawarchi': '1111',
@@ -392,6 +392,7 @@ def restaurant_dashboard():
         db.session.commit()
     orders = Order.query.filter_by(restaurant_id=restaurant.id).order_by(Order.created_at.desc()).all()
     return render_template('restaurant/dashboard.html', restaurant=restaurant, orders=orders)
+
 @app.route('/api/restaurant/update-order/<int:order_id>', methods=['POST'])
 def restaurant_update_order(order_id):
     if 'restaurant_id' not in session:
@@ -460,65 +461,6 @@ def init_db():
 # ==================== RUN ====================
 with app.app_context():
     init_db()
-# ========== API: RESTAURANT STATS ==========
-@app.route('/api/restaurant/stats')
-def restaurant_stats():
-    if 'restaurant_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    rid = session['restaurant_id']
-    restaurant = Restaurant.query.filter_by(name=rid.capitalize()).first()
-    if not restaurant:
-        return jsonify({'today_orders': 0, 'today_revenue': 0, 'active_orders': 0, 'drone_status': 'Ready', 'completed_orders': 0, 'rating': 4.5})
-    
-    # Today's orders
-    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    orders_today = Order.query.filter(
-        Order.restaurant_id == restaurant.id,
-        Order.created_at >= today_start
-    ).all()
-    today_orders = len(orders_today)
-    today_revenue = sum(o.total_amount for o in orders_today if o.status == 'delivered')
-    # Active orders
-    active_orders = Order.query.filter(
-        Order.restaurant_id == restaurant.id,
-        Order.status.in_(['pending', 'accepted', 'preparing', 'out_for_delivery'])
-    ).count()
-    completed_orders = Order.query.filter_by(restaurant_id=restaurant.id, status='delivered').count()
-    
-    return jsonify({
-        'today_orders': today_orders,
-        'today_revenue': float(today_revenue),
-        'active_orders': active_orders,
-        'drone_status': 'Ready',
-        'completed_orders': completed_orders,
-        'rating': 4.5
-    })
 
-# ========== API: PENDING ORDERS FOR RESTAURANT ==========
-@app.route('/api/orders/pending')
-def pending_orders():
-    if 'restaurant_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    rid = session['restaurant_id']
-    restaurant = Restaurant.query.filter_by(name=rid.capitalize()).first()
-    if not restaurant:
-        return jsonify([])
-    orders = Order.query.filter(
-        Order.restaurant_id == restaurant.id,
-        Order.status.in_(['pending', 'accepted', 'preparing', 'out_for_delivery'])
-    ).order_by(Order.created_at.desc()).all()
-    result = []
-    for o in orders:
-        result.append({
-            'id': o.id,
-            'customer_name': o.user.name if o.user else 'Guest',
-            'customer_phone': o.user.phone if o.user else 'N/A',
-            'items': o.items,
-            'total_amount': o.total_amount,
-            'status': o.status,
-            'delivery_address': o.delivery_address,
-            'password': o.unlock_code
-        })
-    return jsonify(result)
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
