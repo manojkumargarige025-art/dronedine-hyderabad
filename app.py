@@ -399,6 +399,22 @@ def init_db():
 # ==================== RUN (tables created on app load) ====================
 with app.app_context():
     init_db()
-
+@app.route('/api/order/update-status/<int:order_id>', methods=['POST'])
+def update_order_status(order_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.get_json()
+    new_status = data.get('status')
+    if new_status not in ['delivered', 'cancelled']:
+        return jsonify({'error': 'Invalid status'}), 400
+    order = Order.query.get_or_404(order_id)
+    if order.user_id != session['user_id']:
+        return jsonify({'error': 'Unauthorized'}), 403
+    order.status = new_status
+    if new_status == 'delivered':
+        order.delivered_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify({'success': True, 'status': new_status})
+    
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
