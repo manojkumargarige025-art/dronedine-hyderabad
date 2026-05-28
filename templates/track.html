@@ -261,7 +261,7 @@
         <div class="cam-card">
             <div class="cam-header"><i class="fas fa-video"></i> Live Drone FPV <span style="font-size: 0.7rem; margin-left: auto;">REC <i class="fas fa-circle" style="color: red;"></i></span></div>
             <div class="cam-feed" id="droneCamFeed">
-                <div class="cam-placeholder"><i class="fas fa-drone"></i><div>Waiting for drone dispatch...</div></div>
+                <div class="cam-placeholder"><i class="fas fa-clock"></i><div>Waiting for drone dispatch...</div></div>
                 <div class="cam-overlay" id="camOverlay">--</div>
             </div>
         </div>
@@ -321,7 +321,6 @@
         }
     }
 
-    // Initialize map (static parts)
     function initMap() {
         map = L.map('trackingMap').setView([kitchenLat, kitchenLng], 13);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -331,15 +330,12 @@
         L.marker([destLat, destLng]).addTo(map).bindPopup('Your drop zone');
         L.polyline([[kitchenLat, kitchenLng], [destLat, destLng]], { color: '#f97316', weight: 3, dashArray: '8, 8' }).addTo(map);
         map.fitBounds([[kitchenLat, kitchenLng], [destLat, destLng]]);
-        // Green zone circle
         L.circle([17.4300, 78.3450], { color: '#f97316', weight: 1, fillColor: '#f97316', fillOpacity: 0.05, radius: 3000 }).addTo(map);
-        // Drone marker (initially at kitchen, but hidden until animation starts)
         const droneIcon = L.divIcon({ html: '<i class="fas fa-drone" style="font-size:32px; color:#f97316;"></i>', iconSize: [32, 32] });
         droneMarker = L.marker([kitchenLat, kitchenLng], { icon: droneIcon }).addTo(map);
-        droneMarker.setOpacity(0); // hidden until animation starts
+        droneMarker.setOpacity(0); // hidden until dispatch
     }
 
-    // Drone animation (only called when status allows)
     function startDroneAnimation() {
         if (animationStarted) return;
         animationStarted = true;
@@ -375,9 +371,12 @@
         }
 
         function animate(timestamp) {
-            if (!animationFrameId) return;
-            const startTime = animationFrameId === true ? timestamp : (animationFrameId.startTime || timestamp);
-            if (!animationFrameId.startTime) animationFrameId.startTime = timestamp;
+            if (!animationStarted) return;
+            if (!animationFrameId) {
+                animationFrameId = { startTime: timestamp };
+                requestAnimationFrame(animate);
+                return;
+            }
             const elapsed = timestamp - animationFrameId.startTime;
             let t = Math.min(1, elapsed / (flightTimeSec * 1000));
             const lat = start[0] + (end[0] - start[0]) * t;
@@ -388,16 +387,15 @@
             if (t < 1) {
                 requestAnimationFrame(animate);
             } else {
-                // Drone landed – show unlock section
+                // Drone landed
                 document.getElementById('unlockSection').style.display = 'block';
                 if (droneCamFeed) {
                     droneCamFeed.innerHTML = `<div class="cam-placeholder"><i class="fas fa-check-circle"></i><div>Drone landed – awaiting PIN</div></div><div class="cam-overlay">📍 At your location</div>`;
                 }
-                // Do NOT auto-update order status here – remove that call.
+                animationStarted = false;
                 animationFrameId = null;
             }
         }
-        animationFrameId = { startTime: null };
         requestAnimationFrame(animate);
     }
 
@@ -409,22 +407,21 @@
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
-    // Poll order status and start animation only when restaurant dispatches
     function checkStatusAndStart() {
         fetch(`/api/order/${orderId}`)
             .then(res => res.json())
             .then(data => {
                 const status = data.status;
                 updateTimeline(status);
-                if (!animationStarted && (status === 'out_for_delivery' || status === 'accepted')) {
-                    // Start animation when restaurant dispatches (or accepted, choose whichever you prefer)
+                if (!animationStarted && status === 'out_for_delivery') {
+                    // Only start animation when drone is dispatched
                     if (statusCheckInterval) clearInterval(statusCheckInterval);
                     startDroneAnimation();
                 } else if (status === 'delivered') {
                     document.getElementById('unlockSection').style.display = 'block';
                     if (statusCheckInterval) clearInterval(statusCheckInterval);
                 } else {
-                    // Show waiting message on camera feed
+                    // Keep waiting message
                     const camFeed = document.getElementById('droneCamFeed');
                     if (camFeed && !animationStarted) {
                         camFeed.innerHTML = `<div class="cam-placeholder"><i class="fas fa-clock"></i><div>Waiting for restaurant to dispatch your order...</div></div><div class="cam-overlay">--</div>`;
