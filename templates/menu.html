@@ -439,14 +439,19 @@
     }
 
     function addToCart(name, price) {
-        const existing = cart.find(item => item.name === name);
-        if (existing) {
-            existing.quantity = (existing.quantity || 1) + 1;
-        } else {
-            cart.push({ name: name, price: parseFloat(price), quantity: 1 });
-        }
-        saveCart();
+    const existing = cart.find(item => item.name === name);
+    if (existing) {
+        existing.quantity = (existing.quantity || 1) + 1;
+    } else {
+        cart.push({ 
+            name: name, 
+            price: parseFloat(price), 
+            quantity: 1,
+            restaurant_id: {{ restaurant.id }}   // ✅ add this line
+        });
     }
+    saveCart();
+}
 
     // Add to cart buttons
     document.querySelectorAll(".btn-add").forEach(btn => {
