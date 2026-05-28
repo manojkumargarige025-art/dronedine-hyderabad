@@ -1,49 +1,126 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DroneDine Operator Panel</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        body { font-family: Arial; background: #0a1a2f; color: white; padding: 20px; }
-        .order-card { background: #1e293b; border-radius: 20px; padding: 15px; margin-bottom: 15px; }
-        button { background: #f59e0b; border: none; padding: 8px 16px; border-radius: 40px; margin-right: 10px; cursor: pointer; }
-        .arrived { border-left: 4px solid #10b981; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0a1a2f;
+            color: white;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #f59e0b;
+        }
+        .order-card {
+            background: #1e293b;
+            border-radius: 20px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #f59e0b;
+        }
+        .order-card.arrived {
+            border-left-color: #10b981;
+            background: #1e2a3a;
+        }
+        button {
+            background: #f59e0b;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 40px;
+            margin-right: 10px;
+            margin-top: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .whatsapp-btn {
+            background: #25D366;
+            color: white;
+        }
+        .call-btn {
+            background: #3b82f6;
+            color: white;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            margin-left: 8px;
+        }
+        .arrived-badge {
+            background: #10b981;
+        }
+        .pending-badge {
+            background: #f59e0b;
+            color: #0a1a2f;
+        }
     </style>
 </head>
 <body>
-<h1>🚁 Drone Command Center</h1>
-<div id="ordersList">Loading orders...</div>
+<div class="container">
+    <h1>🚁 Drone Command Center</h1>
+    <div id="ordersList">Loading orders...</div>
+</div>
+
 <script>
+    // Your demo phone number (hardcoded for T‑Hub presentation)
+    const DEMO_PHONE = "9493474326";
+
     async function loadOrders() {
-        const res = await fetch('/api/orders');
-        const orders = await res.json();
-        const container = document.getElementById('ordersList');
-        if (orders.length === 0) {
-            container.innerHTML = '<p>No active orders</p>';
-            return;
+        try {
+            const response = await fetch('/api/orders');
+            const orders = await response.json();
+            const container = document.getElementById('ordersList');
+            if (!orders.length) {
+                container.innerHTML = '<p>No active orders yet. Place an order from the customer app.</p>';
+                return;
+            }
+            container.innerHTML = orders.map(order => `
+                <div class="order-card ${order.arrived ? 'arrived' : ''}">
+                    <strong>Order #${order.id}</strong>
+                    <span class="status-badge ${order.arrived ? 'arrived-badge' : 'pending-badge'}">
+                        ${order.arrived ? '✅ Drone Arrived' : '🚁 In Flight / Pending'}
+                    </span>
+                    <br>
+                    Customer: ${order.customer_name}<br>
+                    Phone: ${order.customer_phone}<br>
+                    Address: ${order.customer_address}<br>
+                    Status: ${order.status}<br>
+                    <button class="whatsapp-btn" onclick="notifyCustomer(${order.id}, '${order.customer_name}')">
+                        📱 WhatsApp Customer
+                    </button>
+                    <button class="call-btn" onclick="callCustomer()">
+                        📞 Call Customer
+                    </button>
+                </div>
+            `).join('');
+        } catch (err) {
+            console.error(err);
+            document.getElementById('ordersList').innerHTML = '<p>Error loading orders. Make sure backend is running.</p>';
         }
-        container.innerHTML = orders.map(order => `
-            <div class="order-card ${order.arrived ? 'arrived' : ''}">
-                <strong>Order #${order.id}</strong><br>
-                Customer: ${order.customer_name}<br>
-                Phone: ${order.customer_phone}<br>
-                Address: ${order.customer_address}<br>
-                Status: ${order.status}<br>
-                Drone Arrived: ${order.arrived ? '✅ Yes' : '⏳ In flight'}<br>
-                <button onclick="notifyCustomer('${order.customer_phone}', ${order.id})">📱 WhatsApp Customer</button>
-                <button onclick="callCustomer('${order.customer_phone}')">📞 Call Customer</button>
-            </div>
-        `).join('');
     }
-    function notifyCustomer(phone, orderId) {
-        const msg = `Your DroneDine order #${orderId} has arrived. Please use your 4-digit PIN to unlock the box.`;
-        window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+
+    function notifyCustomer(orderId, customerName) {
+        const message = `🚁 DroneDine: Your order #${orderId} has arrived at your location. Please use your 4-digit PIN to unlock the box. Enjoy your meal!`;
+        // Use your demo number for all notifications (perfect for live presentation)
+        window.open(`https://wa.me/91${DEMO_PHONE}?text=${encodeURIComponent(message)}`, '_blank');
     }
-    function callCustomer(phone) {
-        window.location.href = `tel:+91${phone}`;
+
+    function callCustomer() {
+        // Opens phone dialer with your demo number
+        window.location.href = `tel:+91${DEMO_PHONE}`;
     }
+
+    // Refresh every 5 seconds
     loadOrders();
-    setInterval(loadOrders, 5000); // refresh every 5 seconds
+    setInterval(loadOrders, 5000);
 </script>
 </body>
 </html>
