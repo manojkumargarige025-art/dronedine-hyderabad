@@ -187,6 +187,12 @@ def track_order(order_id):
         return "Unauthorized", 403
     return render_template('track.html', order=order)
 
+@app.route('/restaurant/<int:restaurant_id>')
+def restaurant_menu(restaurant_id):
+    restaurant = Restaurant.query.get_or_404(restaurant_id)
+    menu_items = MenuItem.query.filter_by(restaurant_id=restaurant_id).all()
+    return render_template('menu.html', restaurant=restaurant, items=menu_items)
+
 @app.route('/profile')
 def profile():
     if 'user_id' not in session:
