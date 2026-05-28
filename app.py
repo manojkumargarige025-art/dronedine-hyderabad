@@ -29,11 +29,11 @@ CORS(app, supports_credentials=True)
 db = SQLAlchemy(app)
 
 # Session security settings
-app.config['SESSION_COOKIE_SECURE'] = False   # Render uses HTTPS but this is fine for demo
+app.config['SESSION_COOKIE_SECURE'] = False
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
-# Mapbox token (your existing one)
+# Mapbox token
 MAPBOX_TOKEN = "pk.eyJ1IjoibWFub2oyNTgwOCIsImEiOiJjbXBsZ3B3NmoxYzJmMnFzbHV6Zmt1NnNwIn0.hzkSfnkPO_KRL3urJbFtxA"
 
 
@@ -112,7 +112,7 @@ def login():
         phone = request.form.get('phone')
         if not phone or len(phone) != 10:
             return render_template('login.html', error="Invalid phone number")
-        otp = "123456"  # always 123456 for demo
+        otp = "123456"
         session['login_otp'] = otp
         session['login_phone'] = phone
         print(f"[DEMO] OTP for {phone}: {otp}")
@@ -165,7 +165,6 @@ def profile():
         return redirect(url_for('login'))
     user = User.query.get(session['user_id'])
     if not user:
-        # Session user_id is invalid – clear session and redirect to login
         session.clear()
         return redirect(url_for('login'))
     orders = Order.query.filter_by(user_id=user.id).order_by(Order.created_at.desc()).all()
@@ -186,21 +185,6 @@ def track_order(order_id):
     if order.user_id != session['user_id']:
         return "Unauthorized", 403
     return render_template('track.html', order=order)
-
-@app.route('/restaurant/<int:restaurant_id>')
-def restaurant_menu(restaurant_id):
-    restaurant = Restaurant.query.get_or_404(restaurant_id)
-    menu_items = MenuItem.query.filter_by(restaurant_id=restaurant_id).all()
-    return render_template('menu.html', restaurant=restaurant, items=menu_items)
-
-@app.route('/profile')
-def profile():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    user = User.query.get(session['user_id'])
-    orders = Order.query.filter_by(user_id=user.id).order_by(Order.created_at.desc()).all()
-    co2_saved = calculate_co2_saved(orders)
-    return render_template('profile.html', user=user, orders=orders, co2_saved=co2_saved)
 
 
 # ==================== ROUTES: API ====================
@@ -226,7 +210,6 @@ def place_order():
     )
     db.session.add(order)
     db.session.commit()
-    # Add initial tracking record
     tracking = DroneTracking(
         order_id=order.id,
         latitude=data['latitude'],
