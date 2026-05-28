@@ -76,7 +76,7 @@
             100% { left: 110%; top: 60px; }
         }
         .hero h1 {
-            font-size: 3.5rem;
+            font-size: 3rem;
             font-weight: 800;
             letter-spacing: -1px;
             line-height: 1.2;
@@ -85,7 +85,7 @@
         }
         .hero h1 span { color: #f97316; }
         .hero-sub {
-            font-size: 1.2rem;
+            font-size: 1rem;
             color: #475569;
             margin-bottom: 2rem;
         }
@@ -98,7 +98,7 @@
         .btn-primary {
             background: #f97316;
             color: white;
-            padding: 0.8rem 2rem;
+            padding: 0.8rem 1.8rem;
             border-radius: 40px;
             text-decoration: none;
             font-weight: 600;
@@ -106,7 +106,7 @@
         .btn-outline {
             border: 1.5px solid #f97316;
             color: #f97316;
-            padding: 0.8rem 2rem;
+            padding: 0.8rem 1.8rem;
             border-radius: 40px;
             text-decoration: none;
             font-weight: 600;
@@ -116,16 +116,29 @@
             display: flex;
             justify-content: space-between;
             flex-wrap: wrap;
-            gap: 1.5rem;
+            gap: 1rem;
             background: #f8fafc;
             border-radius: 60px;
-            padding: 1.5rem 2rem;
+            padding: 1.5rem 1rem;
+            margin: 2rem 0;
+            text-align: center;
+        }
+        .stat-item {
+            flex: 1;
+            min-width: 100px;
+        }
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #f97316;
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            color: #475569;
+        }
+        .search-section {
             margin: 2rem 0;
         }
-        .stat-item { text-align: center; flex: 1; min-width: 100px; }
-        .stat-number { font-size: 1.8rem; font-weight: 800; color: #f97316; }
-        .stat-label { font-size: 0.85rem; color: #475569; }
-        .search-section { margin: 2rem 0; }
         .search-box {
             width: 100%;
             padding: 1rem 1.5rem;
@@ -153,21 +166,26 @@
         }
         .restaurant-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 25px -10px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
         }
         .card-img {
             height: 180px;
             background-size: cover;
             background-position: center;
         }
-        .card-content { padding: 1rem; }
+        .card-content {
+            padding: 1rem;
+        }
         .restaurant-name {
             font-size: 1.2rem;
             font-weight: 700;
             display: flex;
             justify-content: space-between;
         }
-        .rating { color: #fbbf24; font-size: 0.9rem; }
+        .rating {
+            color: #fbbf24;
+            font-size: 0.9rem;
+        }
         .restaurant-cuisine {
             color: #64748b;
             font-size: 0.85rem;
@@ -183,58 +201,19 @@
             font-weight: 600;
             margin-top: 0.5rem;
         }
-        .grid-4 {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 1.5rem;
-            margin: 2rem 0;
-        }
-        .card-step, .card-benefit {
-            text-align: center;
-            padding: 1.5rem;
-            background: #f8fafc;
-            border-radius: 20px;
-        }
-        .icon-large { font-size: 2rem; margin-bottom: 0.5rem; }
-        .comparison-table {
-            background: #f8fafc;
-            border-radius: 24px;
-            padding: 1rem;
-            margin: 2rem 0;
-        }
-        .comparison-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 0.8rem 0;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        .comparison-dronedine { color: #f97316; font-weight: 600; }
         .footer {
             background: #f8fafc;
             border-radius: 24px;
-            padding: 2rem;
+            padding: 1.5rem;
             margin-top: 3rem;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1.5rem;
-        }
-        .footer a {
-            color: #64748b;
-            text-decoration: none;
-            display: block;
-            margin: 0.3rem 0;
-        }
-        .footer a:hover { color: #f97316; }
-        .copyright {
             text-align: center;
-            padding: 1rem;
             font-size: 0.75rem;
             color: #94a3b8;
         }
         @media (max-width: 768px) {
             .hero h1 { font-size: 2rem; }
             .navbar { flex-direction: column; text-align: center; }
-            .stats-bar { flex-direction: column; align-items: center; }
+            .stats-bar { flex-direction: column; }
         }
     </style>
 </head>
@@ -274,8 +253,16 @@
         <div class="restaurant-grid" id="restaurantGrid">
             {% for restaurant in restaurants %}
             <div class="restaurant-card" data-name="{{ restaurant.name|lower }}" data-cuisine="{{ restaurant.cuisine|lower }}" onclick="window.location.href='{{ url_for('restaurant_menu', restaurant_id=restaurant.id) }}'">
-                <!-- Fixed image URLs per restaurant name -->
-                <div class="card-img" style="background-image: url('{% if restaurant.name == 'Bawarchi' %}https://images.pexels.com/photos/1624487/pexels-photo-1624487.jpeg?w=400&h=300&fit=crop{% elif restaurant.name == 'Paradise' %}https://images.pexels.com/photos/1624487/pexels-photo-1624487.jpeg?w=400&h=300&fit=crop{% else %}https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?w=400&h=300&fit=crop{% endif %}');"></div>
+                <!-- Image per restaurant -->
+                <div class="card-img" style="background-image: url('
+                    {%- if restaurant.name == 'Bawarchi' -%}
+                        https://images.pexels.com/photos/1624487/pexels-photo-1624487.jpeg?w=400&h=300&fit=crop
+                    {%- elif restaurant.name == 'Paradise' -%}
+                        https://images.pexels.com/photos/1596888/pexels-photo-1596888.jpeg?w=400&h=300&fit=crop
+                    {%- else -%}
+                        https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?w=400&h=300&fit=crop
+                    {%- endif -%}
+                ');"></div>
                 <div class="card-content">
                     <div class="restaurant-name">{{ restaurant.name }} <span class="rating">⭐ {{ restaurant.rating }}</span></div>
                     <div class="restaurant-cuisine">{{ restaurant.cuisine }}</div>
@@ -285,53 +272,31 @@
             {% endfor %}
         </div>
 
-        <h2 class="section-title">How DroneDine Works</h2>
-        <div class="grid-4">
-            <div class="card-step"><div class="icon-large">📱</div><h3>1. Order Food</h3><p>Browse & order in seconds</p></div>
-            <div class="card-step"><div class="icon-large">🍳</div><h3>2. Prepared Fresh</h3><p>Restaurant cooks with care</p></div>
-            <div class="card-step"><div class="icon-large">🚁</div><h3>3. Drone Flies</h3><p>Autonomous flight (3km zone)</p></div>
-            <div class="card-step"><div class="icon-large">🔓</div><h3>4. Unlock & Enjoy</h3><p>4‑digit code opens the box</p></div>
-        </div>
-
-        <h2 class="section-title">Why Choose DroneDine?</h2>
-        <div class="grid-4">
-            <div class="card-benefit"><div class="icon-large">⚡</div><h3>Lightning Fast</h3><p>15‑min guaranteed</p></div>
-            <div class="card-benefit"><div class="icon-large">🌱</div><h3>Zero Emissions</h3><p>100% electric drones</p></div>
-            <div class="card-benefit"><div class="icon-large">📍</div><h3>Live Tracking</h3><p>Watch your food fly</p></div>
-            <div class="card-benefit"><div class="icon-large">🔒</div><h3>Safe & Secure</h3><p>PIN‑protected box</p></div>
-        </div>
-
-        <div class="comparison-table">
-            <div class="comparison-row"><div style="font-weight:600; width:40%">Delivery Time</div><div>30-45 min</div><div class="comparison-dronedine">15 min</div></div>
-            <div class="comparison-row"><div style="font-weight:600; width:40%">Traffic Delays</div><div>Yes</div><div class="comparison-dronedine">No – flies direct</div></div>
-            <div class="comparison-row"><div style="font-weight:600; width:40%">Emissions</div><div>Carbon heavy</div><div class="comparison-dronedine">Zero emissions</div></div>
-            <div class="comparison-row"><div style="font-weight:600; width:40%">Food Temperature</div><div>Often cold</div><div class="comparison-dronedine">Always hot</div></div>
+        <!-- Simplified footer -->
+        <div class="footer">
+            <p>© 2026 DroneDine Hyderabad | 5% Commission | Zero GST Burden</p>
         </div>
     </div>
-
-    <div class="footer container">
-        <div><h3>DroneDine</h3><p>Revolutionising food delivery in Hyderabad.</p></div>
-        <div><h4>Quick Links</h4><a href="#">How It Works</a><a href="#">For Restaurants</a><a href="/track">Track Order</a></div>
-        <div><h4>Contact</h4><a href="mailto:hello@dronedine.in">📧 hello@dronedine.in</a><a href="tel:+919876543210">📱 +91 98765 43210</a><p>📍 Hyderabad, TS</p></div>
-        <div><h4>Follow Us</h4><a href="#"><i class="fab fa-linkedin"></i> LinkedIn</a><a href="#"><i class="fab fa-instagram"></i> Instagram</a><a href="#"><i class="fab fa-twitter"></i> Twitter</a></div>
-    </div>
-    <div class="copyright">© 2026 DroneDine – Demo Mode. Launching soon with T‑Hub support.</div>
 
     <script>
+        // Search filter
         const searchInput = document.getElementById('searchInput');
         const cards = document.querySelectorAll('.restaurant-card');
-        searchInput.addEventListener('input', function() {
-            const term = this.value.toLowerCase();
-            cards.forEach(card => {
-                const name = card.getAttribute('data-name') || '';
-                const cuisine = card.getAttribute('data-cuisine') || '';
-                if (name.includes(term) || cuisine.includes(term)) {
-                    card.style.display = '';
-                } else {
-                    card.style.display = 'none';
-                }
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                const term = this.value.toLowerCase();
+                cards.forEach(card => {
+                    const name = card.getAttribute('data-name') || '';
+                    const cuisine = card.getAttribute('data-cuisine') || '';
+                    if (name.includes(term) || cuisine.includes(term)) {
+                        card.style.display = '';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
             });
-        });
+        }
+        // Animated counters
         function animateCounter(elId, target) {
             const el = document.getElementById(elId);
             if (!el) return;
