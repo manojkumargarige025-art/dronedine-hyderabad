@@ -179,18 +179,35 @@
     }
 
     function startDroneAnimation() {
-        if (!droneMarker) return;
-        const start = kitchenCoords, end = destinationCoords, duration = 8000, startTime = performance.now();
-        function animate(now) {
-            let t = Math.min(1, (now - startTime) / duration);
-            const lat = start[0] + (end[0] - start[0]) * t;
-            const lng = start[1] + (end[1] - start[1]) * t;
-            droneMarker.setLatLng([lat, lng]);
-            if (t < 1) requestAnimationFrame(animate);
-            else { droneMarker.setLatLng(end); showToast('Drone has arrived! Enter your unlock code.'); }
+    if (!droneMarker) return;
+    const start = kitchenCoords, end = destinationCoords, duration = 8000, startTime = performance.now();
+    function animate(now) {
+        let t = Math.min(1, (now - startTime) / duration);
+        const lat = start[0] + (end[0] - start[0]) * t;
+        const lng = start[1] + (end[1] - start[1]) * t;
+        droneMarker.setLatLng([lat, lng]);
+        if (t < 1) {
+            requestAnimationFrame(animate);
+        } else {
+            droneMarker.setLatLng(end);
+            showToast('Drone has arrived! Enter your unlock code.');
+            // NEW: Send a request to backend to mark order as delivered
+            fetch(`/api/order/update-status/${orderId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'delivered' })
+            }).then(res => res.json()).then(data => {
+                if (data.success) {
+                    // Force refresh of tracking data to update timeline
+                    fetchTracking();
+                    showToast('Order delivered successfully!');
+                    document.getElementById('unlockSection').style.display = 'block'; // ensure visible
+                }
+            }).catch(err => console.warn('Status update failed', err));
         }
-        requestAnimationFrame(animate);
     }
+    requestAnimationFrame(animate);
+}
 
     document.getElementById('unlockBtn').onclick = async () => {
         const pin = document.getElementById('pinInput').value;
