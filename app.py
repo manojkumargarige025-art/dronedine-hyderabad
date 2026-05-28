@@ -196,7 +196,37 @@ def cart():
         return redirect(url_for('login'))
     return render_template('cart.html')
 
+@app.route('/api/orders')
+def list_orders():
+    """All orders for admin — supports status, payment, and search filters."""
+    status = request.args.get('status', '').strip()
+    payment = request.args.get('payment', '').strip()
+    search = request.args.get('q', '').strip()
 
+    conn = db.get_connection()
+    cursor = conn.cursor()
+
+    query = "SELECT * FROM orders WHERE 1=1"
+    params = []
+
+    if status:
+        query += " AND status = ?"
+        params.append(status)
+
+    if payment:
+        query += " AND payment_status = ?"
+        params.append(payment)
+
+    if search:
+        query += " AND (customer_name LIKE ? OR customer_phone LIKE ? OR CAST(id AS TEXT) = ?)"
+        like = f"%{search}%"
+        params.extend([like, like, search])
+
+    query += " ORDER BY created_at DESC"
+    cursor.execute(query, params)
+    orders = [row_to_dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return jsonify(orders)
 # ==================== ROUTES: API ====================
 @app.route('/api/place-order', methods=['POST'])
 def place_order():
