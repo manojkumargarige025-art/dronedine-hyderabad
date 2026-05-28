@@ -415,10 +415,10 @@
                     droneCamFeed.innerHTML = `<div class="cam-placeholder"><i class="fas fa-check-circle"></i><div>Drone landed – awaiting PIN</div></div><div class="cam-overlay">📍 At your location</div>`;
                 }
                 fetch('/api/order/update-status/' + orderId, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: 'delivered' })
-                }).catch(e => console.warn(e));
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'delivered' })
+}).catch(e => console.warn(e));
             }
         }
         animationFrameId = requestAnimationFrame(step);
