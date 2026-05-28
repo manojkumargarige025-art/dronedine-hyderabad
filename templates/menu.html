@@ -8,23 +8,19 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #ffffff;
-            color: #1e293b;
-        }
+        body { font-family: 'Inter', sans-serif; background: #ffffff; color: #1e293b; }
         .navbar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1rem 5%;
-            max-width: 1200px;
+            padding: 1.2rem 5%;
+            max-width: 1400px;
             margin: 0 auto;
             flex-wrap: wrap;
             gap: 1rem;
         }
         .logo {
-            font-size: 1.5rem;
+            font-size: 1.8rem;
             font-weight: 700;
             background: linear-gradient(135deg, #f97316, #fbbf24);
             -webkit-background-clip: text;
@@ -33,19 +29,21 @@
         }
         .nav-links {
             display: flex;
-            gap: 1.5rem;
+            gap: 2rem;
             align-items: center;
+            flex-wrap: wrap;
         }
         .nav-links a {
             text-decoration: none;
             color: #334155;
             font-weight: 500;
+            transition: color 0.2s;
         }
-        .nav-links a:hover { color: #f97316; }
+        .nav-links a:hover, .nav-links a.active { color: #f97316; }
         .btn-cart {
             background: #f97316;
             color: white;
-            padding: 0.4rem 1rem;
+            padding: 0.5rem 1.2rem;
             border-radius: 40px;
             text-decoration: none;
             font-weight: 600;
@@ -56,21 +54,18 @@
             padding: 1rem;
         }
         .restaurant-header {
+            background: #f8fafc;
+            border-radius: 32px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            background: #f8fafc;
-            border-radius: 24px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
         }
         .restaurant-name {
             font-size: 2rem;
             font-weight: 700;
-        }
-        .rating {
-            color: #fbbf24;
         }
         .drone-badge {
             background: #fef3c7;
@@ -86,43 +81,27 @@
         }
         .menu-card {
             background: white;
-            border-radius: 20px;
+            border-radius: 24px;
             overflow: hidden;
             border: 1px solid #e2e8f0;
             transition: transform 0.2s;
         }
-        .menu-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
-        }
+        .menu-card:hover { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
         .menu-img {
             height: 160px;
             background-size: cover;
             background-position: center;
         }
-        .menu-content {
-            padding: 1rem;
-        }
-        .menu-name {
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
-        .menu-desc {
-            font-size: 0.8rem;
-            color: #64748b;
-            margin: 0.3rem 0;
-        }
+        .menu-content { padding: 1rem; }
+        .menu-name { font-size: 1.1rem; font-weight: 600; }
+        .menu-desc { font-size: 0.8rem; color: #64748b; margin: 0.3rem 0; }
         .menu-footer {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-top: 0.8rem;
         }
-        .price {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: #f97316;
-        }
+        .price { font-size: 1.2rem; font-weight: 700; color: #f97316; }
         .btn-add {
             background: #f97316;
             color: white;
@@ -133,12 +112,13 @@
             font-weight: 600;
         }
         .footer {
-            text-align: center;
+            background: #f8fafc;
+            border-radius: 24px;
             padding: 1.5rem;
-            font-size: 0.8rem;
-            color: #94a3b8;
-            border-top: 1px solid #e2e8f0;
             margin-top: 2rem;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #94a3b8;
         }
         @media (max-width: 640px) {
             .navbar { flex-direction: column; text-align: center; }
@@ -152,8 +132,8 @@
         <div class="nav-links">
             <a href="/">Home</a>
             <a href="/track">Track Order</a>
-            <a href="/login">Login</a>
-            <a href="#" class="btn-cart" onclick="alert('Cart will be implemented soon')">Cart</a>
+            <a href="/profile">My Profile</a>
+            <a href="/logout" class="btn-cart" style="background:#dc2626;">Logout</a>
         </div>
     </nav>
 
@@ -161,7 +141,7 @@
         <div class="restaurant-header">
             <div>
                 <div class="restaurant-name">{{ restaurant.name }}</div>
-                <div class="restaurant-cuisine">{{ restaurant.cuisine }} • <span class="rating">⭐ {{ restaurant.rating }}</span></div>
+                <div>{{ restaurant.cuisine }} • ⭐ {{ restaurant.rating }}</div>
                 <div class="drone-badge" style="margin-top:0.5rem;">🚁 Drone delivery within {{ restaurant.delivery_time }} min</div>
             </div>
             <div class="drone-badge">Drone Ready</div>
@@ -189,7 +169,6 @@
     </div>
 
     <script>
-        // Simple add-to-cart demo (replace with real cart logic later)
         document.querySelectorAll('.btn-add').forEach(btn => {
             btn.addEventListener('click', () => {
                 const name = btn.getAttribute('data-name');
