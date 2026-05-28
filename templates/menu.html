@@ -1,182 +1,490 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{ restaurant.name }} - DroneDine</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background: #ffffff; color: #1e293b; }
+        :root {
+            --primary: #f97316;
+            --primary-dark: #ea580c;
+            --white: #ffffff;
+            --bg: #f8fafc;
+            --text: #0f172a;
+            --muted: #64748b;
+            --border: #e2e8f0;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #fafafa;
+            color: var(--text);
+        }
+        /* NAVBAR */
         .navbar {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 1.2rem 5%;
-            max-width: 1400px;
-            margin: 0 auto;
-            flex-wrap: wrap;
-            gap: 1rem;
+            background: white;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
         .logo {
-            font-size: 1.8rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #f97316, #fbbf24);
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #f97316, #fb923c);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
         }
         .nav-links {
             display: flex;
-            gap: 2rem;
             align-items: center;
-            flex-wrap: wrap;
+            gap: 1.5rem;
         }
         .nav-links a {
             text-decoration: none;
             color: #334155;
-            font-weight: 500;
-            transition: color 0.2s;
-        }
-        .nav-links a:hover, .nav-links a.active { color: #f97316; }
-        .btn-cart {
-            background: #f97316;
-            color: white;
-            padding: 0.5rem 1.2rem;
-            border-radius: 40px;
-            text-decoration: none;
             font-weight: 600;
+            transition: 0.3s;
         }
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+        .logout-btn {
+            background: #dc2626;
+            color: white !important;
+            padding: 0.7rem 1.2rem;
+            border-radius: 40px;
+        }
+        /* CONTAINER */
         .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 1rem;
+            max-width: 1400px;
+            margin: auto;
+            padding: 2rem;
         }
+        /* RESTAURANT HEADER */
         .restaurant-header {
-            background: #f8fafc;
-            border-radius: 32px;
-            padding: 1.5rem;
+            background: white;
+            border-radius: 35px;
+            padding: 2rem;
             margin-bottom: 2rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.05);
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
+            gap: 2rem;
         }
-        .restaurant-name {
-            font-size: 2rem;
+        .restaurant-left h1 {
+            font-size: 3rem;
+            font-weight: 800;
+        }
+        .restaurant-info {
+            margin-top: 0.8rem;
+            color: var(--muted);
+            font-size: 1rem;
+        }
+        .restaurant-tags {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+        .tag {
+            background: #fff7ed;
+            color: var(--primary-dark);
+            padding: 0.6rem 1rem;
+            border-radius: 50px;
+            font-size: 0.9rem;
             font-weight: 700;
         }
-        .drone-badge {
-            background: #fef3c7;
-            color: #b45309;
-            padding: 0.3rem 1rem;
-            border-radius: 40px;
-            font-size: 0.8rem;
+        .restaurant-rating {
+            background: #16a34a;
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 25px;
+            font-size: 1.3rem;
+            font-weight: 800;
         }
+        /* TITLE */
+        .section-title {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 2rem;
+        }
+        /* MENU GRID */
         .menu-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 2rem;
         }
+        /* MENU CARD */
         .menu-card {
             background: white;
-            border-radius: 24px;
+            border-radius: 30px;
             overflow: hidden;
-            border: 1px solid #e2e8f0;
-            transition: transform 0.2s;
+            position: relative;
+            transition: 0.4s;
+            border: 1px solid #f1f5f9;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
         }
-        .menu-card:hover { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+        .menu-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.12);
+        }
+        /* IMAGE */
         .menu-img {
-            height: 160px;
+            height: 240px;
             background-size: cover;
             background-position: center;
+            position: relative;
         }
-        .menu-content { padding: 1rem; }
-        .menu-name { font-size: 1.1rem; font-weight: 600; }
-        .menu-desc { font-size: 0.8rem; color: #64748b; margin: 0.3rem 0; }
-        .menu-footer {
+        .menu-img::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);
+        }
+        /* BADGES */
+        .top-badges {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            display: flex;
+            gap: 0.5rem;
+            z-index: 2;
+        }
+        .badge {
+            padding: 0.45rem 0.9rem;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        .offer {
+            background: #f97316;
+            color: white;
+        }
+        .veg {
+            background: white;
+            color: #16a34a;
+        }
+        /* FAVORITE */
+        .favorite-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.25);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 2;
+            cursor: pointer;
+        }
+        /* DELIVERY TIME */
+        .delivery-time {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 0.6rem 1rem;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            z-index: 2;
+        }
+        /* CONTENT */
+        .menu-content {
+            padding: 1.4rem;
+        }
+        .menu-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        .menu-name {
+            font-size: 1.35rem;
+            font-weight: 800;
+        }
+        .food-type {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-top: 0.2rem;
+        }
+        .rating {
+            background: #16a34a;
+            color: white;
+            padding: 0.5rem 0.8rem;
+            border-radius: 14px;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+        .menu-desc {
+            margin-top: 1rem;
+            color: #64748b;
+            line-height: 1.6;
+            min-height: 60px;
+        }
+        .price-row {
+            margin-top: 1.5rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 0.8rem;
         }
-        .price { font-size: 1.2rem; font-weight: 700; color: #f97316; }
+        .price {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #f97316;
+        }
+        .old-price {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            text-decoration: line-through;
+        }
         .btn-add {
-            background: #f97316;
+            background: linear-gradient(135deg, #f97316, #fb923c);
             color: white;
             border: none;
-            padding: 0.4rem 1rem;
-            border-radius: 40px;
+            padding: 0.85rem 1.5rem;
+            border-radius: 50px;
             cursor: pointer;
-            font-weight: 600;
+            font-weight: 700;
+            transition: 0.3s;
         }
+        .btn-add:hover {
+            transform: scale(1.08);
+            box-shadow: 0 10px 20px rgba(249,115,22,0.35);
+        }
+        /* FLOATING CART */
+        .floating-cart {
+            position: fixed;
+            right: 25px;
+            bottom: 25px;
+            width: 75px;
+            height: 75px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f97316, #fb923c);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 15px 35px rgba(249,115,22,0.35);
+            z-index: 999;
+        }
+        #cartCount {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            background: #dc2626;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+        /* FOOTER */
         .footer {
-            background: #f8fafc;
-            border-radius: 24px;
-            padding: 1.5rem;
-            margin-top: 2rem;
+            margin-top: 3rem;
+            background: white;
+            padding: 2rem;
+            border-radius: 25px;
             text-align: center;
-            font-size: 0.75rem;
             color: #94a3b8;
         }
-        @media (max-width: 640px) {
-            .navbar { flex-direction: column; text-align: center; }
-            .restaurant-name { font-size: 1.5rem; }
+        @media (max-width: 768px) {
+            .navbar {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            .restaurant-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .restaurant-left h1 {
+                font-size: 2rem;
+            }
+            .menu-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="logo">DroneDine</div>
-        <div class="nav-links">
-            <a href="/">Home</a>
-            <a href="/track">Track Order</a>
-            <a href="/profile">My Profile</a>
-            <a href="/logout" class="btn-cart" style="background:#dc2626;">Logout</a>
-        </div>
-    </nav>
 
-    <div class="container">
-        <div class="restaurant-header">
-            <div>
-                <div class="restaurant-name">{{ restaurant.name }}</div>
-                <div>{{ restaurant.cuisine }} • ⭐ {{ restaurant.rating }}</div>
-                <div class="drone-badge" style="margin-top:0.5rem;">🚁 Drone delivery within {{ restaurant.delivery_time }} min</div>
+<!-- NAVBAR -->
+<nav class="navbar">
+    <div class="logo">🚁 DroneDine</div>
+    <div class="nav-links">
+        <a href="/">Home</a>
+        <a href="/track">Track Order</a>
+        <a href="/profile">My Profile</a>
+        <a href="/cart"><i class="fas fa-cart-shopping"></i> Cart</a>
+        <a href="/logout" class="logout-btn">Logout</a>
+    </div>
+</nav>
+
+<!-- MAIN -->
+<div class="container">
+    <!-- RESTAURANT HEADER -->
+    <div class="restaurant-header">
+        <div class="restaurant-left">
+            <h1>{{ restaurant.name }}</h1>
+            <div class="restaurant-info">
+                {{ restaurant.cuisine }} • Fast Delivery • Hyderabad
             </div>
-            <div class="drone-badge">Drone Ready</div>
+            <div class="restaurant-tags">
+                <div class="tag">🚁 Drone Delivery</div>
+                <div class="tag">⏱ {{ restaurant.delivery_time }} mins</div>
+                <div class="tag">🔥 Trending</div>
+            </div>
         </div>
+        <div class="restaurant-rating">
+            ⭐ {{ restaurant.rating }}
+        </div>
+    </div>
 
-        <div class="menu-grid">
-            {% for item in items %}
-            <div class="menu-card">
-                <div class="menu-img" style="background-image: url('https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?w=400&h=300&fit=crop');"></div>
-                <div class="menu-content">
-                    <div class="menu-name">{{ item.name }}</div>
-                    <div class="menu-desc">{{ item.description or 'Freshly prepared with authentic spices' }}</div>
-                    <div class="menu-footer">
-                        <span class="price">₹{{ item.price }}</span>
-                        <button class="btn-add" data-name="{{ item.name }}" data-price="{{ item.price }}">Add to Cart</button>
-                    </div>
+    <!-- TITLE -->
+    <div class="section-title">Recommended Dishes 🍽️</div>
+
+    <!-- MENU GRID -->
+    <div class="menu-grid">
+        {% for item in items %}
+        <div class="menu-card">
+            <div class="menu-img" style="background-image: url('{{ item.image_url if item.image_url else 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=1200&auto=format&fit=crop' }}');">
+                <div class="top-badges">
+                    <span class="badge offer">20% OFF</span>
+                    <span class="badge veg">Veg</span>
+                </div>
+                <div class="favorite-btn">
+                    <i class="far fa-heart"></i>
+                </div>
+                <div class="delivery-time">
+                    🚁 {{ restaurant.delivery_time }} mins
                 </div>
             </div>
-            {% endfor %}
+            <div class="menu-content">
+                <div class="menu-top">
+                    <div>
+                        <div class="menu-name">{{ item.name }}</div>
+                        <div class="food-type">{{ restaurant.cuisine }}</div>
+                    </div>
+                    <div class="rating">⭐ 4.5</div>
+                </div>
+                <div class="menu-desc">
+                    {{ item.description or 'Freshly prepared using premium ingredients and authentic flavors.' }}
+                </div>
+                <div class="price-row">
+                    <div>
+                        <div class="price">₹{{ item.price }}</div>
+                        <div class="old-price">₹{{ item.price + 80 }}</div>
+                    </div>
+                    <button class="btn-add" data-name="{{ item.name }}" data-price="{{ item.price }}">
+                        Add +
+                    </button>
+                </div>
+            </div>
         </div>
+        {% endfor %}
     </div>
 
+    <!-- FOOTER -->
     <div class="footer">
-        <p>© 2026 DroneDine Hyderabad | 5% Commission | Zero GST Burden</p>
+        © 2026 DroneDine Hyderabad | Fast Drone Delivery | Zero GST Burden
     </div>
+</div>
 
-    <script>
-        document.querySelectorAll('.btn-add').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const name = btn.getAttribute('data-name');
-                const price = btn.getAttribute('data-price');
-                alert(`${name} added to cart (₹${price})`);
-                // In real implementation, you would update a cart sidebar and call /api/place-order later
-            });
+<!-- FLOATING CART -->
+<div class="floating-cart" onclick="window.location.href='/cart'">
+    <i class="fas fa-cart-shopping"></i>
+    <span id="cartCount">0</span>
+</div>
+
+<script>
+    // ---------- CART LOGIC (with quantity support) ----------
+    let cart = JSON.parse(localStorage.getItem("dronedine_cart")) || [];
+
+    function saveCart() {
+        localStorage.setItem("dronedine_cart", JSON.stringify(cart));
+        updateCartCount();
+    }
+
+    function updateCartCount() {
+        const countEl = document.getElementById("cartCount");
+        if (countEl) {
+            const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+            countEl.innerText = totalItems;
+        }
+    }
+
+    function addToCart(name, price) {
+        const existing = cart.find(item => item.name === name);
+        if (existing) {
+            existing.quantity = (existing.quantity || 1) + 1;
+        } else {
+            cart.push({ name: name, price: parseFloat(price), quantity: 1 });
+        }
+        saveCart();
+    }
+
+    // Add to cart buttons
+    document.querySelectorAll(".btn-add").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const name = btn.getAttribute("data-name");
+            const price = btn.getAttribute("data-price");
+            addToCart(name, price);
+            // Visual feedback
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i> Added';
+            btn.style.background = "#16a34a";
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.style.background = "linear-gradient(135deg, #f97316, #fb923c)";
+            }, 1200);
         });
-    </script>
+    });
+
+    // Favorite button toggle
+    document.querySelectorAll(".favorite-btn").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const icon = btn.querySelector("i");
+            if (icon.classList.contains("far")) {
+                icon.classList.remove("far");
+                icon.classList.add("fas");
+                icon.style.color = "#ef4444";
+            } else {
+                icon.classList.remove("fas");
+                icon.classList.add("far");
+                icon.style.color = "white";
+            }
+        });
+    });
+
+    // Initial load
+    updateCartCount();
+</script>
 </body>
 </html>
