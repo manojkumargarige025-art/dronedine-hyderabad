@@ -169,7 +169,12 @@
                 if (response.ok) {
                     alert(`Order placed! Order ID: ${result.order_id}. Unlock code: ${unlockCode}`);
                     localStorage.removeItem("dronedine_cart");
-                    window.location.href = `/track/${result.order_id}`;
+                    const orderId = Number(result.order_id);
+                    if (isNaN(orderId)) {
+                        alert('Invalid order ID received');
+                        return;
+                    }
+                    window.location.href = `/track/${orderId}`;
                 } else {
                     alert(`Error: ${result.error}`);
                 }
