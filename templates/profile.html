@@ -4,94 +4,587 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Profile - DroneDine</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; }
-        .navbar { display: flex; justify-content: space-between; align-items: center; background: white; padding: 1rem 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .logo { font-size: 1.6rem; font-weight: 700; color: #f97316; cursor: pointer; }
-        .profile-container { max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
-        .profile-header { background: white; border-radius: 28px; padding: 1.5rem; margin-bottom: 1.5rem; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .avatar { width: 80px; height: 80px; background: #f97316; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-size: 2rem; color: white; }
-        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem; }
-        .stat-card { background: #f1f5f9; border-radius: 20px; padding: 1rem; text-align: center; }
-        .stat-value { font-size: 1.8rem; font-weight: 700; color: #f97316; }
-        .section { background: white; border-radius: 28px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .section-title { font-size: 1.3rem; font-weight: 600; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; }
-        .edit-btn { background: #f97316; color: white; border: none; padding: 0.3rem 1rem; border-radius: 40px; cursor: pointer; }
-        .address-card { background: #f1f5f9; border-radius: 16px; padding: 0.8rem; margin-bottom: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
-        .modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 2000; }
-        .modal-content { background: white; border-radius: 24px; padding: 1.5rem; width: 90%; max-width: 500px; }
-        .modal-content input { width: 100%; padding: 0.8rem; margin: 0.5rem 0; border-radius: 40px; border: 1px solid #e2e8f0; }
-        .btn { background: #f97316; color: white; border: none; padding: 0.6rem; border-radius: 40px; cursor: pointer; width: 100%; }
-        .map-container { height: 200px; border-radius: 20px; margin: 1rem 0; }
-        .toast { position: fixed; bottom: 20px; left: 20px; background: #1e293b; color: white; padding: 0.8rem 1.5rem; border-radius: 40px; z-index: 2000; transform: translateX(-120%); transition: 0.3s; }
-        .toast.show { transform: translateX(0); }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: linear-gradient(135deg, 
+ 0%, 
+ 100%); 
+            color: 
+; 
+            min-height: 100vh;
+        }
+        
+        /* Navbar */
+        .navbar { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            background: white; 
+            padding: 1rem 2rem; 
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .logo { 
+            font-size: 1.6rem; 
+            font-weight: 700; 
+            color: 
+; 
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .nav-links a {
+            text-decoration: none;
+            color: 
+;
+            margin-left: 1.5rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover {
+            color: 
+;
+        }
+        
+        /* Profile Container */
+        .profile-container { 
+            max-width: 900px; 
+            margin: 2rem auto; 
+            padding: 0 1.5rem; 
+        }
+        
+        /* Profile Header */
+        .profile-header { 
+            background: linear-gradient(135deg, 
+ 0%, 
+ 100%);
+            border-radius: 24px; 
+            padding: 2.5rem; 
+            margin-bottom: 2rem; 
+            text-align: center; 
+            box-shadow: 0 8px 24px rgba(249, 115, 22, 0.25);
+            color: white;
+        }
+        .avatar { 
+            width: 100px; 
+            height: 100px; 
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            border: 4px solid white;
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            margin: 0 auto 1rem; 
+            font-size: 2.5rem; 
+            color: white;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        .avatar:hover {
+            transform: scale(1.05);
+        }
+        .profile-header h2 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        .profile-header p {
+            opacity: 0.9;
+            margin-bottom: 1.5rem;
+        }
+        .edit-profile-btn {
+            background: white;
+            color: 
+;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .edit-profile-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+        }
+        
+        /* Stats Grid */
+        .stats-grid { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 1rem; 
+            margin-top: 2rem; 
+        }
+        .stat-card { 
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 16px; 
+            padding: 1.5rem 1rem; 
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .stat-value { 
+            font-size: 2rem; 
+            font-weight: 700; 
+            color: white;
+            margin-bottom: 0.25rem;
+        }
+        .stat-label {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+        
+        /* Section */
+        .section { 
+            background: white; 
+            border-radius: 20px; 
+            padding: 2rem; 
+            margin-bottom: 1.5rem; 
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+        }
+        .section-title { 
+            font-size: 1.4rem; 
+            font-weight: 600; 
+            margin-bottom: 1.5rem; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            color: 
+;
+        }
+        .section-title i {
+            margin-right: 0.5rem;
+            color: 
+;
+        }
+        
+        /* Buttons */
+        .edit-btn { 
+            background: 
+; 
+            color: white; 
+            border: none; 
+            padding: 0.6rem 1.5rem; 
+            border-radius: 50px; 
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+        .edit-btn:hover {
+            background: #ea580c;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+        }
+        
+        /* Address Card */
+        .address-card { 
+            background: 
+; 
+            border: 2px solid #e2e8f0;
+            border-radius: 16px; 
+            padding: 1.25rem; 
+            margin-bottom: 1rem; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            transition: all 0.3s;
+        }
+        .address-card:hover {
+            border-color: 
+;
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.1);
+        }
+        .address-icon {
+            width: 40px;
+            height: 40px;
+            background: 
+;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            margin-right: 1rem;
+        }
+        .address-content {
+            flex: 1;
+        }
+        .address-label {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+            color: 
+;
+        }
+        .address-text {
+            color: 
+;
+            font-size: 0.9rem;
+        }
+        .delete-btn {
+            background: 
+;
+            color: 
+;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .delete-btn:hover {
+            background: 
+;
+            color: white;
+        }
+        
+        /* Order Card */
+        .order-card {
+            background: 
+;
+            border: 2px solid 
+;
+            border-radius: 16px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s;
+        }
+        .order-card:hover {
+            border-color: 
+;
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.1);
+        }
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        .order-id {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: 
+;
+        }
+        .order-amount {
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: 
+;
+        }
+        .order-details {
+            color: 
+;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+        .order-status {
+            display: inline-block;
+            padding: 0.4rem 1rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: 
+;
+            color: 
+;
+        }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: 
+;
+        }
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        /* Modal */
+        .modal { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            z-index: 2000;
+            animation: fadeIn 0.3s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .modal-content { 
+            background: white; 
+            border-radius: 24px; 
+            padding: 2rem; 
+            width: 90%; 
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .modal-content h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: 
+;
+        }
+        .modal-content input { 
+            width: 100%; 
+            padding: 0.9rem 1.2rem; 
+            margin: 0.5rem 0; 
+            border-radius: 12px; 
+            border: 2px solid 
+;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        .modal-content input:focus {
+            outline: none;
+            border-color: 
+;
+        }
+        .btn { 
+            background: 
+; 
+            color: white; 
+            border: none; 
+            padding: 0.9rem; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            width: 100%;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s;
+            margin-top: 0.5rem;
+        }
+        .btn:hover {
+            background: 
+;
+            transform: translateY(-2px);
+        }
+        .btn-secondary {
+            background: 
+;
+            color: 
+;
+        }
+        .btn-secondary:hover {
+            background: #cbd5e1;
+        }
+        .map-container { 
+            height: 250px; 
+            border-radius: 16px; 
+            margin: 1rem 0;
+            border: 2px solid 
+;
+            overflow: hidden;
+        }
+        
+        /* Toast */
+        .toast { 
+            position: fixed; 
+            bottom: 30px; 
+            left: 50%;
+            transform: translateX(-50%) translateY(150%);
+            background: 
+; 
+            color: white; 
+            padding: 1rem 2rem; 
+            border-radius: 50px; 
+            z-index: 3000;
+            transition: transform 0.3s;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            font-weight: 500;
+        }
+        .toast.show { 
+            transform: translateX(-50%) translateY(0);
+        }
+        .toast.error {
+            background: 
+;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+            .profile-header {
+                padding: 2rem 1.5rem;
+            }
+            .section {
+                padding: 1.5rem;
+            }
+            .address-card {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+        }
     </style>
 </head>
 <body>
 <div class="navbar">
-    <div class="logo" onclick="window.location.href='/'"><i class="fas fa-drone"></i> DroneDine</div>
-    <div>
-        <a href="/" style="text-decoration:none; color:#475569; margin-right:1rem;">Home</a>
-        <a href="/logout" style="text-decoration:none; color:#475569;">Logout</a>
+    <div class="logo" onclick="window.location.href='/'">
+        <i class="fas fa-drone"></i> DroneDine
+    </div>
+    <div class="nav-links">
+        <a href="/"><i class="fas fa-home"></i> Home</a>
+        <a href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
 </div>
+
 <div class="profile-container">
+    <!-- Profile Header -->
     <div class="profile-header">
         <div class="avatar"><i class="fas fa-user"></i></div>
-        <h2 id="userName">{{ user.name or 'Customer' }}</h2>
-        <p><i class="fas fa-phone"></i> {{ user.phone }}</p>
-        <button class="edit-btn" id="editProfileBtn">Edit Profile</button>
+        <h2 id="userName">Manoj Kumar</h2>
+        <p><i class="fas fa-phone"></i> +91 98765 43210</p>
+        <button class="edit-profile-btn" id="editProfileBtn">
+            <i class="fas fa-edit"></i> Edit Profile
+        </button>
         <div class="stats-grid">
-            <div class="stat-card"><div class="stat-value">{{ orders|length }}</div><div>Total Orders</div></div>
-            <div class="stat-card"><div class="stat-value">{{ orders|selectattr("status","equalto","delivered")|list|length }}</div><div>Drone Deliveries</div></div>
-            <div class="stat-card"><div class="stat-value">{{ "%.1f"|format(co2_saved) }} kg</div><div>CO₂ Saved</div></div>
+            <div class="stat-card">
+                <div class="stat-value">12</div>
+                <div class="stat-label">Total Orders</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">12</div>
+                <div class="stat-label">Drone Deliveries</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">3.6 kg</div>
+                <div class="stat-label">CO₂ Saved</div>
+            </div>
         </div>
     </div>
 
+    <!-- Saved Addresses -->
     <div class="section">
-        <div class="section-title">Saved Addresses <button class="edit-btn" id="addAddressBtn">+ Add</button></div>
-        <div id="addressesList"></div>
+        <div class="section-title">
+            <span><i class="fas fa-map-marker-alt"></i> Saved Addresses</span>
+            <button class="edit-btn" id="addAddressBtn">
+                <i class="fas fa-plus"></i> Add New
+            </button>
+        </div>
+        <div id="addressesList">
+            <div class="address-card">
+                <div class="address-icon"><i class="fas fa-home"></i></div>
+                <div class="address-content">
+                    <div class="address-label">Home</div>
+                    <div class="address-text">Flat 301, Cyber Towers, HITEC City, Hyderabad - 500081</div>
+                </div>
+                <button class="delete-btn" onclick="deleteAddress(0)">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </div>
+            <div class="address-card">
+                <div class="address-icon"><i class="fas fa-briefcase"></i></div>
+                <div class="address-content">
+                    <div class="address-label">Work</div>
+                    <div class="address-text">WeWork, Raheja Mindspace, Madhapur, Hyderabad - 500081</div>
+                </div>
+                <button class="delete-btn" onclick="deleteAddress(1)">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </div>
+        </div>
     </div>
 
+    <!-- Order History -->
     <div class="section">
-        <div class="section-title">Order History</div>
-        {% for order in orders %}
-        <div class="address-card">
-            <div><strong>Order #{{ order.id }}</strong> – ₹{{ order.total_amount }}<br>{{ order.created_at.strftime('%d %b %Y, %I:%M %p') }}<br>{{ order.delivery_address[:50] }}</div>
-            <div><span class="edit-btn" style="background:#10b981;">{{ order.status }}</span></div>
+        <div class="section-title">
+            <span><i class="fas fa-history"></i> Order History</span>
         </div>
-        {% else %}
-        <p>No orders yet.</p>
-        {% endfor %}
+        <div class="order-card">
+            <div class="order-header">
+                <div class="order-id">Order #1247</div>
+                <div class="order-amount">₹320</div>
+            </div>
+            <div class="order-details">
+                <i class="fas fa-store"></i> Paradise Biryani<br>
+                <i class="fas fa-calendar"></i> 28 May 2026, 02:15 PM<br>
+                <i class="fas fa-map-marker-alt"></i> Flat 301, Cyber Towers, HITEC City
+            </div>
+            <span class="order-status"><i class="fas fa-check-circle"></i> Delivered</span>
+        </div>
+        <div class="order-card">
+            <div class="order-header">
+                <div class="order-id">Order #1246</div>
+                <div class="order-amount">₹580</div>
+            </div>
+            <div class="order-details">
+                <i class="fas fa-store"></i> Domino's Pizza<br>
+                <i class="fas fa-calendar"></i> 27 May 2026, 07:30 PM<br>
+                <i class="fas fa-map-marker-alt"></i> WeWork, Raheja Mindspace
+            </div>
+            <span class="order-status"><i class="fas fa-check-circle"></i> Delivered</span>
+        </div>
     </div>
 </div>
 
 <!-- Edit Profile Modal -->
 <div id="editProfileModal" class="modal" style="display:none;">
     <div class="modal-content">
-        <h3>Edit Profile</h3>
-        <input type="text" id="profileName" placeholder="Name" value="{{ user.name or '' }}">
-        <input type="email" id="profileEmail" placeholder="Email" value="{{ user.email or '' }}">
-        <button id="saveProfileBtn" class="btn">Save</button>
-        <button id="closeProfileModal" class="btn" style="background:#ccc; margin-top:0.5rem;">Cancel</button>
+        <h3><i class="fas fa-user-edit"></i> Edit Profile</h3>
+        <input type="text" id="profileName" placeholder="Full Name" value="Manoj Kumar">
+        <input type="email" id="profileEmail" placeholder="Email Address" value="manoj@dronedine.com">
+        <input type="tel" id="profilePhone" placeholder="Phone Number" value="+91 98765 43210">
+        <button id="saveProfileBtn" class="btn">
+            <i class="fas fa-save"></i> Save Changes
+        </button>
+        <button id="closeProfileModal" class="btn btn-secondary">
+            <i class="fas fa-times"></i> Cancel
+        </button>
     </div>
 </div>
 
-<!-- Add Address Modal with Map -->
+<!-- Add Address Modal -->
 <div id="addressModal" class="modal" style="display:none;">
     <div class="modal-content">
-        <h3>Add Delivery Address</h3>
-        <input type="text" id="addressInput" placeholder="Search location (e.g., Gachibowli)">
-        <button id="searchAddressBtn" class="btn" style="background:#3b82f6;">Search</button>
+        <h3><i class="fas fa-map-marked-alt"></i> Add Delivery Address</h3>
+        <input type="text" id="addressInput" placeholder="Search location (e.g., Gachibowli, Hyderabad)">
+        <button id="searchAddressBtn" class="btn" style="background:
+;">
+            <i class="fas fa-search"></i> Search Location
+        </button>
         <div id="addressMap" class="map-container"></div>
-        <input type="text" id="addressLabel" placeholder="Label (Home, Work, etc.)">
-        <button id="saveAddressBtn" class="btn">Save Address</button>
-        <button id="closeAddressModal" class="btn" style="background:#ccc; margin-top:0.5rem;">Cancel</button>
+        <input type="text" id="addressLabel" placeholder="Label (Home, Work, Friend's Place, etc.)">
+        <button id="saveAddressBtn" class="btn">
+            <i class="fas fa-save"></i> Save Address
+        </button>
+        <button id="closeAddressModal" class="btn btn-secondary">
+            <i class="fas fa-times"></i> Cancel
+        </button>
     </div>
 </div>
 
@@ -101,39 +594,55 @@
     const MAPBOX_TOKEN = "pk.eyJ1IjoibWFub2oyNTgwOCIsImEiOiJjbXBsZ3B3NmoxYzJmMnFzbHV6Zmt1NnNwIn0.hzkSfnkPO_KRL3urJbFtxA";
     let addressMap = null;
     let selectedCoords = null;
+    let currentMarker = null;
 
     function showToast(msg, isErr = false) {
         const toast = document.getElementById('toast');
         toast.innerText = msg;
-        toast.style.background = isErr ? '#dc2626' : '#1e293b';
+        toast.className = 'toast' + (isErr ? ' error' : '');
         toast.classList.add('show');
         setTimeout(() => toast.classList.remove('show'), 3000);
     }
 
     // Load saved addresses
     async function loadAddresses() {
-        const res = await fetch('/api/user/addresses');
-        const addresses = await res.json();
-        const container = document.getElementById('addressesList');
-        if (addresses.length === 0) {
-            container.innerHTML = '<p>No saved addresses. Add one!</p>';
-            return;
+        try {
+            const res = await fetch('/api/user/addresses');
+            const addresses = await res.json();
+            const container = document.getElementById('addressesList');
+            if (addresses.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-icon"><i class="fas fa-map-marker-alt"></i></div><p>No saved addresses yet. Add your first address!</p></div>';
+                return;
+            }
+            container.innerHTML = addresses.map((addr, idx) => `
+                <div class="address-card">
+                    <div class="address-icon"><i class="fas fa-${addr.label === 'Home' ? 'home' : addr.label === 'Work' ? 'briefcase' : 'map-marker-alt'}"></i></div>
+                    <div class="address-content">
+                        <div class="address-label">${addr.label || 'Address'}</div>
+                        <div class="address-text">${addr.address}</div>
+                    </div>
+                    <button class="delete-btn" onclick="deleteAddress(${idx})">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+            `).join('');
+        } catch(err) {
+            console.error(err);
         }
-        container.innerHTML = addresses.map((addr, idx) => `
-            <div class="address-card">
-                <div><strong>${addr.label || 'Address'}</strong><br>${addr.address}</div>
-                <div><button class="edit-btn" style="background:#dc2626;" onclick="deleteAddress(${idx})">Delete</button></div>
-            </div>
-        `).join('');
     }
 
     async function deleteAddress(idx) {
-        const res = await fetch(`/api/user/addresses?index=${idx}`, { method: 'DELETE' });
-        if (res.ok) {
-            showToast('Address deleted');
-            loadAddresses();
-        } else {
-            showToast('Failed to delete', true);
+        if (!confirm('Are you sure you want to delete this address?')) return;
+        try {
+            const res = await fetch(`/api/user/addresses?index=${idx}`, { method: 'DELETE' });
+            if (res.ok) {
+                showToast('✓ Address deleted successfully');
+                loadAddresses();
+            } else {
+                showToast('Failed to delete address', true);
+            }
+        } catch(err) {
+            showToast('Network error', true);
         }
     }
 
@@ -147,81 +656,150 @@
     document.getElementById('saveProfileBtn').onclick = async () => {
         const name = document.getElementById('profileName').value;
         const email = document.getElementById('profileEmail').value;
-        const res = await fetch('/api/user/update', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, email })
-        });
-        if (res.ok) {
-            showToast('Profile updated');
-            document.getElementById('userName').innerText = name;
-            document.getElementById('editProfileModal').style.display = 'none';
-        } else {
-            showToast('Update failed', true);
+        const phone = document.getElementById('profilePhone').value;
+        
+        if (!name || !email || !phone) {
+            showToast('Please fill all fields', true);
+            return;
+        }
+        
+        try {
+            const res = await fetch('/api/user/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, phone })
+            });
+            if (res.ok) {
+                showToast('✓ Profile updated successfully');
+                document.getElementById('userName').innerText = name;
+                document.getElementById('editProfileModal').style.display = 'none';
+            } else {
+                showToast('Update failed', true);
+            }
+        } catch(err) {
+            showToast('Network error', true);
         }
     };
 
     // Add address modal
-    let addressModalMap = null;
     document.getElementById('addAddressBtn').onclick = () => {
         document.getElementById('addressModal').style.display = 'flex';
+        document.getElementById('addressInput').value = '';
+        document.getElementById('addressLabel').value = '';
+        selectedCoords = null;
+        
         setTimeout(() => {
-            if (addressModalMap) addressModalMap.remove();
-            addressModalMap = L.map('addressMap').setView([17.4300, 78.3450], 13);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(addressModalMap);
-            addressModalMap.on('click', async (e) => {
+            if (addressMap) addressMap.remove();
+            addressMap = L.map('addressMap').setView([17.4300, 78.3450], 13);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(addressMap);
+            
+            addressMap.on('click', async (e) => {
                 selectedCoords = e.latlng;
+                if (currentMarker) addressMap.removeLayer(currentMarker);
+                currentMarker = L.marker(selectedCoords, {
+                    icon: L.divIcon({
+                        html: '<div style="background:
+;width:30px;height:30px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>',
+                        className: '',
+                        iconSize: [30, 30]
+                    })
+                }).addTo(addressMap);
+                
                 try {
                     const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${e.latlng.lng},${e.latlng.lat}.json?access_token=${MAPBOX_TOKEN}`);
                     const data = await res.json();
                     if (data.features && data.features[0]) {
                         document.getElementById('addressInput').value = data.features[0].place_name;
                     }
-                } catch(err) { console.warn(err); }
-                L.marker(selectedCoords).addTo(addressModalMap).bindPopup('Selected').openPopup();
+                } catch(err) { 
+                    console.warn(err); 
+                }
             });
         }, 100);
     };
+    
     document.getElementById('closeAddressModal').onclick = () => {
         document.getElementById('addressModal').style.display = 'none';
+        if (currentMarker) currentMarker = null;
     };
+    
     document.getElementById('searchAddressBtn').onclick = async () => {
         const query = document.getElementById('addressInput').value;
-        if (!query) return;
-        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&limit=1`;
-        const res = await fetch(url);
-        const data = await res.json();
-        if (data.features && data.features[0]) {
-            const [lng, lat] = data.features[0].geometry.coordinates;
-            selectedCoords = { lat, lng };
-            addressModalMap.setView([lat, lng], 15);
-            L.marker([lat, lng]).addTo(addressModalMap).bindPopup(data.features[0].place_name).openPopup();
-            document.getElementById('addressInput').value = data.features[0].place_name;
-        } else {
-            alert('Location not found');
+        if (!query) {
+            showToast('Please enter a location', true);
+            return;
+        }
+        
+        try {
+            const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&limit=1`;
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            if (data.features && data.features[0]) {
+                const [lng, lat] = data.features[0].geometry.coordinates;
+                selectedCoords = { lat, lng };
+                addressMap.setView([lat, lng], 15);
+                
+                if (currentMarker) addressMap.removeLayer(currentMarker);
+                currentMarker = L.marker([lat, lng], {
+                    icon: L.divIcon({
+                        html: '<div style="background:
+;width:30px;height:30px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>',
+                        className: '',
+                        iconSize: [30, 30]
+                    })
+                }).addTo(addressMap);
+                
+                document.getElementById('addressInput').value = data.features[0].place_name;
+                showToast('✓ Location found');
+            } else {
+                showToast('Location not found', true);
+            }
+        } catch(err) {
+            showToast('Search failed', true);
         }
     };
+    
     document.getElementById('saveAddressBtn').onclick = async () => {
         const address = document.getElementById('addressInput').value;
         const label = document.getElementById('addressLabel').value;
+        
         if (!address || !selectedCoords) {
-            showToast('Please select a location on map', true);
+            showToast('Please select a location on the map', true);
             return;
         }
-        const res = await fetch('/api/user/addresses', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ address, label: label || 'Home', lat: selectedCoords.lat, lng: selectedCoords.lng })
-        });
-        if (res.ok) {
-            showToast('Address saved');
-            document.getElementById('addressModal').style.display = 'none';
-            loadAddresses();
-        } else {
-            showToast('Failed to save', true);
+        if (!label) {
+            showToast('Please enter a label (Home, Work, etc.)', true);
+            return;
+        }
+        
+        try {
+            const res = await fetch('/api/user/addresses', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    address, 
+                    label, 
+                    lat: selectedCoords.lat, 
+                    lng: selectedCoords.lng 
+                })
+            });
+            
+            if (res.ok) {
+                showToast('✓ Address saved successfully');
+                document.getElementById('addressModal').style.display = 'none';
+                loadAddresses();
+            } else {
+                showToast('Failed to save address', true);
+            }
+        } catch(err) {
+            showToast('Network error', true);
         }
     };
 
+    // Load addresses on page load
     loadAddresses();
 </script>
 </body>
