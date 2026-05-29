@@ -556,6 +556,13 @@ def update_order_status(order_id):
     db.session.commit()
     return jsonify({'success': True, 'status': new_status})
 
+@app.route('/admin/manager/<int:manager_id>')
+def admin_manager_detail(manager_id):
+    manager = Manager.query.get_or_404(manager_id)
+    riders = Rider.query.filter_by(manager_id=manager_id).all()
+    orders = Order.query.filter_by(manager_id=manager_id).all()
+    return render_template('admin/manager_detail.html', manager=manager, riders=riders, orders=orders)
+
 @app.route('/api/orders')
 def list_orders():
     orders = Order.query.order_by(Order.created_at.desc()).all()
