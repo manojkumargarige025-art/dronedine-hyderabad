@@ -330,6 +330,39 @@ def rider_complete_stage():
         return jsonify({'error': 'Invalid stage'}), 400
     return jsonify({'success': True})
 
+@app.route('/api/restaurant/toggle-status', methods=['POST'])
+def toggle_restaurant_status():
+    if 'restaurant_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    rid = session['restaurant_id']
+    restaurant = Restaurant.query.filter_by(name=rid.capitalize()).first()
+    if not restaurant:
+        return jsonify({'error': 'Restaurant not found'}), 404
+    data = request.get_json()
+    restaurant.is_active = data.get('is_active', True)
+    db.session.commit()
+    return jsonify({'success': True, 'is_active': restaurant.is_active})
+
+@app.route('/api/riders/active')
+def get_active_riders():
+    riders = Rider.query.filter_by(is_active=True).all()
+    result = [{'id': r.id, 'name': r.name, 'phone': r.phone} for r in riders]
+    return jsonify(result)
+
+@app.route('/api/order/<int:order_id>/assign-rider', methods=['POST'])
+def assign_rider_to_order(order_id):
+    if 'restaurant_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.get_json()
+    rider_id = data.get('rider_id')
+    order = Order.query.get_or_404(order_id)
+    # Optionally check that order belongs to this restaurant
+    restaurant = Restaurant.query.filter_by(name=session['restaurant_id'].capitalize()).first()
+    if order.restaurant_id != restaurant.id:
+        return jsonify({'error': 'Not your order'}), 403
+    order.rider_id = rider_id
+    db.session.commit()
+    return jsonify({'success': True})
 # ==================== DRONE INTEGRATION (SIMULATED) ====================
 def request_drone(order_id):
     print(f"[DRONE] Requesting drone for order {order_id}")
