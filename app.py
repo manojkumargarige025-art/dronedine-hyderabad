@@ -77,7 +77,22 @@ class Rider(db.Model):
     current_lat = db.Column(db.Float, default=0.0)
     current_lng = db.Column(db.Float, default=0.0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    # No relationship to Order here
+    # New columns
+    zone = db.Column(db.String(50))
+    manager_id = db.Column(db.Integer, db.ForeignKey('manager.id'))
+    current_order_id = db.Column(db.Integer)
+    last_seen = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Manager(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(100), unique=True)
+    phone = db.Column(db.String(10))
+    password_hash = db.Column(db.String(200))
+    zone = db.Column(db.String(50))
+    status = db.Column(db.String(20), default='online')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    riders = db.relationship('Rider', backref='manager', lazy=True)
 
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -95,6 +110,12 @@ class Order(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     delivered_at = db.Column(db.DateTime)
+    # New columns
+    manager_id = db.Column(db.Integer, db.ForeignKey('manager.id'))
+    zone = db.Column(db.String(50))
+    delivery_type = db.Column(db.String(20), default='drone')
+    delivery_stage = db.Column(db.String(30))
+    support_status = db.Column(db.String(20), default='none')
 
 class DroneTracking(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -114,6 +135,29 @@ class DeliveryStage(db.Model):
     start_time = db.Column(db.DateTime)
     end_time = db.Column(db.DateTime)
     drone_flight_id = db.Column(db.String(50))
+
+class SupportTicket(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('order.id'))
+    rider_id = db.Column(db.Integer, db.ForeignKey('rider.id'))
+    manager_id = db.Column(db.Integer, db.ForeignKey('manager.id'))
+    issue_type = db.Column(db.String(50))
+    message = db.Column(db.Text)
+    priority = db.Column(db.String(20), default='medium')
+    status = db.Column(db.String(20), default='open')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    resolved_at = db.Column(db.DateTime)
+
+class Drone(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    drone_id = db.Column(db.String(20), unique=True)
+    battery = db.Column(db.Integer, default=100)
+    status = db.Column(db.String(20), default='idle')
+    current_order_id = db.Column(db.Integer, db.ForeignKey('order.id'))
+    zone = db.Column(db.String(50))
+    last_lat = db.Column(db.Float, default=0.0)
+    last_lng = db.Column(db.Float, default=0.0)
+    payload_lock = db.Column(db.Boolean, default=False)
 
 # ==================== HELPER FUNCTIONS ====================
 def generate_unlock_code():
@@ -282,6 +326,7 @@ def update_rider_location():
     rider = Rider.query.get(session['rider_id'])
     rider.current_lat = data['lat']
     rider.current_lng = data['lng']
+    rider.last_seen = datetime.utcnow()
     db.session.commit()
     return jsonify({'status': 'ok'})
 
@@ -330,39 +375,6 @@ def rider_complete_stage():
         return jsonify({'error': 'Invalid stage'}), 400
     return jsonify({'success': True})
 
-@app.route('/api/restaurant/toggle-status', methods=['POST'])
-def toggle_restaurant_status():
-    if 'restaurant_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    rid = session['restaurant_id']
-    restaurant = Restaurant.query.filter_by(name=rid.capitalize()).first()
-    if not restaurant:
-        return jsonify({'error': 'Restaurant not found'}), 404
-    data = request.get_json()
-    restaurant.is_active = data.get('is_active', True)
-    db.session.commit()
-    return jsonify({'success': True, 'is_active': restaurant.is_active})
-
-@app.route('/api/riders/active')
-def get_active_riders():
-    riders = Rider.query.filter_by(is_active=True).all()
-    result = [{'id': r.id, 'name': r.name, 'phone': r.phone} for r in riders]
-    return jsonify(result)
-
-@app.route('/api/order/<int:order_id>/assign-rider', methods=['POST'])
-def assign_rider_to_order(order_id):
-    if 'restaurant_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    data = request.get_json()
-    rider_id = data.get('rider_id')
-    order = Order.query.get_or_404(order_id)
-    # Optionally check that order belongs to this restaurant
-    restaurant = Restaurant.query.filter_by(name=session['restaurant_id'].capitalize()).first()
-    if order.restaurant_id != restaurant.id:
-        return jsonify({'error': 'Not your order'}), 403
-    order.rider_id = rider_id
-    db.session.commit()
-    return jsonify({'success': True})
 # ==================== DRONE INTEGRATION (SIMULATED) ====================
 def request_drone(order_id):
     print(f"[DRONE] Requesting drone for order {order_id}")
@@ -437,7 +449,8 @@ def place_order():
         status='pending',
         delivery_lat=data['latitude'],
         delivery_lng=data['longitude'],
-        delivery_address=data['delivery_address']
+        delivery_address=data['delivery_address'],
+        zone='Gachibowli'  # default zone, you can derive from address
     )
     db.session.add(order)
     db.session.commit()
@@ -654,17 +667,92 @@ def restaurant_update_order(order_id):
 # ==================== ROUTES: ADMIN DASHBOARD ====================
 @app.route('/admin/dashboard')
 def admin_dashboard():
+    return render_template('admin/dashboard.html')
+
+# ==================== ADMIN API ENDPOINTS ====================
+@app.route('/api/admin/stats')
+def admin_stats():
     total_orders = Order.query.count()
-    active_orders = Order.query.filter(Order.status.in_(['accepted', 'preparing', 'out_for_delivery'])).count()
-    delivered_orders = Order.query.filter_by(status='delivered').count()
     total_revenue = db.session.query(db.func.sum(Order.total_amount)).filter_by(status='delivered').scalar() or 0
-    orders = Order.query.order_by(Order.created_at.desc()).all()
-    return render_template('admin/dashboard.html', 
-                         total_orders=total_orders,
-                         active_orders=active_orders,
-                         delivered_orders=delivered_orders,
-                         total_revenue=total_revenue,
-                         orders=orders)
+    active_riders = Rider.query.filter_by(is_active=True).count()
+    active_drones = Drone.query.filter(Drone.status.in_(['idle','flying'])).count()
+    open_tickets = SupportTicket.query.filter_by(status='open').count()
+    return jsonify({
+        'total_orders': total_orders,
+        'total_revenue': float(total_revenue),
+        'active_riders': active_riders,
+        'active_drones': active_drones,
+        'open_tickets': open_tickets
+    })
+
+@app.route('/api/admin/managers')
+def admin_managers():
+    managers = Manager.query.all()
+    result = []
+    for m in managers:
+        riders_count = Rider.query.filter_by(manager_id=m.id).count()
+        active_orders = Order.query.filter_by(manager_id=m.id, status='out_for_delivery').count()
+        issues_count = SupportTicket.query.filter_by(manager_id=m.id, status='open').count()
+        result.append({
+            'id': m.id,
+            'name': m.name,
+            'zone': m.zone,
+            'riders_count': riders_count,
+            'active_orders': active_orders,
+            'issues_count': issues_count,
+            'status': m.status
+        })
+    return jsonify(result)
+
+@app.route('/api/admin/drones')
+def admin_drones():
+    drones = Drone.query.all()
+    return jsonify([{
+        'id': d.id,
+        'drone_id': d.drone_id,
+        'battery': d.battery,
+        'status': d.status,
+        'zone': d.zone,
+        'current_order_id': d.current_order_id
+    } for d in drones])
+
+@app.route('/api/admin/tickets')
+def admin_tickets():
+    tickets = SupportTicket.query.filter_by(status='open').all()
+    result = []
+    for t in tickets:
+        rider = Rider.query.get(t.rider_id)
+        result.append({
+            'id': t.id,
+            'order_id': t.order_id,
+            'rider_name': rider.name if rider else 'N/A',
+            'issue_type': t.issue_type,
+            'priority': t.priority,
+            'status': t.status
+        })
+    return jsonify(result)
+
+@app.route('/api/admin/drone/<int:drone_id>/<action>', methods=['POST'])
+def admin_drone_action(drone_id, action):
+    drone = Drone.query.get(drone_id)
+    if not drone:
+        return jsonify({'error': 'Drone not found'}), 404
+    if action == 'return':
+        drone.status = 'returning'
+    elif action == 'emergency':
+        drone.status = 'emergency_stop'
+    db.session.commit()
+    return jsonify({'status': 'ok'})
+
+@app.route('/api/admin/ticket/<int:ticket_id>/resolve', methods=['POST'])
+def resolve_ticket(ticket_id):
+    ticket = SupportTicket.query.get(ticket_id)
+    if not ticket:
+        return jsonify({'error': 'Ticket not found'}), 404
+    ticket.status = 'resolved'
+    ticket.resolved_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify({'status': 'ok'})
 
 # ==================== INITIAL DATA SEED ====================
 def init_db():
@@ -689,8 +777,56 @@ def init_db():
         db.session.add_all(menu_items)
         db.session.commit()
 
+    # Seed managers
+    if Manager.query.count() == 0:
+        managers = [
+            Manager(name='Arjun', email='arjun@dronedine.com', phone='9999999991', zone='Madhapur', status='online'),
+            Manager(name='Priya', email='priya@dronedine.com', phone='9999999992', zone='Banjara Hills', status='online'),
+            Manager(name='Sameer', email='sameer@dronedine.com', phone='9999999993', zone='Gachibowli', status='busy'),
+        ]
+        db.session.add_all(managers)
+        db.session.commit()
+
+    # Seed drones
+    if Drone.query.count() == 0:
+        drones = [
+            Drone(drone_id='DR-001', battery=87, status='idle', zone='Gachibowli'),
+            Drone(drone_id='DR-002', battery=94, status='flying', zone='Madhapur'),
+            Drone(drone_id='DR-003', battery=32, status='charging', zone='HITEC City'),
+        ]
+        db.session.add_all(drones)
+        db.session.commit()
+
+    # Seed riders
+    if Rider.query.count() == 0:
+        riders = [
+            Rider(phone='9999999911', name='Rahul', zone='Madhapur', manager_id=1, is_active=True),
+            Rider(phone='9999999912', name='Neha', zone='Madhapur', manager_id=1, is_active=True),
+            Rider(phone='9999999913', name='Vikram', zone='Gachibowli', manager_id=3, is_active=True),
+        ]
+        db.session.add_all(riders)
+        db.session.commit()
+
+    # Sample orders (if none)
+    if Order.query.count() == 0:
+        orders = [
+            Order(user_id=1, restaurant_id=1, items='[{"name":"Chicken Biryani","quantity":2,"price":280}]', total_amount=560, unlock_code='1234', status='pending', delivery_address='HITEC City, Hyderabad', zone='HITEC City'),
+            Order(user_id=1, restaurant_id=2, items='[{"name":"Paradise Special Biryani","quantity":1,"price":320}]', total_amount=320, unlock_code='5678', status='out_for_delivery', delivery_address='Madhapur, Hyderabad', zone='Madhapur'),
+        ]
+        db.session.add_all(orders)
+        db.session.commit()
+
+    # Sample support tickets
+    if SupportTicket.query.count() == 0:
+        tickets = [
+            SupportTicket(order_id=1, rider_id=1, issue_type='restaurant_delay', priority='medium', status='open'),
+            SupportTicket(order_id=2, rider_id=2, issue_type='customer_not_reachable', priority='high', status='escalated'),
+        ]
+        db.session.add_all(tickets)
+        db.session.commit()
+
 with app.app_context():
     init_db()
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    app.run(debug=True, host='0.0.0.0', port=5000)
