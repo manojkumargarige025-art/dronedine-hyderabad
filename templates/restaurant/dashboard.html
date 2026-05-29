@@ -9,32 +9,20 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --primary: 
-;
-            --primary-dark: 
-;
-            --white: 
-;
-            --bg: 
-;
-            --text: 
-;
-            --muted: 
-;
-            --border: 
-;
-            --light: 
-;
+            --primary: #f97316;
+            --primary-dark: #ea580c;
+            --white: #ffffff;
+            --bg: #f8fafc;
+            --text: #0f172a;
+            --muted: #64748b;
+            --border: #e2e8f0;
+            --light: #fff7ed;
             --shadow: 0 4px 20px rgba(0,0,0,0.06);
         }
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Inter', sans-serif;
-            background: var(--bg);
+            background: #fafafa;
             color: var(--text);
         }
         .navbar {
@@ -53,9 +41,7 @@
         .logo {
             font-size: 1.8rem;
             font-weight: 800;
-            background: linear-gradient(135deg, 
-, 
-);
+            background: linear-gradient(135deg, #f97316, #fb923c);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
@@ -67,8 +53,7 @@
         }
         .nav-links a {
             text-decoration: none;
-            color: 
-;
+            color: #334155;
             font-weight: 600;
             transition: 0.3s;
         }
@@ -76,8 +61,7 @@
             color: var(--primary);
         }
         .logout-btn {
-            background: 
-;
+            background: #dc2626;
             color: white !important;
             padding: 0.5rem 1.2rem;
             border-radius: 40px;
@@ -87,7 +71,6 @@
             margin: 2rem auto;
             padding: 0 1.5rem;
         }
-        /* Stats Grid */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -123,13 +106,6 @@
             font-size: 0.75rem;
             color: var(--muted);
         }
-        /* Two column layout */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 1fr 320px;
-            gap: 2rem;
-        }
-        /* Orders Table */
         .orders-card {
             background: white;
             border-radius: 28px;
@@ -166,37 +142,30 @@
             font-size: 0.7rem;
             font-weight: 600;
         }
-        .status-pending { background: 
-; color: 
-; }
-        .status-accepted { background: 
-; color: 
-; }
-        .status-preparing { background: 
-; color: 
-; }
-        .status-out_for_delivery { background: 
-; color: 
-; }
-        .status-delivered { background: 
-; color: 
-; }
+        .status-pending { background: #fef3c7; color: #b45309; }
+        .status-accepted { background: #dbeafe; color: #1e40af; }
+        .status-preparing { background: #fed7aa; color: #9a3412; }
+        .status-out_for_delivery { background: #d1fae5; color: #065f46; }
+        .status-delivered { background: #dcfce7; color: #166534; }
         .action-btn {
             background: var(--primary);
             border: none;
-            padding: 0.2rem 0.6rem;
-            border-radius: 20px;
+            padding: 0.3rem 0.8rem;
+            border-radius: 40px;
             color: white;
             font-size: 0.7rem;
             cursor: pointer;
             transition: 0.2s;
         }
-        /* Right sidebar */
+        .action-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
         .sidebar-card {
             background: white;
             border-radius: 28px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
+            padding: 1.2rem;
+            margin-top: 1.5rem;
             box-shadow: var(--shadow);
         }
         .popular-item {
@@ -214,39 +183,7 @@
             transition: 0.2s;
         }
         .quick-action:hover {
-            background: 
-;
-        }
-        .status-toggle {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .toggle-switch {
-            width: 50px;
-            height: 26px;
-            background: 
-;
-            border-radius: 40px;
-            position: relative;
-            cursor: pointer;
-        }
-        .toggle-switch.active {
-            background: var(--primary);
-        }
-        .toggle-switch::after {
-            content: '';
-            width: 22px;
-            height: 22px;
-            background: white;
-            border-radius: 50%;
-            position: absolute;
-            top: 2px;
-            left: 3px;
-            transition: 0.2s;
-        }
-        .toggle-switch.active::after {
-            left: 25px;
+            background: #fef3c7;
         }
         .footer {
             text-align: center;
@@ -256,9 +193,11 @@
             font-size: 0.75rem;
         }
         @media (max-width: 900px) {
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 600px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .orders-table th, .orders-table td { font-size: 0.7rem; }
         }
     </style>
 </head>
@@ -276,7 +215,7 @@
         <h1><i class="fas fa-robot"></i> {{ restaurant.name }} Command Center</h1>
         <p style="margin-bottom: 2rem;">Manage live orders, drones, and performance</p>
 
-        <!-- Stats Cards -->
+        <!-- Stats Grid -->
         <div class="stats-grid" id="statsGrid">
             <div class="stat-card">
                 <div class="stat-title">Active Orders</div>
@@ -300,60 +239,37 @@
             </div>
         </div>
 
-        <!-- Main Dashboard Grid -->
-        <div class="dashboard-grid">
-            <!-- Left: Orders Table -->
-            <div class="orders-card">
-                <div class="section-title"><i class="fas fa-list-ul"></i> Live Orders</div>
-                <div id="ordersTableContainer">
-                    <table class="orders-table" id="ordersTable">
-                        <thead>
-                            <tr><th>Order #</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Action</th></tr>
-                        </thead>
-                        <tbody id="ordersTableBody">
-                            <tr><td colspan="6" style="text-align:center;">Loading orders...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+        <!-- Orders Table -->
+        <div class="orders-card">
+            <div class="section-title"><i class="fas fa-list-ul"></i> Live Orders</div>
+            <div id="ordersTableContainer">
+                <table class="orders-table" id="ordersTable">
+                    <thead>
+                        <tr><th>Order #</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Action</th></tr>
+                    </thead>
+                    <tbody id="ordersTableBody">
+                        <tr><td colspan="6" style="text-align:center;">Loading orders...</td></tr>
+                    </tbody>
+                </table>
             </div>
+        </div>
 
-            <!-- Right Sidebar -->
-            <div>
-                <!-- Popular Items -->
-                <div class="sidebar-card">
-                    <div class="section-title"><i class="fas fa-chart-line"></i> Popular Items</div>
-                    <div id="popularItems">
-                        <div class="popular-item"><span>Hyderabad Biryani</span><span>24 orders</span></div>
-                        <div class="popular-item"><span>Chicken Tikka Pizza</span><span>18 orders</span></div>
-                        <div class="popular-item"><span>Butter Naan</span><span>15 orders</span></div>
-                        <div class="popular-item"><span>Haleem</span><span>12 orders</span></div>
-                    </div>
-                </div>
-
-                <!-- Quick Actions -->
-                <div class="sidebar-card">
-                    <div class="section-title"><i class="fas fa-bolt"></i> Quick Actions</div>
-                    <div class="quick-action" onclick="alert('Manage menu - coming soon')">📋 Manage Menu</div>
-                    <div class="quick-action" onclick="alert('Drone tracking - coming soon')">🚁 Track Drones</div>
-                    <div class="quick-action" onclick="alert('Assign rider - coming soon')">🛵 Assign Rider</div>
-                </div>
-
-                <!-- Restaurant Status Toggle -->
-                <div class="sidebar-card">
-                    <div class="section-title"><i class="fas fa-power-off"></i> Restaurant Status</div>
-                    <div class="status-toggle">
-                        <span>Online / Offline</span>
-                        <div id="statusToggle" class="toggle-switch active" onclick="toggleRestaurantStatus()"></div>
-                    </div>
-                    <div id="statusMessage" class="stat-sub" style="margin-top: 0.5rem;">Currently accepting orders</div>
-                </div>
-
-                <!-- Simple Chart (mock) -->
-                <div class="sidebar-card">
-                    <div class="section-title"><i class="fas fa-chart-simple"></i> Today's Earnings</div>
-                    <canvas id="earningsChart" height="150"></canvas>
-                </div>
+        <!-- Sidebar (optional - popular items, quick actions) -->
+        <div class="sidebar-card">
+            <div class="section-title"><i class="fas fa-chart-line"></i> Popular Items</div>
+            <div id="popularItems">
+                <div class="popular-item"><span>Hyderabad Biryani</span><span>24 orders</span></div>
+                <div class="popular-item"><span>Chicken Tikka Pizza</span><span>18 orders</span></div>
+                <div class="popular-item"><span>Butter Naan</span><span>15 orders</span></div>
+                <div class="popular-item"><span>Haleem</span><span>12 orders</span></div>
             </div>
+        </div>
+
+        <div class="sidebar-card">
+            <div class="section-title"><i class="fas fa-bolt"></i> Quick Actions</div>
+            <div class="quick-action" onclick="alert('Manage menu - coming soon')">📋 Manage Menu</div>
+            <div class="quick-action" onclick="alert('Drone tracking - coming soon')">🚁 Track Drones</div>
+            <div class="quick-action" onclick="alert('Assign rider - coming soon')">🛵 Assign Rider</div>
         </div>
     </div>
 
@@ -362,41 +278,23 @@
     </div>
 
     <script>
-        let chart = null;
-
         function showToast(msg, isError = false) {
             alert(msg);
         }
 
-        // Helper to get status class
-        function getStatusClass(status) {
-            switch(status) {
-                case 'pending': return 'status-pending';
-                case 'accepted': return 'status-accepted';
-                case 'preparing': return 'status-preparing';
-                case 'out_for_delivery': return 'status-out_for_delivery';
-                case 'delivered': return 'status-delivered';
-                default: return 'status-pending';
-            }
-        }
-
-        // Fetch stats
         async function fetchStats() {
             try {
                 const res = await fetch('/api/restaurant/stats');
                 const data = await res.json();
                 document.getElementById('activeOrdersCount').innerText = data.active_orders || 0;
                 document.getElementById('todayRevenue').innerText = `₹${(data.today_revenue || 0).toFixed(2)}`;
-                // Completed orders (all time) – you can fetch from another endpoint, but we'll use a placeholder
-                // For demo, we'll use a mock value – replace with actual API if needed
-                document.getElementById('completedOrders').innerText = data.completed_orders || 12;
+                document.getElementById('completedOrders').innerText = data.completed_orders || 0;
                 document.getElementById('rating').innerText = data.rating || 4.5;
             } catch (err) {
                 console.warn("Stats fetch error", err);
             }
         }
 
-        // Fetch orders
         async function fetchOrders() {
             try {
                 const res = await fetch('/api/orders/pending');
@@ -415,7 +313,16 @@
                     } catch(e) {
                         itemsText = order.items;
                     }
-                    const statusClass = getStatusClass(order.status);
+                    let statusClass = '';
+                    let statusText = order.status;
+                    switch(order.status) {
+                        case 'pending': statusClass = 'status-pending'; break;
+                        case 'accepted': statusClass = 'status-accepted'; break;
+                        case 'preparing': statusClass = 'status-preparing'; break;
+                        case 'out_for_delivery': statusClass = 'status-out_for_delivery'; break;
+                        case 'delivered': statusClass = 'status-delivered'; break;
+                        default: statusClass = 'status-pending';
+                    }
                     let actionHtml = '';
                     if (order.status === 'pending') {
                         actionHtml = `<button class="action-btn" onclick="updateOrderStatus(${order.id}, 'accept')">Accept</button>`;
@@ -426,25 +333,24 @@
                     } else if (order.status === 'out_for_delivery') {
                         actionHtml = `<button class="action-btn" onclick="updateOrderStatus(${order.id}, 'deliver')">Deliver</button>`;
                     } else {
-                        actionHtml = `<span class="status-badge ${statusClass}">${order.status.replace(/_/g,' ')}</span>`;
+                        actionHtml = `<span class="status-badge ${statusClass}">${statusText.replace(/_/g,' ')}</span>`;
                     }
                     html += `<tr>
                         <td>#${order.id}</td>
                         <td>${order.customer_name || 'Guest'}</td>
                         <td>${itemsText}</td>
                         <td>₹${order.total_amount}</td>
-                        <td><span class="status-badge ${statusClass}">${order.status.replace(/_/g,' ')}</span></td>
+                        <td><span class="status-badge ${statusClass}">${statusText.replace(/_/g,' ')}</span></td>
                         <td>${actionHtml}</td>
                     </tr>`;
                 });
                 tbody.innerHTML = html;
             } catch (err) {
                 console.warn("Orders fetch error", err);
-                document.getElementById('ordersTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center;">Error loading orders. Please refresh.</td></tr>';
+                document.getElementById('ordersTableBody').innerHTML = '<tr><td colspan="6">Error loading orders. Please refresh.</td></tr>';
             }
         }
 
-        // Update order status
         async function updateOrderStatus(orderId, action) {
             try {
                 const res = await fetch(`/api/restaurant/update-order/${orderId}`, {
@@ -465,52 +371,12 @@
             }
         }
 
-        // Toggle restaurant status (UI only for demo)
-        function toggleRestaurantStatus() {
-            const toggle = document.getElementById('statusToggle');
-            const msg = document.getElementById('statusMessage');
-            if (toggle.classList.contains('active')) {
-                toggle.classList.remove('active');
-                msg.innerText = 'Offline – not accepting new orders';
-            } else {
-                toggle.classList.add('active');
-                msg.innerText = 'Online – accepting orders';
-            }
-        }
-
-        // Initialize chart
-        function initChart() {
-            const ctx = document.getElementById('earningsChart').getContext('2d');
-            chart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: ['00:00', '08:00', '12:00', '16:00', '20:00'],
-                    datasets: [{
-                        label: 'Earnings (₹)',
-                        data: [0, 500, 1200, 800, 450],
-                        borderColor: '
-',
-                        backgroundColor: 'rgba(249,115,22,0.1)',
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: { legend: { position: 'top' } }
-                }
-            });
-        }
-
-        // Auto-refresh every 8 seconds
         fetchStats();
         fetchOrders();
-        initChart();
         setInterval(() => {
             fetchStats();
             fetchOrders();
-        }, 8000);
+        }, 5000);
     </script>
 </body>
-</html> 
+</html>
