@@ -1,6 +1,6 @@
 """
 DroneDine - Complete Backend with User Auth, Orders, Drone Tracking,
-Admin/Restaurant Dashboards, Profile Updates, Rider App, and Drone Integration
+Admin/Restaurant Dashboards, Manager Dashboard, Rider App, and Drone Integration
 """
 import os
 import json
@@ -77,7 +77,6 @@ class Rider(db.Model):
     current_lat = db.Column(db.Float, default=0.0)
     current_lng = db.Column(db.Float, default=0.0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    # New columns
     zone = db.Column(db.String(50))
     manager_id = db.Column(db.Integer, db.ForeignKey('manager.id'))
     current_order_id = db.Column(db.Integer)
@@ -110,7 +109,6 @@ class Order(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     delivered_at = db.Column(db.DateTime)
-    # New columns
     manager_id = db.Column(db.Integer, db.ForeignKey('manager.id'))
     zone = db.Column(db.String(50))
     delivery_type = db.Column(db.String(20), default='drone')
@@ -167,7 +165,7 @@ def calculate_co2_saved(orders):
     delivered = [o for o in orders if o.status == 'delivered']
     return len(delivered) * 0.065
 
-# ==================== ROUTES: AUTH ====================
+# ==================== ROUTES: AUTH (Customer) ====================
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -207,7 +205,7 @@ def logout():
     session.clear()
     return redirect(url_for('home'))
 
-# ==================== ROUTES: PAGES ====================
+# ==================== ROUTES: PAGES (Customer) ====================
 @app.route('/')
 def home():
     restaurants = Restaurant.query.filter_by(is_active=True).all()
@@ -374,6 +372,30 @@ def rider_complete_stage():
     else:
         return jsonify({'error': 'Invalid stage'}), 400
     return jsonify({'success': True})
+
+@app.route('/api/rider/create-ticket', methods=['POST'])
+def rider_create_ticket():
+    if 'rider_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.get_json()
+    order_id = data.get('order_id')
+    issue_type = data.get('issue_type')
+    message = data.get('message')
+    rider_id = session['rider_id']
+    rider = Rider.query.get(rider_id)
+    manager_id = rider.manager_id if rider else None
+    ticket = SupportTicket(
+        order_id=order_id,
+        rider_id=rider_id,
+        manager_id=manager_id,
+        issue_type=issue_type,
+        message=message,
+        priority='medium',
+        status='open'
+    )
+    db.session.add(ticket)
+    db.session.commit()
+    return jsonify({'success': True, 'ticket_id': ticket.id})
 
 # ==================== DRONE INTEGRATION (SIMULATED) ====================
 def request_drone(order_id):
@@ -664,6 +686,158 @@ def restaurant_update_order(order_id):
         return jsonify({'success': True, 'status': order.status})
     return jsonify({'error': 'Invalid action'}), 400
 
+# ==================== ROUTES: MANAGER DASHBOARD ====================
+MANAGER_PINS = {
+    'arjun': '1111',
+    'priya': '2222',
+    'sameer': '3333'
+}
+
+@app.route('/manager/login', methods=['GET', 'POST'])
+def manager_login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        pin = request.form.get('pin')
+        if username in MANAGER_PINS and MANAGER_PINS[username] == pin:
+            manager = Manager.query.filter_by(name=username.capitalize()).first()
+            if manager:
+                session['manager_id'] = manager.id
+                session['manager_name'] = manager.name
+                session['manager_zone'] = manager.zone
+                return redirect(url_for('manager_dashboard'))
+        return render_template('manager/login.html', error="Invalid credentials")
+    return render_template('manager/login.html')
+
+@app.route('/manager/dashboard')
+def manager_dashboard():
+    if 'manager_id' not in session:
+        return redirect(url_for('manager_login'))
+    return render_template('manager/dashboard.html')
+
+@app.route('/manager/logout')
+def manager_logout():
+    session.pop('manager_id', None)
+    session.pop('manager_name', None)
+    session.pop('manager_zone', None)
+    return redirect(url_for('manager_login'))
+
+# ==================== MANAGER API ENDPOINTS ====================
+@app.route('/api/manager/stats')
+def manager_stats():
+    if 'manager_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    zone = session.get('manager_zone')
+    active_riders = Rider.query.filter_by(zone=zone, is_active=True).count()
+    active_orders = Order.query.filter_by(zone=zone, status='out_for_delivery').count()
+    open_tickets = SupportTicket.query.join(Rider).filter(Rider.zone==zone, SupportTicket.status=='open').count()
+    return jsonify({
+        'active_riders': active_riders,
+        'active_orders': active_orders,
+        'open_tickets': open_tickets
+    })
+
+@app.route('/api/manager/riders')
+def manager_riders():
+    if 'manager_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    zone = session.get('manager_zone')
+    riders = Rider.query.filter_by(zone=zone).all()
+    return jsonify([{
+        'id': r.id,
+        'name': r.name,
+        'phone': r.phone,
+        'is_active': r.is_active,
+        'current_order_id': r.current_order_id,
+        'last_seen': r.last_seen.isoformat() if r.last_seen else None
+    } for r in riders])
+
+@app.route('/api/manager/orders')
+def manager_orders():
+    if 'manager_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    zone = session.get('manager_zone')
+    orders = Order.query.filter_by(zone=zone).filter(Order.status.in_(['pending','accepted','preparing','out_for_delivery'])).all()
+    result = []
+    for o in orders:
+        rider = Rider.query.get(o.rider_id)
+        result.append({
+            'id': o.id,
+            'customer_name': o.user.name if o.user else 'Guest',
+            'restaurant_name': Restaurant.query.get(o.restaurant_id).name,
+            'total': o.total_amount,
+            'status': o.status,
+            'rider_name': rider.name if rider else 'Unassigned',
+            'created_at': o.created_at.isoformat()
+        })
+    return jsonify(result)
+
+@app.route('/api/manager/tickets')
+def manager_tickets():
+    if 'manager_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    zone = session.get('manager_zone')
+    tickets = SupportTicket.query.join(Rider).filter(Rider.zone==zone, SupportTicket.status.in_(['open','escalated'])).all()
+    result = []
+    for t in tickets:
+        rider = Rider.query.get(t.rider_id)
+        order = Order.query.get(t.order_id)
+        result.append({
+            'id': t.id,
+            'order_id': t.order_id,
+            'rider_name': rider.name if rider else 'N/A',
+            'issue_type': t.issue_type,
+            'message': t.message,
+            'priority': t.priority,
+            'status': t.status,
+            'created_at': t.created_at.isoformat()
+        })
+    return jsonify(result)
+
+@app.route('/api/manager/ticket/<int:ticket_id>/resolve', methods=['POST'])
+def manager_resolve_ticket(ticket_id):
+    if 'manager_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    ticket = SupportTicket.query.get(ticket_id)
+    if not ticket:
+        return jsonify({'error': 'Ticket not found'}), 404
+    ticket.status = 'resolved'
+    ticket.resolved_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify({'success': True})
+
+@app.route('/api/manager/ticket/<int:ticket_id>/escalate', methods=['POST'])
+def manager_escalate_ticket(ticket_id):
+    if 'manager_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    ticket = SupportTicket.query.get(ticket_id)
+    if not ticket:
+        return jsonify({'error': 'Ticket not found'}), 404
+    ticket.priority = 'high'
+    ticket.status = 'escalated'
+    db.session.commit()
+    return jsonify({'success': True})
+
+@app.route('/api/manager/assign-rider', methods=['POST'])
+def manager_assign_rider():
+    if 'manager_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.get_json()
+    order_id = data.get('order_id')
+    rider_id = data.get('rider_id')
+    order = Order.query.get(order_id)
+    if not order:
+        return jsonify({'error': 'Order not found'}), 404
+    if order.zone != session.get('manager_zone'):
+        return jsonify({'error': 'Not your zone'}), 403
+    order.rider_id = rider_id
+    order.status = 'rider_to_pad'
+    db.session.commit()
+    rider = Rider.query.get(rider_id)
+    if rider:
+        rider.current_order_id = order_id
+        db.session.commit()
+    return jsonify({'success': True})
+
 # ==================== ROUTES: ADMIN DASHBOARD ====================
 @app.route('/admin/dashboard')
 def admin_dashboard():
@@ -807,7 +981,7 @@ def init_db():
         db.session.add_all(riders)
         db.session.commit()
 
-    # Sample orders (if none)
+    # Sample orders
     if Order.query.count() == 0:
         orders = [
             Order(user_id=1, restaurant_id=1, items='[{"name":"Chicken Biryani","quantity":2,"price":280}]', total_amount=560, unlock_code='1234', status='pending', delivery_address='HITEC City, Hyderabad', zone='HITEC City'),
