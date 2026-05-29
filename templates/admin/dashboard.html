@@ -3,59 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - DroneDine</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <title>Super Admin - DroneDine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; }
-        .navbar { background: #1e293b; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
-        .logo { font-size: 1.5rem; font-weight: 700; color: #f97316; }
+        .navbar { background: #1e293b; padding: 1rem 2rem; display: flex; justify-content: space-between; }
+        .logo { font-size: 1.5rem; font-weight: 800; color: #f97316; }
         .container { max-width: 1400px; margin: 2rem auto; padding: 0 1rem; }
         .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
-        .stat-card { background: #1e293b; border-radius: 20px; padding: 1rem; text-align: center; }
-        .stat-value { font-size: 2rem; font-weight: 700; color: #f97316; }
-        .table-container { background: #1e293b; border-radius: 24px; padding: 1.5rem; overflow-x: auto; }
+        .stat-card { background: #1e293b; border-radius: 24px; padding: 1rem; text-align: center; }
+        .stat-value { font-size: 2rem; font-weight: 800; color: #f97316; }
+        .section { background: #1e293b; border-radius: 24px; padding: 1.5rem; margin-bottom: 2rem; }
         table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 0.8rem; text-align: left; border-bottom: 1px solid #334155; }
+        th, td { text-align: left; padding: 0.75rem; border-bottom: 1px solid #334155; }
         th { color: #f97316; }
-        .status-badge { padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.7rem; display: inline-block; }
-        .status-placed { background: #f59e0b; color: #0f172a; }
-        .status-accepted { background: #3b82f6; }
-        .status-preparing { background: #8b5cf6; }
-        .status-out_for_delivery { background: #ec489a; }
-        .status-delivered { background: #10b981; }
+        .badge { padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.7rem; }
+        .online { background: #10b981; }
+        .offline { background: #dc2626; }
+        .busy { background: #f59e0b; }
+        button { background: #f97316; border: none; padding: 0.3rem 0.8rem; border-radius: 20px; cursor: pointer; }
     </style>
 </head>
 <body>
-<div class="navbar"><div class="logo"><i class="fas fa-chalkboard-user"></i> Admin Dashboard</div><div><i class="fas fa-user-shield"></i> Admin</div></div>
-<div class="container">
-    <div class="stats">
-        <div class="stat-card"><div class="stat-value">{{ total_orders }}</div><div>Total Orders</div></div>
-        <div class="stat-card"><div class="stat-value">{{ active_orders }}</div><div>Active Orders</div></div>
-        <div class="stat-card"><div class="stat-value">{{ delivered_orders }}</div><div>Delivered</div></div>
-        <div class="stat-card"><div class="stat-value">₹{{ total_revenue }}</div><div>Revenue</div></div>
+    <div class="navbar"><div class="logo">🚁 DroneDine Super Admin</div><div><i class="fas fa-user-shield"></i> Admin</div></div>
+    <div class="container">
+        <div class="stats" id="stats">
+            <div class="stat-card"><div class="stat-value" id="totalOrders">0</div><div>Total Orders</div></div>
+            <div class="stat-card"><div class="stat-value" id="totalRevenue">₹0</div><div>Revenue</div></div>
+            <div class="stat-card"><div class="stat-value" id="activeRiders">0</div><div>Active Riders</div></div>
+            <div class="stat-card"><div class="stat-value" id="activeDrones">0</div><div>Active Drones</div></div>
+            <div class="stat-card"><div class="stat-value" id="openTickets">0</div><div>Open Tickets</div></div>
+        </div>
+
+        <div class="section"><h2>📋 Managers</h2>
+            <table id="managersTable"><thead><tr><th>Name</th><th>Zone</th><th>Riders</th><th>Active Orders</th><th>Issues</th><th>Status</th><th>Actions</th></tr></thead><tbody id="managersBody"></tbody></table>
+        </div>
+        <div class="section"><h2>🚁 Drone Operations</h2>
+            <table id="dronesTable"><thead><tr><th>Drone ID</th><th>Battery</th><th>Status</th><th>Zone</th><th>Current Order</th><th>Actions</th></tr></thead><tbody id="dronesBody"></tbody></table>
+        </div>
+        <div class="section"><h2>🆘 Escalated Issues</h2>
+            <table id="ticketsTable"><thead><tr><th>Order #</th><th>Rider</th><th>Issue</th><th>Priority</th><th>Status</th><th>Actions</th></tr></thead><tbody id="ticketsBody"></tbody></table>
+        </div>
     </div>
-    <div class="table-container">
-        <h2 style="margin-bottom:1rem;">All Orders</h2>
-        <table>
-            <thead><tr><th>ID</th><th>Customer</th><th>Restaurant</th><th>Items</th><th>Total</th><th>Status</th><th>Unlock Code</th><th>Created At</th></tr></thead>
-            <tbody>
-                {% for order in orders %}
-                <tr>
-                    <td>{{ order.id }}</td>
-                    <td>{{ order.user.phone if order.user else 'N/A' }}</td>
-                    <td>{{ order.restaurant.name if order.restaurant else 'N/A' }}</td>
-                    <td>{{ order.items[:50] | safe if order.items else '-' }}...</td>
-                    <td>₹{{ order.total_amount }}</td>
-                    <td><span class="status-badge status-{{ order.status.replace('_', '-') }}">{{ order.status }}</span></td>
-                    <td>{{ order.unlock_code }}</td>
-                    <td>{{ order.created_at.strftime('%d/%m %H:%M') }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
+    <script>
+        async function loadData() {
+            const res = await fetch('/api/admin/stats');
+            const data = await res.json();
+            document.getElementById('totalOrders').innerText = data.total_orders;
+            document.getElementById('totalRevenue').innerText = `₹${data.total_revenue}`;
+            document.getElementById('activeRiders').innerText = data.active_riders;
+            document.getElementById('activeDrones').innerText = data.active_drones;
+            document.getElementById('openTickets').innerText = data.open_tickets;
+
+            const managers = await fetch('/api/admin/managers').then(r => r.json());
+            document.getElementById('managersBody').innerHTML = managers.map(m => `
+                <tr><td>${m.name}</td><td>${m.zone}</td><td>${m.riders_count}</td><td>${m.active_orders}</td><td>${m.issues_count}</td><td><span class="badge ${m.status}">${m.status}</span></td><td><button onclick="viewManager(${m.id})">View</button></td></tr>
+            `).join('');
+
+            const drones = await fetch('/api/admin/drones').then(r => r.json());
+            document.getElementById('dronesBody').innerHTML = drones.map(d => `
+                <tr><td>${d.drone_id}</td><td>${d.battery}%</td><td>${d.status}</td><td>${d.zone}</td><td>${d.current_order_id || '-'}</td><td><button onclick="droneAction(${d.id}, 'return')">Return</button> <button onclick="droneAction(${d.id}, 'emergency')">⚠️ Stop</button></td></tr>
+            `).join('');
+
+            const tickets = await fetch('/api/admin/tickets').then(r => r.json());
+            document.getElementById('ticketsBody').innerHTML = tickets.map(t => `
+                <tr><td>#${t.order_id}</td><td>${t.rider_name}</td><td>${t.issue_type}</td><td>${t.priority}</td><td>${t.status}</td><td><button onclick="resolveTicket(${t.id})">Resolve</button></td></tr>
+            `).join('');
+        }
+        function viewManager(id) { window.location.href = `/admin/manager/${id}`; }
+        function droneAction(id, action) { fetch(`/api/admin/drone/${id}/${action}`, {method:'POST'}).then(()=>loadData()); }
+        function resolveTicket(id) { fetch(`/api/admin/ticket/${id}/resolve`, {method:'POST'}).then(()=>loadData()); }
+        loadData();
+        setInterval(loadData, 10000);
+    </script>
 </body>
 </html>
