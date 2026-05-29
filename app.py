@@ -1,10 +1,12 @@
 """
 DroneDine - Complete Backend with User Auth, Orders, Drone Tracking,
-Admin/Restaurant Dashboards, Profile Updates, and Saved Addresses
+Admin/Restaurant Dashboards, Profile Updates, Rider App, and Drone Integration
 """
 import os
 import json
 import random
+import threading
+import time
 from datetime import datetime
 from functools import wraps
 
@@ -19,6 +21,9 @@ from flask import (
 )
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
+
+# Optional: requests for simulating drone webhooks (if calling external)
+import requests
 
 # ==================== CONFIGURATION ====================
 app = Flask(__name__)
@@ -68,14 +73,25 @@ class MenuItem(db.Model):
     image_url = db.Column(db.String(200))
     is_veg = db.Column(db.Boolean, default=True)
 
+class Rider(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    phone = db.Column(db.String(10), unique=True, nullable=False)
+    name = db.Column(db.String(100))
+    is_active = db.Column(db.Boolean, default=False)
+    current_lat = db.Column(db.Float, default=0.0)
+    current_lng = db.Column(db.Float, default=0.0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    orders = db.relationship('Order', backref='rider', lazy=True)
+
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurant.id'), nullable=False)
+    rider_id = db.Column(db.Integer, db.ForeignKey('rider.id'), nullable=True)
     items = db.Column(db.Text, nullable=False)
     total_amount = db.Column(db.Float, nullable=False)
     unlock_code = db.Column(db.String(4), nullable=False)
-    status = db.Column(db.String(50), default='pending')   # ✅ pending, not placed
+    status = db.Column(db.String(50), default='pending')
     delivery_lat = db.Column(db.Float, default=17.4116)
     delivery_lng = db.Column(db.Float, default=78.3400)
     delivery_address = db.Column(db.String(200), default='Gachibowli, Hyderabad')
@@ -94,6 +110,15 @@ class DroneTracking(db.Model):
     battery = db.Column(db.Integer, default=100)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
+class DeliveryStage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False)
+    stage = db.Column(db.String(30))   # 'rider_to_pad', 'drone_flight', 'rider_to_customer'
+    status = db.Column(db.String(20), default='pending')
+    start_time = db.Column(db.DateTime)
+    end_time = db.Column(db.DateTime)
+    drone_flight_id = db.Column(db.String(50))
+
 # ==================== HELPER FUNCTIONS ====================
 def generate_unlock_code():
     return str(random.randint(1000, 9999))
@@ -103,7 +128,6 @@ def calculate_co2_saved(orders):
     return len(delivered) * 0.065
 
 def row_to_dict(row):
-    """Convert sqlite3.Row to dict (if using raw SQL). Not needed for SQLAlchemy."""
     return {k: row[k] for k in row.keys()}
 
 # ==================== ROUTES: AUTH ====================
@@ -194,7 +218,191 @@ def cart():
         return redirect(url_for('login'))
     return render_template('cart.html')
 
-# ==================== ROUTES: API ====================
+# ==================== RIDER AUTH & DASHBOARD ====================
+@app.route('/rider/login', methods=['GET', 'POST'])
+def rider_login():
+    if request.method == 'POST':
+        phone = request.form.get('phone')
+        if not phone or len(phone) != 10:
+            return render_template('rider/login.html', error="Invalid phone number")
+        session['rider_login_phone'] = phone
+        session['rider_login_otp'] = "123456"
+        print(f"[DEMO] Rider OTP for {phone}: 123456")
+        return redirect(url_for('rider_verify_otp'))
+    return render_template('rider/login.html')
+
+@app.route('/rider/verify-otp', methods=['GET', 'POST'])
+def rider_verify_otp():
+    if request.method == 'POST':
+        entered_otp = request.form.get('otp')
+        expected_otp = session.get('rider_login_otp')
+        phone = session.get('rider_login_phone')
+        if not phone:
+            return render_template('rider/verify_otp.html', error="Session expired")
+        if str(entered_otp) == str(expected_otp) or str(entered_otp) == "123456":
+            rider = Rider.query.filter_by(phone=phone).first()
+            if not rider:
+                rider = Rider(phone=phone)
+                db.session.add(rider)
+                db.session.commit()
+            session['rider_id'] = rider.id
+            session.pop('rider_login_otp', None)
+            session.pop('rider_login_phone', None)
+            return redirect(url_for('rider_dashboard'))
+        else:
+            return render_template('rider/verify_otp.html', error="Wrong OTP")
+    return render_template('rider/verify_otp.html')
+
+@app.route('/rider/dashboard')
+def rider_dashboard():
+    if 'rider_id' not in session:
+        return redirect(url_for('rider_login'))
+    return render_template('rider/dashboard.html')
+
+@app.route('/rider/logout')
+def rider_logout():
+    session.pop('rider_id', None)
+    return redirect(url_for('rider_login'))
+
+# ==================== RIDER API ====================
+@app.route('/api/rider/me')
+def rider_me():
+    if 'rider_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    rider = Rider.query.get(session['rider_id'])
+    return jsonify({'id': rider.id, 'name': rider.name, 'is_active': rider.is_active})
+
+@app.route('/api/rider/toggle', methods=['POST'])
+def rider_toggle():
+    if 'rider_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    rider = Rider.query.get(session['rider_id'])
+    rider.is_active = not rider.is_active
+    db.session.commit()
+    return jsonify({'is_active': rider.is_active})
+
+@app.route('/api/rider/location', methods=['POST'])
+def update_rider_location():
+    if 'rider_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.get_json()
+    rider = Rider.query.get(session['rider_id'])
+    rider.current_lat = data['lat']
+    rider.current_lng = data['lng']
+    db.session.commit()
+    return jsonify({'status': 'ok'})
+
+@app.route('/api/rider/current-order')
+def rider_current_order():
+    if 'rider_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    rider_id = session['rider_id']
+    # Find order assigned to this rider that is not yet delivered
+    order = Order.query.filter_by(rider_id=rider_id).filter(Order.status.in_(['rider_to_pad', 'rider_to_customer'])).first()
+    if not order:
+        return jsonify({})
+    # For demo, we need pickup and dropoff addresses based on stage
+    if order.status == 'rider_to_pad':
+        pickup = "Restaurant address"
+        dropoff = "Drone Launch Pad"
+    else:
+        pickup = "Drone Landing Pad"
+        dropoff = order.delivery_address
+    return jsonify({
+        'id': order.id,
+        'pickup_address': pickup,
+        'dropoff_address': dropoff,
+        'status': order.status
+    })
+
+@app.route('/api/rider/complete-stage', methods=['POST'])
+def rider_complete_stage():
+    if 'rider_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.get_json()
+    order_id = data['order_id']
+    qr_code = data.get('qr_code')
+    # For demo, skip QR validation
+    order = Order.query.get(order_id)
+    if not order:
+        return jsonify({'error': 'Order not found'}), 404
+    if order.rider_id != session['rider_id']:
+        return jsonify({'error': 'Not your order'}), 403
+    if order.status == 'rider_to_pad':
+        order.status = 'drone_in_air'
+        db.session.commit()
+        # Trigger drone request
+        request_drone(order.id)
+    elif order.status == 'rider_to_customer':
+        order.status = 'delivered'
+        order.delivered_at = datetime.utcnow()
+        db.session.commit()
+    else:
+        return jsonify({'error': 'Invalid stage'}), 400
+    return jsonify({'success': True})
+
+# ==================== DRONE INTEGRATION (SIMULATED) ====================
+def request_drone(order_id):
+    """Called when first rider hands over package at drone pad."""
+    print(f"[DRONE] Requesting drone for order {order_id}")
+    threading.Timer(2.0, simulate_drone_webhook, args=[order_id]).start()
+
+def simulate_drone_webhook(order_id):
+    # Simulate takeoff
+    send_drone_webhook(order_id, 'takeoff')
+    time.sleep(2)
+    # Simulate in‑flight positions
+    for i in range(5):
+        lat = 17.4300 + (i * 0.002)
+        lng = 78.3450 + (i * 0.003)
+        send_drone_webhook(order_id, 'position', lat=lat, lng=lng, alt=50 + i*10, speed=60 - i*5, battery=100 - i*5)
+        time.sleep(1)
+    # Simulate landing
+    send_drone_webhook(order_id, 'landed')
+
+def send_drone_webhook(order_id, event, lat=None, lng=None, alt=None, speed=None, battery=None):
+    payload = {'order_id': order_id, 'event': event}
+    if lat is not None:
+        payload.update({'lat': lat, 'lng': lng, 'alt': alt, 'speed': speed, 'battery': battery})
+    try:
+        requests.post('http://localhost:5000/api/drone/webhook', json=payload, timeout=2)
+    except Exception as e:
+        print(f"Webhook error: {e}")
+
+@app.route('/api/drone/webhook', methods=['POST'])
+def drone_webhook():
+    data = request.get_json()
+    order_id = data['order_id']
+    event = data['event']
+    order = Order.query.get(order_id)
+    if not order:
+        return jsonify({'error': 'Order not found'}), 404
+    if event == 'takeoff':
+        order.status = 'drone_in_air'
+        db.session.commit()
+        print(f"[DRONE] Order {order_id} takeoff")
+    elif event == 'position':
+        # Store tracking data for customer map
+        tracking = DroneTracking(
+            order_id=order_id,
+            latitude=data['lat'],
+            longitude=data['lng'],
+            altitude=data['alt'],
+            speed=data['speed'],
+            battery=data['battery']
+        )
+        db.session.add(tracking)
+        db.session.commit()
+    elif event == 'landed':
+        order.status = 'rider_to_customer'
+        # Assign a second rider (for demo, reuse the same rider? we need a new rider)
+        # For simplicity, we'll assign a dummy rider (you can later assign real one)
+        # For now, we keep the same rider; in production assign a new available rider.
+        db.session.commit()
+        print(f"[DRONE] Order {order_id} landed, awaiting final rider")
+    return jsonify({'status': 'ok'})
+
+# ==================== REST OF API ENDPOINTS ====================
 @app.route('/api/place-order', methods=['POST'])
 def place_order():
     if 'user_id' not in session:
@@ -210,7 +418,7 @@ def place_order():
         items=json.dumps(data['items']),
         total_amount=data['total'],
         unlock_code=data['unlock_code'],
-        status='pending',              # ✅ important!
+        status='pending',
         delivery_lat=data['latitude'],
         delivery_lng=data['longitude'],
         delivery_address=data['delivery_address']
@@ -296,25 +504,6 @@ def update_order_status(order_id):
         order.delivered_at = datetime.utcnow()
     db.session.commit()
     return jsonify({'success': True, 'status': new_status})
-
-class Rider(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    phone = db.Column(db.String(10), unique=True, nullable=False)
-    name = db.Column(db.String(100))
-    is_active = db.Column(db.Boolean, default=False)   # online/offline
-    current_lat = db.Column(db.Float, default=0.0)
-    current_lng = db.Column(db.Float, default=0.0)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    orders = db.relationship('Order', backref='rider', lazy=True)
-
-class DeliveryStage(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False)
-    stage = db.Column(db.String(30))   # 'rider_to_pad', 'drone_to_pad', 'rider_to_customer'
-    status = db.Column(db.String(20), default='pending')
-    start_time = db.Column(db.DateTime)
-    end_time = db.Column(db.DateTime)
-    drone_flight_id = db.Column(db.String(50))
 
 # ========== API: ALL ORDERS (for admin) ==========
 @app.route('/api/orders')
