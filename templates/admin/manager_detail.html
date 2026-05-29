@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manager Details - DroneDine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; padding: 2rem; }
+        .card { background: #1e293b; border-radius: 24px; padding: 1.5rem; margin-bottom: 1.5rem; }
+        h1 { color: #f97316; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid #334155; }
+        th { color: #f97316; }
+        a { color: #f97316; text-decoration: none; }
+        .back-btn { display: inline-block; margin-top: 1rem; background: #f97316; padding: 0.5rem 1rem; border-radius: 40px; color: white; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>{{ manager.name }}</h1>
+        <p><strong>Zone:</strong> {{ manager.zone }} | <strong>Status:</strong> {{ manager.status }}</p>
+        <p><strong>Email:</strong> {{ manager.email }} | <strong>Phone:</strong> {{ manager.phone }}</p>
+    </div>
+    <div class="card">
+        <h2>👥 Riders ({{ riders|length }})</h2>
+        <table>
+            <thead><tr><th>Name</th><th>Phone</th><th>Status</th><th>Current Order</th></tr></thead>
+            <tbody>
+                {% for r in riders %}
+                <tr>
+                    <td>{{ r.name or 'N/A' }}</td>
+                    <td>{{ r.phone }}</td>
+                    <td>{{ 'Online' if r.is_active else 'Offline' }}</td>
+                    <td>{{ r.current_order_id or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="card">
+        <h2>📦 Orders ({{ orders|length }})</h2>
+        <table>
+            <thead><tr><th>Order #</th><th>Total</th><th>Status</th></tr></thead>
+            <tbody>
+                {% for o in orders %}
+                <tr>
+                    <td>#{{ o.id }}</td>
+                    <td>₹{{ o.total_amount }}</td>
+                    <td>{{ o.status }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <a href="/admin/dashboard" class="back-btn">← Back to Admin Dashboard</a>
+</body>
+</html>
