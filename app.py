@@ -390,8 +390,8 @@ def restaurant_login_page():
             session['restaurant_name'] = rid.capitalize()
             return redirect(url_for('restaurant_dashboard'))
         else:
-            return render_template('restaurant_login.html', error="Invalid credentials")
-    return render_template('restaurant_login.html')
+            return render_template('login.html', error="Invalid credentials")
+    return render_template('login.html')
 
 @app.route('/restaurant/dashboard')
 def restaurant_dashboard():
