@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Rider Dashboard - DroneDine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+            padding-bottom: 2rem;
+        }
+        .navbar {
+            background: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .logo {
+            font-weight: 800;
+            font-size: 1.3rem;
+            color: #f97316;
+        }
+        .logout {
+            background: #dc2626;
+            color: white;
+            padding: 0.4rem 1rem;
+            border-radius: 40px;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        .card {
+            background: white;
+            border-radius: 28px;
+            padding: 1.2rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+        .online {
+            background: #10b981;
+            color: white;
+        }
+        .offline {
+            background: #dc2626;
+            color: white;
+        }
+        button {
+            background: #f97316;
+            border: none;
+            padding: 0.7rem;
+            border-radius: 40px;
+            font-weight: 600;
+            color: white;
+            width: 100%;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        button:active { transform: scale(0.98); }
+        .order-details {
+            margin-top: 0.8rem;
+            padding-top: 0.8rem;
+            border-top: 1px solid #e2e8f0;
+        }
+        .order-details p {
+            margin: 0.3rem 0;
+            font-size: 0.9rem;
+        }
+        .map-container {
+            height: 250px;
+            border-radius: 20px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+        .info-text {
+            text-align: center;
+            color: #64748b;
+            padding: 2rem;
+        }
+        @media (max-width: 640px) {
+            .container { padding: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo"><i class="fas fa-motorcycle"></i> DroneDine Rider</div>
+        <a href="/rider/logout" class="logout">Logout</a>
+    </nav>
+
+    <div class="container">
+        <!-- Status Card -->
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3><i class="fas fa-circle"></i> Status</h3>
+                <span id="statusBadge" class="status-badge offline">Offline</span>
+            </div>
+            <button id="toggleBtn">Go Online</button>
+        </div>
+
+        <!-- Active Order Card (hidden initially) -->
+        <div id="orderCard" class="card" style="display: none;">
+            <h3><i class="fas fa-box"></i> Active Delivery</h3>
+            <div id="orderDetails" class="order-details">
+                <p><strong>Order #<span id="orderId"></span></strong></p>
+                <p>📍 Pickup: <span id="pickupAddr"></span></p>
+                <p>🏁 Dropoff: <span id="dropoffAddr"></span></p>
+                <p>📦 Status: <span id="orderStatus"></span></p>
+            </div>
+            <div id="map" class="map-container"></div>
+            <button id="completeBtn" style="margin-top: 1rem;">✔ Complete Stage</button>
+        </div>
+
+        <!-- No active order message -->
+        <div id="noOrderCard" class="card">
+            <div class="info-text">
+                <i class="fas fa-clock" style="font-size: 2rem;"></i>
+                <p>No active order</p>
+                <p style="font-size: 0.8rem;">Stay online to receive delivery tasks</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        // DOM elements
+        const toggleBtn = document.getElementById('toggleBtn');
+        const statusBadge = document.getElementById('statusBadge');
+        const orderCard = document.getElementById('orderCard');
+        const noOrderCard = document.getElementById('noOrderCard');
+        const completeBtn = document.getElementById('completeBtn');
+        let map = null, riderMarker = null, watchId = null;
+        let socket = io();
+
+        // Helper: fetch rider status and update UI
+        async function fetchRiderStatus() {
+            try {
+                const res = await fetch('/api/rider/me');
+                const data = await res.json();
+                if (data.is_active !== undefined) {
+                    const isActive = data.is_active;
+                    toggleBtn.innerText = isActive ? 'Go Offline' : 'Go Online';
+                    statusBadge.innerText = isActive ? 'Online' : 'Offline';
+                    statusBadge.className = isActive ? 'status-badge online' : 'status-badge offline';
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        // Fetch current active order
+        async function fetchCurrentOrder() {
+            try {
+                const res = await fetch('/api/rider/current-order');
+                const order = await res.json();
+                if (order.id) {
+                    orderCard.style.display = 'block';
+                    noOrderCard.style.display = 'none';
+                    document.getElementById('orderId').innerText = order.id;
+                    document.getElementById('pickupAddr').innerText = order.pickup_address || 'Restaurant';
+                    document.getElementById('dropoffAddr').innerText = order.dropoff_address || 'Drone Pad';
+                    document.getElementById('orderStatus').innerText = order.status;
+                    // Initialize or update map
+                    if (!map) {
+                        map = L.map('map').setView([17.4265, 78.3450], 13);
+                        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                            attribution: 'OSM & CartoDB'
+                        }).addTo(map);
+                        riderMarker = L.marker([17.4265, 78.3450], {
+                            icon: L.divIcon({ html: '🛵', iconSize: [30,30], className: 'rider-icon' })
+                        }).addTo(map);
+                    }
+                    startLocationTracking();
+                } else {
+                    orderCard.style.display = 'none';
+                    noOrderCard.style.display = 'block';
+                    if (watchId) navigator.geolocation.clearWatch(watchId);
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        // Start sending GPS location
+        function startLocationTracking() {
+            if (watchId) navigator.geolocation.clearWatch(watchId);
+            watchId = navigator.geolocation.watchPosition(async (pos) => {
+                const { latitude, longitude } = pos.coords;
+                if (riderMarker) {
+                    riderMarker.setLatLng([latitude, longitude]);
+                    map.setView([latitude, longitude], 15);
+                }
+                // Send location to backend
+                await fetch('/api/rider/location', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lat: latitude, lng: longitude })
+                });
+            }, (err) => { console.warn("Geolocation error:", err); }, { enableHighAccuracy: true });
+        }
+
+        // Toggle online/offline
+        toggleBtn.onclick = async () => {
+            await fetch('/api/rider/toggle', { method: 'POST' });
+            fetchRiderStatus();
+        };
+
+        // Complete current stage (handover)
+        completeBtn.onclick = async () => {
+            const orderIdElem = document.getElementById('orderId');
+            if (!orderIdElem.innerText) return;
+            // Optional: prompt for QR code (simulate)
+            const qr = prompt("Enter handover QR code (or any value for demo)");
+            if (qr === null) return;
+            const res = await fetch('/api/rider/complete-stage', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ order_id: orderIdElem.innerText, qr_code: qr })
+            });
+            if (res.ok) {
+                alert('Stage completed!');
+                fetchCurrentOrder();
+            } else {
+                alert('Failed to complete stage');
+            }
+        };
+
+        // Periodic updates
+        fetchRiderStatus();
+        fetchCurrentOrder();
+        setInterval(fetchCurrentOrder, 5000);
+
+        // Listen for real-time order assignment via WebSocket
+        socket.on('new_order_for_rider', () => {
+            fetchCurrentOrder();
+        });
+    </script>
+</body>
+</html>
