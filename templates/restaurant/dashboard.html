@@ -6,7 +6,6 @@
     <title>{{ restaurant.name }} - Command Center</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --primary: #f97316;
@@ -106,6 +105,39 @@
             font-size: 0.75rem;
             color: var(--muted);
         }
+        .restaurant-status-toggle {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-bottom: 1rem;
+        }
+        .toggle-switch {
+            width: 60px;
+            height: 30px;
+            background: #cbd5e1;
+            border-radius: 40px;
+            position: relative;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .toggle-switch.active {
+            background: #10b981;
+        }
+        .toggle-switch::after {
+            content: '';
+            width: 26px;
+            height: 26px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 3px;
+            transition: 0.2s;
+        }
+        .toggle-switch.active::after {
+            left: 31px;
+        }
         .orders-card {
             background: white;
             border-radius: 28px;
@@ -159,7 +191,12 @@
         }
         .action-btn:hover {
             transform: scale(1.02);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .rider-select {
+            padding: 0.2rem 0.4rem;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            font-size: 0.7rem;
         }
         .sidebar-card {
             background: white;
@@ -212,10 +249,16 @@
     </nav>
 
     <div class="container">
-        <h1><i class="fas fa-robot"></i> {{ restaurant.name }} Command Center</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <h1><i class="fas fa-robot"></i> {{ restaurant.name }} Command Center</h1>
+            <div class="restaurant-status-toggle">
+                <span>🍽️ Restaurant Status:</span>
+                <div id="restaurantStatusToggle" class="toggle-switch {{ 'active' if restaurant.is_active else '' }}" onclick="toggleRestaurantStatus()"></div>
+                <span id="statusText">{{ 'Online' if restaurant.is_active else 'Offline' }}</span>
+            </div>
+        </div>
         <p style="margin-bottom: 2rem;">Manage live orders, drones, and performance</p>
 
-        <!-- Stats Grid -->
         <div class="stats-grid" id="statsGrid">
             <div class="stat-card">
                 <div class="stat-title">Active Orders</div>
@@ -239,22 +282,20 @@
             </div>
         </div>
 
-        <!-- Orders Table -->
         <div class="orders-card">
             <div class="section-title"><i class="fas fa-list-ul"></i> Live Orders</div>
             <div id="ordersTableContainer">
                 <table class="orders-table" id="ordersTable">
                     <thead>
-                        <tr><th>Order #</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Action</th></tr>
+                        <tr><th>Order #</th><th>Customer</th><th>Items</th><th>Total</th><th>Rider</th><th>Status</th><th>Action</th></tr>
                     </thead>
                     <tbody id="ordersTableBody">
-                        <tr><td colspan="6" style="text-align:center;">Loading orders...</td></tr>
+                        <tr><td colspan="7" style="text-align:center;">Loading orders...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- Sidebar (optional - popular items, quick actions) -->
         <div class="sidebar-card">
             <div class="section-title"><i class="fas fa-chart-line"></i> Popular Items</div>
             <div id="popularItems">
@@ -269,7 +310,7 @@
             <div class="section-title"><i class="fas fa-bolt"></i> Quick Actions</div>
             <div class="quick-action" onclick="alert('Manage menu - coming soon')">📋 Manage Menu</div>
             <div class="quick-action" onclick="alert('Drone tracking - coming soon')">🚁 Track Drones</div>
-            <div class="quick-action" onclick="alert('Assign rider - coming soon')">🛵 Assign Rider</div>
+            <div class="quick-action" onclick="showAssignRiderModal()">🛵 Assign Rider</div>
         </div>
     </div>
 
@@ -278,8 +319,69 @@
     </div>
 
     <script>
-        function showToast(msg, isError = false) {
-            alert(msg);
+        let activeRiders = []; // store list of active riders
+
+        async function fetchRiders() {
+            try {
+                const res = await fetch('/api/riders/active');
+                activeRiders = await res.json();
+            } catch(e) { console.warn(e); }
+        }
+
+        async function toggleRestaurantStatus() {
+            const toggle = document.getElementById('restaurantStatusToggle');
+            const statusText = document.getElementById('statusText');
+            const isActive = toggle.classList.contains('active');
+            const newStatus = !isActive;
+            try {
+                const res = await fetch('/api/restaurant/toggle-status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_active: newStatus })
+                });
+                if (res.ok) {
+                    if (newStatus) {
+                        toggle.classList.add('active');
+                        statusText.innerText = 'Online';
+                    } else {
+                        toggle.classList.remove('active');
+                        statusText.innerText = 'Offline';
+                    }
+                } else {
+                    alert('Failed to update status');
+                }
+            } catch(e) { alert('Network error'); }
+        }
+
+        function showAssignRiderModal() {
+            const orderId = prompt("Enter Order ID to assign rider:");
+            if (!orderId) return;
+            if (activeRiders.length === 0) {
+                alert("No active riders available. Ask riders to go online.");
+                return;
+            }
+            let riderList = activeRiders.map(r => `${r.id}: ${r.name || r.phone}`).join('\n');
+            const selected = prompt(`Select rider ID from list:\n${riderList}\n\nEnter rider ID:`);
+            if (selected) {
+                assignRiderToOrder(orderId, selected);
+            }
+        }
+
+        async function assignRiderToOrder(orderId, riderId) {
+            try {
+                const res = await fetch(`/api/order/${orderId}/assign-rider`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rider_id: riderId })
+                });
+                if (res.ok) {
+                    alert('Rider assigned successfully');
+                    fetchOrders(); // refresh orders
+                } else {
+                    const err = await res.json();
+                    alert('Error: ' + err.error);
+                }
+            } catch(e) { alert('Network error'); }
         }
 
         async function fetchStats() {
@@ -290,9 +392,7 @@
                 document.getElementById('todayRevenue').innerText = `₹${(data.today_revenue || 0).toFixed(2)}`;
                 document.getElementById('completedOrders').innerText = data.completed_orders || 0;
                 document.getElementById('rating').innerText = data.rating || 4.5;
-            } catch (err) {
-                console.warn("Stats fetch error", err);
-            }
+            } catch (err) { console.warn(err); }
         }
 
         async function fetchOrders() {
@@ -301,11 +401,11 @@
                 const orders = await res.json();
                 const tbody = document.getElementById('ordersTableBody');
                 if (!orders.length) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No active orders. Great job! 🎉</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No active orders. Great job! 🎉</td></tr>';
                     return;
                 }
                 let html = '';
-                orders.forEach(order => {
+                for (const order of orders) {
                     let itemsText = '';
                     try {
                         const items = JSON.parse(order.items);
@@ -314,7 +414,6 @@
                         itemsText = order.items;
                     }
                     let statusClass = '';
-                    let statusText = order.status;
                     switch(order.status) {
                         case 'pending': statusClass = 'status-pending'; break;
                         case 'accepted': statusClass = 'status-accepted'; break;
@@ -333,21 +432,27 @@
                     } else if (order.status === 'out_for_delivery') {
                         actionHtml = `<button class="action-btn" onclick="updateOrderStatus(${order.id}, 'deliver')">Deliver</button>`;
                     } else {
-                        actionHtml = `<span class="status-badge ${statusClass}">${statusText.replace(/_/g,' ')}</span>`;
+                        actionHtml = `<span class="status-badge ${statusClass}">${order.status.replace(/_/g,' ')}</span>`;
+                    }
+                    // rider display
+                    let riderDisplay = 'Not assigned';
+                    if (order.rider_id) {
+                        riderDisplay = `Rider #${order.rider_id}`;
                     }
                     html += `<tr>
                         <td>#${order.id}</td>
                         <td>${order.customer_name || 'Guest'}</td>
                         <td>${itemsText}</td>
                         <td>₹${order.total_amount}</td>
-                        <td><span class="status-badge ${statusClass}">${statusText.replace(/_/g,' ')}</span></td>
+                        <td>${riderDisplay}</td>
+                        <td><span class="status-badge ${statusClass}">${order.status.replace(/_/g,' ')}</span></td>
                         <td>${actionHtml}</td>
                     </tr>`;
-                });
+                }
                 tbody.innerHTML = html;
             } catch (err) {
-                console.warn("Orders fetch error", err);
-                document.getElementById('ordersTableBody').innerHTML = '<tr><td colspan="6">Error loading orders. Please refresh.</td></tr>';
+                console.warn(err);
+                document.getElementById('ordersTableBody').innerHTML = '<tr><td colspan="7">Error loading orders</td></tr>';
             }
         }
 
@@ -360,17 +465,18 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    showToast(`Order #${orderId} updated to ${data.status}`);
+                    alert(`Order #${orderId} updated to ${data.status}`);
                     fetchOrders();
                     fetchStats();
                 } else {
-                    showToast(`Failed: ${data.error || 'Unknown error'}`, true);
+                    alert(`Failed: ${data.error || 'Unknown error'}`);
                 }
             } catch (err) {
-                showToast('Network error. Please try again.', true);
+                alert('Network error');
             }
         }
 
+        fetchRiders();
         fetchStats();
         fetchOrders();
         setInterval(() => {
