@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Manager Dashboard - DroneDine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; }
+        .navbar {
+            background: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .logo { font-size: 1.5rem; font-weight: 800; color: #f97316; }
+        .nav-links a { text-decoration: none; color: #334155; margin: 0 0.8rem; font-weight: 500; }
+        .nav-links a:hover { color: #f97316; }
+        .container { max-width: 1400px; margin: 2rem auto; padding: 0 1rem; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+        .stat-card { background: white; border-radius: 24px; padding: 1rem; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .stat-number { font-size: 2rem; font-weight: 800; color: #f97316; }
+        .section { background: white; border-radius: 24px; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 0.75rem; border-bottom: 1px solid #e2e8f0; }
+        th { color: #f97316; }
+        .badge { padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600; }
+        .online { background: #10b981; color: white; }
+        .offline { background: #dc2626; color: white; }
+        .busy { background: #f59e0b; color: white; }
+        button { background: #f97316; border: none; padding: 0.3rem 0.8rem; border-radius: 20px; cursor: pointer; color: white; font-weight: 600; }
+        select { padding: 0.2rem; border-radius: 20px; border: 1px solid #e2e8f0; }
+        .footer { text-align: center; padding: 1rem; color: #94a3b8; }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="logo">🚁 DroneDine Manager</div>
+        <div class="nav-links">
+            <a href="/manager/dashboard">Dashboard</a>
+            <a href="/manager/logout">Logout</a>
+        </div>
+    </div>
+    <div class="container">
+        <h1>Welcome, <span id="managerName"></span></h1>
+        <p>Zone: <strong id="managerZone"></strong></p>
+
+        <div class="stats" id="stats">
+            <div class="stat-card"><div class="stat-number" id="activeRiders">0</div><div>Active Riders</div></div>
+            <div class="stat-card"><div class="stat-number" id="activeOrders">0</div><div>Active Orders</div></div>
+            <div class="stat-card"><div class="stat-number" id="openTickets">0</div><div>Open Tickets</div></div>
+        </div>
+
+        <div class="section">
+            <h2>🛵 Riders in Your Zone</h2>
+            <table id="ridersTable">
+                <thead><tr><th>Name</th><th>Phone</th><th>Status</th><th>Current Order</th><th>Last Seen</th><th>Action</th></tr></thead>
+                <tbody id="ridersBody"></tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>📦 Active Orders</h2>
+            <table id="ordersTable">
+                <thead><tr><th>Order #</th><th>Customer</th><th>Restaurant</th><th>Total</th><th>Status</th><th>Rider</th><th>Action</th></tr></thead>
+                <tbody id="ordersBody"></tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>⚠️ Support Tickets</h2>
+            <table id="ticketsTable">
+                <thead><tr><th>Order</th><th>Rider</th><th>Issue</th><th>Priority</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody id="ticketsBody"></tbody>
+            </table>
+        </div>
+    </div>
+    <div class="footer">© 2026 DroneDine – Manager Portal</div>
+
+    <script>
+        async function loadStats() {
+            const res = await fetch('/api/manager/stats');
+            const data = await res.json();
+            document.getElementById('activeRiders').innerText = data.active_riders || 0;
+            document.getElementById('activeOrders').innerText = data.active_orders || 0;
+            document.getElementById('openTickets').innerText = data.open_tickets || 0;
+        }
+
+        async function loadRiders() {
+            const res = await fetch('/api/manager/riders');
+            const riders = await res.json();
+            const tbody = document.getElementById('ridersBody');
+            tbody.innerHTML = riders.map(r => `
+                <tr>
+                    <td>${r.name || 'N/A'}</td>
+                    <td>${r.phone}</td>
+                    <td><span class="badge ${r.is_active ? 'online' : 'offline'}">${r.is_active ? 'Online' : 'Offline'}</span></td>
+                    <td>${r.current_order_id || '-'}</td>
+                    <td>${r.last_seen ? new Date(r.last_seen).toLocaleTimeString() : '-'}</td>
+                    <td><button onclick="assignOrderToRider(${r.id})">Assign Order</button></td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadOrders() {
+            const res = await fetch('/api/manager/orders');
+            const orders = await res.json();
+            const tbody = document.getElementById('ordersBody');
+            tbody.innerHTML = orders.map(o => `
+                <tr>
+                    <td>#${o.id}</td>
+                    <td>${o.customer_name}</td>
+                    <td>${o.restaurant_name}</td>
+                    <td>₹${o.total}</td>
+                    <td>${o.status}</td>
+                    <td>${o.rider_name || 'Unassigned'}</td>
+                    <td><button onclick="openRiderModal(${o.id})">Assign Rider</button></td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadTickets() {
+            const res = await fetch('/api/manager/tickets');
+            const tickets = await res.json();
+            const tbody = document.getElementById('ticketsBody');
+            tbody.innerHTML = tickets.map(t => `
+                <tr>
+                    <td>#${t.order_id}</td>
+                    <td>${t.rider_name}</td>
+                    <td>${t.issue_type}</td>
+                    <td><span class="badge" style="background:${t.priority === 'high' ? '#dc2626' : '#f59e0b'}">${t.priority}</span></td>
+                    <td>${t.status}</td>
+                    <td><button onclick="resolveTicket(${t.id})">Resolve</button> <button onclick="escalateTicket(${t.id})">Escalate</button></td>
+                </tr>
+            `).join('');
+        }
+
+        async function assignOrderToRider(riderId) {
+            const orderId = prompt("Enter Order ID to assign to this rider:");
+            if (!orderId) return;
+            const res = await fetch('/api/manager/assign-rider', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ order_id: parseInt(orderId), rider_id: riderId })
+            });
+            if (res.ok) {
+                alert('Rider assigned successfully');
+                loadOrders();
+                loadRiders();
+            } else {
+                alert('Failed to assign');
+            }
+        }
+
+        function openRiderModal(orderId) {
+            const riderId = prompt("Enter Rider ID to assign to this order:");
+            if (!riderId) return;
+            fetch('/api/manager/assign-rider', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ order_id: orderId, rider_id: parseInt(riderId) })
+            }).then(res => res.ok ? (alert('Assigned'), loadOrders(), loadRiders()) : alert('Failed'));
+        }
+
+        function resolveTicket(ticketId) {
+            fetch(`/api/manager/ticket/${ticketId}/resolve`, { method: 'POST' }).then(() => loadTickets());
+        }
+        function escalateTicket(ticketId) {
+            fetch(`/api/manager/ticket/${ticketId}/escalate`, { method: 'POST' }).then(() => loadTickets());
+        }
+
+        // Get manager info from session (could be passed via template, but we use API)
+        document.getElementById('managerName').innerText = "{{ session.get('manager_name', 'Manager') }}";
+        document.getElementById('managerZone').innerText = "{{ session.get('manager_zone', 'Gachibowli') }}";
+
+        loadStats();
+        loadRiders();
+        loadOrders();
+        loadTickets();
+        setInterval(() => { loadStats(); loadRiders(); loadOrders(); loadTickets(); }, 10000);
+    </script>
+</body>
+</html>
