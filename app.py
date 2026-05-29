@@ -297,6 +297,25 @@ def update_order_status(order_id):
     db.session.commit()
     return jsonify({'success': True, 'status': new_status})
 
+class Rider(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    phone = db.Column(db.String(10), unique=True, nullable=False)
+    name = db.Column(db.String(100))
+    is_active = db.Column(db.Boolean, default=False)   # online/offline
+    current_lat = db.Column(db.Float, default=0.0)
+    current_lng = db.Column(db.Float, default=0.0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    orders = db.relationship('Order', backref='rider', lazy=True)
+
+class DeliveryStage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False)
+    stage = db.Column(db.String(30))   # 'rider_to_pad', 'drone_to_pad', 'rider_to_customer'
+    status = db.Column(db.String(20), default='pending')
+    start_time = db.Column(db.DateTime)
+    end_time = db.Column(db.DateTime)
+    drone_flight_id = db.Column(db.String(50))
+
 # ========== API: ALL ORDERS (for admin) ==========
 @app.route('/api/orders')
 def list_orders():
